@@ -1,0 +1,294 @@
+"""Hybrid movie recommender.
+
+Combines three signals into one score:
+  * content    - TF-IDF over genres, tags and overview (what the movie *is*)
+  * collab     - item-item collaborative filtering over a ratings matrix (what *people* co-enjoy)
+  * quality    - normalised critic rating (a gentle prior towards good movies)
+
+The final list is re-ranked with Maximal Marginal Relevance (MMR) so it stays diverse.
+See docs/ALGORITHM.md for the full write-up.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import normalize
+
+DATA_PATH = Path(__file__).parent / "data" / "movies.json"
+
+WEIGHTS = {"content": 0.55, "collab": 0.35, "quality": 0.10}
+MOOD_WEIGHTS = {"content": 0.80, "collab": 0.0, "quality": 0.20}
+DISLIKE_PENALTY = 0.5
+MOOD_BOOST = 1.5
+MMR_LAMBDA = 0.75
+
+# Everyday words -> vocabulary the catalogue actually uses.
+MOOD_SYNONYMS = {
+    "cozy": "cozy heartwarming feel-good whimsical",
+    "comfort": "cozy heartwarming feel-good",
+    "chill": "cozy quiet feel-good",
+    "funny": "comedy quirky witty fun",
+    "laugh": "comedy fun witty",
+    "comedy": "comedy fun",
+    "scary": "horror scary suspense",
+    "spooky": "horror scary supernatural",
+    "horror": "horror scary",
+    "cry": "emotional bittersweet drama",
+    "sad": "emotional bittersweet drama",
+    "emotional": "emotional heartwarming",
+    "romantic": "romance love",
+    "love": "romance love",
+    "date": "romance feel-good witty",
+    "mind": "mind-bending cerebral twist",
+    "smart": "cerebral clever",
+    "think": "cerebral mind-bending",
+    "twist": "twist psychological",
+    "action": "action adrenaline",
+    "exciting": "adrenaline action thriller",
+    "thrill": "thriller suspense",
+    "epic": "epic adventure heroic",
+    "space": "space sci-fi",
+    "future": "sci-fi cyberpunk ai",
+    "dark": "dark gritty",
+    "kid": "family animation",
+    "family": "family animation heartwarming",
+    "inspir": "uplifting inspiring mentor",
+    "motivat": "uplifting inspiring ambition",
+    "magic": "magical fantasy whimsical",
+    "music": "music musical",
+    "history": "history true-story",
+    "true": "true-story",
+    "war": "war intense",
+    "anime": "animation japanese",
+    "classic": "classic iconic",
+}
+
+TOKEN_PATTERN = r"(?u)\b[a-z0-9][a-z0-9\-]+\b"
+
+
+def _tokens(movie: dict) -> set[str]:
+    return {g.lower() for g in movie["genres"]} | set(movie["tags"])
+
+
+def _minmax(x: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Scale the masked entries of x to [0, 1]; others become 0."""
+    out = np.zeros_like(x)
+    if not mask.any():
+        return out
+    lo, hi = x[mask].min(), x[mask].max()
+    out[mask] = (x[mask] - lo) / (hi - lo) if hi > lo else 1.0
+    return out
+
+
+def simulate_ratings(movies: list[dict], n_users: int = 600, seed: int = 42) -> np.ndarray:
+    """Generate a realistic, sparse user x movie 1-5 ratings matrix (0 = unwatched).
+
+    Each synthetic user has a sparse genre taste (Dirichlet). They are more likely to
+    watch and to rate highly the movies matching that taste. Deterministic via seed.
+    """
+    rng = np.random.default_rng(seed)
+    genres = sorted({g for m in movies for g in m["genres"]})
+    g_index = {g: i for i, g in enumerate(genres)}
+    G = np.zeros((len(movies), len(genres)))
+    for i, m in enumerate(movies):
+        for g in m["genres"]:
+            G[i, g_index[g]] = 1.0
+    G /= G.sum(axis=1, keepdims=True)
+
+    taste = rng.dirichlet(np.full(len(genres), 0.3), size=n_users)
+    affinity = taste @ G.T
+    affinity /= affinity.max(axis=1, keepdims=True)
+
+    quality = np.array([m["rating"] for m in movies])
+    quality = (quality - quality.mean()) / quality.std()
+
+    watched = rng.random(affinity.shape) < (0.06 + 0.5 * affinity)
+    raw = 1 + 4 * affinity + 0.35 * quality + rng.normal(0, 0.6, affinity.shape)
+    return np.clip(np.rint(raw), 1, 5) * watched
+
+
+class Recommender:
+    def __init__(self, movies: list[dict], ratings: np.ndarray | None = None):
+        self.movies = movies
+        self.by_id = {m["id"]: i for i, m in enumerate(movies)}
+        n = len(movies)
+
+        # Content model: genres and tags count double, they are the strongest signal.
+        docs = [
+            " ".join(m["genres"] * 2 + m["tags"] * 2).lower() + " " + m["overview"].lower()
+            for m in movies
+        ]
+        self.vectorizer = TfidfVectorizer(
+            token_pattern=TOKEN_PATTERN, stop_words="english", sublinear_tf=True
+        )
+        self.X = normalize(self.vectorizer.fit_transform(docs)).toarray()
+        self.content_sim = self.X @ self.X.T
+        np.fill_diagonal(self.content_sim, 0)
+
+        # Collaborative model: adjusted-cosine item-item similarity.
+        self.ratings = simulate_ratings(movies) if ratings is None else ratings
+        watched = self.ratings > 0
+        counts = np.maximum(watched.sum(axis=1, keepdims=True), 1)
+        user_mean = self.ratings.sum(axis=1, keepdims=True) / counts
+        centered = np.where(watched, self.ratings - user_mean, 0.0)
+        items = normalize(centered.T)
+        self.collab_sim = items @ items.T
+        np.fill_diagonal(self.collab_sim, 0)
+
+        r = np.array([m["rating"] for m in movies])
+        self.quality = (r - r.min()) / (r.max() - r.min())
+        self.n = n
+
+    # ---------- helpers ----------
+    def _indices(self, ids) -> list[int]:
+        return [self.by_id[i] for i in dict.fromkeys(ids or []) if i in self.by_id]
+
+    def expand_mood(self, mood: str) -> str:
+        text = mood.lower()
+        extra = [v for k, v in MOOD_SYNONYMS.items() if k in text]
+        return " ".join([text, *extra])
+
+    def _mood_terms(self, mood: str) -> set[str]:
+        vocab = set(self.vectorizer.vocabulary_)
+        return {t for t in self.expand_mood(mood).replace(",", " ").split() if t in vocab}
+
+    def _mmr(self, candidates: list[int], relevance: np.ndarray, k: int) -> list[int]:
+        """Maximal Marginal Relevance: trade relevance against redundancy."""
+        selected: list[int] = []
+        pool = list(candidates)
+        while pool and len(selected) < k:
+            if selected:
+                redundancy = self.content_sim[np.ix_(pool, selected)].max(axis=1)
+            else:
+                redundancy = np.zeros(len(pool))
+            mmr = MMR_LAMBDA * relevance[pool] - (1 - MMR_LAMBDA) * redundancy
+            best = pool.pop(int(np.argmax(mmr)))
+            selected.append(best)
+        return selected
+
+    def _card(self, idx: int, **extra) -> dict:
+        return {**self.movies[idx], **extra}
+
+    # ---------- public API ----------
+    def recommend(self, liked=(), disliked=(), mood: str | None = None, k: int = 12) -> dict:
+        liked_i, disliked_i = self._indices(liked), self._indices(disliked)
+        mood = (mood or "").strip()
+        n = self.n
+
+        content = np.zeros(n)
+        collab = np.zeros(n)
+        profile = np.zeros(self.X.shape[1])
+        if liked_i:
+            profile += self.X[liked_i].sum(axis=0)
+            collab += self.collab_sim[liked_i].mean(axis=0)
+        if disliked_i:
+            profile -= DISLIKE_PENALTY * self.X[disliked_i].sum(axis=0)
+            collab -= DISLIKE_PENALTY * self.collab_sim[disliked_i].mean(axis=0)
+        if mood:
+            q = normalize(self.vectorizer.transform([self.expand_mood(mood)])).toarray()[0]
+            profile += MOOD_BOOST * q * max(1, len(liked_i))
+        if profile.any():
+            content = self.X @ (profile / np.linalg.norm(profile))
+
+        candidates = np.ones(n, dtype=bool)
+        candidates[liked_i + disliked_i] = False
+
+        if not liked_i and not disliked_i and not mood:
+            weights, mode = {"content": 0, "collab": 0, "quality": 1}, "popular"
+        elif mood and not liked_i:
+            weights, mode = MOOD_WEIGHTS, "mood"
+        else:
+            weights, mode = WEIGHTS, "personal"
+
+        parts = {
+            "content": _minmax(content, candidates),
+            "collab": _minmax(collab, candidates),
+            "quality": _minmax(self.quality, candidates),
+        }
+        score = sum(weights[name] * parts[name] for name in parts)
+        if mood:
+            # Hard relevance floor so a mood search never returns unrelated films.
+            candidates &= content > 0.05
+
+        ranked = [int(i) for i in np.argsort(-score) if candidates[i]][: k * 3]
+        chosen = self._mmr(ranked, score, k) if mode != "popular" else ranked[:k]
+
+        mood_terms = self._mood_terms(mood) if mood else set()
+        top = score[chosen].max() if chosen else 1.0
+        items = []
+        for idx in chosen:
+            because, shared = None, []
+            if liked_i:
+                link = self.content_sim[idx, liked_i] + self.collab_sim[idx, liked_i]
+                j = liked_i[int(np.argmax(link))]
+                because = {"id": self.movies[j]["id"], "title": self.movies[j]["title"]}
+                shared = sorted(_tokens(self.movies[idx]) & _tokens(self.movies[j]))
+            if mood_terms:
+                shared = sorted(set(shared) | (_tokens(self.movies[idx]) & mood_terms))
+            if because:
+                reason = f"Because you loved {because['title']}"
+            elif mood:
+                reason = f"Matches “{mood}”"
+            else:
+                reason = "A crowd favourite to get you started"
+            items.append(self._card(
+                idx,
+                score=round(float(score[idx]), 4),
+                match=int(round(55 + 44 * score[idx] / top)) if top > 0 else 55,
+                reason=reason,
+                because=because,
+                shared=shared[:4],
+                breakdown={name: round(float(weights[name] * parts[name][idx]), 4) for name in parts},
+            ))
+
+        return {"mode": mode, "items": items, "taste": self.taste_profile(liked_i, disliked_i)}
+
+    def taste_profile(self, liked_i: list[int], disliked_i: list[int]) -> dict:
+        genre_w: dict[str, float] = {}
+        tag_w: dict[str, float] = {}
+        for idx, w in [(i, 1.0) for i in liked_i] + [(i, -DISLIKE_PENALTY) for i in disliked_i]:
+            for g in self.movies[idx]["genres"]:
+                genre_w[g] = genre_w.get(g, 0) + w
+            for t in self.movies[idx]["tags"]:
+                tag_w[t] = tag_w.get(t, 0) + w
+        top = max([v for v in genre_w.values() if v > 0], default=1)
+        genres = sorted(((g, v) for g, v in genre_w.items() if v > 0), key=lambda x: -x[1])[:6]
+        tags = sorted(((t, v) for t, v in tag_w.items() if v > 0), key=lambda x: -x[1])[:8]
+        return {
+            "genres": [{"name": g, "weight": round(v / top, 3)} for g, v in genres],
+            "tags": [t for t, _ in tags],
+            "confidence": round(min(1.0, len(liked_i) / 5), 2),
+        }
+
+    def similar(self, movie_id: int, k: int = 6) -> list[dict]:
+        if movie_id not in self.by_id:
+            raise KeyError(movie_id)
+        i = self.by_id[movie_id]
+        sim = 0.6 * self.content_sim[i] + 0.4 * self.collab_sim[i]
+        order = [int(j) for j in np.argsort(-sim) if j != i][:k]
+        base = _tokens(self.movies[i])
+        return [
+            self._card(j, similarity=round(float(sim[j]), 4), shared=sorted(_tokens(self.movies[j]) & base)[:4])
+            for j in order
+        ]
+
+    def meta(self) -> dict:
+        watched = self.ratings > 0
+        return {
+            "movies": self.n,
+            "simulated_users": int(self.ratings.shape[0]),
+            "ratings": int(watched.sum()),
+            "sparsity": round(1 - float(watched.mean()), 3),
+            "vocabulary": len(self.vectorizer.vocabulary_),
+            "weights": WEIGHTS,
+            "mmr_lambda": MMR_LAMBDA,
+            "genres": sorted({g for m in self.movies for g in m["genres"]}),
+        }
+
+
+def load_default() -> Recommender:
+    with open(DATA_PATH, encoding="utf-8") as f:
+        return Recommender(json.load(f))
