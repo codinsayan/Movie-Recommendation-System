@@ -3,9 +3,21 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [Unreleased] (branch `feature/tmdb`, Iteration 3: real-world data)
 
-Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
+### Added
+- `scripts/build_tmdb_catalog.py`: builds a real catalogue (about 450 most-voted + currently popular films) from the TMDB API, with keywords, cast, director, runtime, tagline, poster, backdrop, YouTube trailer and TMDB recommendations. Reads `TMDB_READ_ACCESS_TOKEN` / `TMDB_API_KEY` from the environment or a git-ignored `.env` (`.env.example` provided). Retries on 429, certifi TLS.
+- **Graph-based collaborative filtering**: item vectors from TMDB's audience-driven recommendation graph (symmetrised, with self-loops); cosine = shared neighbourhood.
+- **Vote-weighted quality** (IMDb-style Bayesian average with the median vote count as prior).
+- Director and top cast as content features ("Because you loved Inception · christopher nolan").
+- Dataset switch: `CINEMAGIC_DATASET=tmdb|curated` (TMDB is the default when a snapshot exists).
+- UI: real backdrops in the billboard, hover previews, modal and "More Like This"; **▶ Play Trailer** (YouTube, privacy-enhanced) in the billboard, previews and modal; tagline, runtime, director and cast in the modal; TMDB attribution.
+- `tests/test_tmdb.py` (8 tests, offline): payload normalisation, slugs, trailer choice, graph CF, people explanations, weighted rating, and JS parity on a graph catalogue. `tests/conftest.py` pins the existing tests to the curated dataset.
+
+### Changed
+- Static model format v2 ships sparse item vectors (`X`, `C`); the browser computes the similarity matrices on load, keeping `model.json` small for large catalogues.
+- Ranking uses a stable sort, so tie order is deterministic and identical in Python and JS.
+- Genre and search rows are capped at 30 titles.
 
 ## [0.2.1] - 2026-10-16 (GitHub Pages deployment)
 

@@ -1,9 +1,10 @@
 """Hybrid movie recommender.
 
 Combines three signals into one score:
-  * content    - TF-IDF over genres, tags and overview (what the movie *is*)
-  * collab     - item-item collaborative filtering over a ratings matrix (what *people* co-enjoy)
-  * quality    - normalised critic rating (a gentle prior towards good movies)
+  * content    - TF-IDF over genres, tags, people and overview (what the movie *is*)
+  * collab     - item-item collaborative filtering (what *people* co-enjoy), learnt from either
+                 TMDB's audience-driven recommendation graph or a simulated ratings matrix
+  * quality    - vote-weighted rating (a gentle prior towards good, well-known movies)
 
 The final list is re-ranked with Maximal Marginal Relevance (MMR) so it stays diverse.
 See docs/ALGORITHM.md for the full write-up.
@@ -11,13 +12,16 @@ See docs/ALGORITHM.md for the full write-up.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 
-DATA_PATH = Path(__file__).parent / "data" / "movies.json"
+DATA_DIR = Path(__file__).parent / "data"
+DATASETS = {"curated": DATA_DIR / "movies.json", "tmdb": DATA_DIR / "tmdb_movies.json"}
+DATA_PATH = DATASETS["curated"]
 
 WEIGHTS = {"content": 0.55, "collab": 0.35, "quality": 0.10}
 MOOD_WEIGHTS = {"content": 0.80, "collab": 0.0, "quality": 0.20}
@@ -70,7 +74,35 @@ TOKEN_PATTERN = r"(?u)\b[a-z0-9][a-z0-9\-]+\b"
 
 
 def _tokens(movie: dict) -> set[str]:
-    return {g.lower() for g in movie["genres"]} | set(movie["tags"])
+    return {g.lower() for g in movie["genres"]} | set(movie["tags"]) | set(movie.get("people", []))
+
+
+def weighted_rating(movies: list[dict]) -> np.ndarray:
+    """IMDb-style Bayesian rating: shrink films with few votes towards the mean."""
+    r = np.array([m["rating"] for m in movies], dtype=float)
+    if not all("votes" in m for m in movies):
+        return r
+    v = np.array([m["votes"] for m in movies], dtype=float)
+    prior = float(np.median(v))
+    return v / (v + prior) * r + prior / (v + prior) * r.mean()
+
+
+def graph_vectors(movies: list[dict]) -> tuple[np.ndarray, int]:
+    """Item vectors from TMDB's recommendation graph.
+
+    A[i, j] = 1 when TMDB recommends j for i (or i for j), plus a self-loop so a
+    direct link also counts. Cosine between rows = how much two films share
+    their audience-driven neighbourhood.
+    """
+    index = {m["id"]: i for i, m in enumerate(movies)}
+    A = np.eye(len(movies))
+    for i, m in enumerate(movies):
+        for rec_id in m.get("tmdb_recs", []):
+            j = index.get(rec_id)
+            if j is not None and j != i:
+                A[i, j] = A[j, i] = 1.0
+    edges = int((A.sum() - len(movies)) // 2)
+    return normalize(A), edges
 
 
 def _minmax(x: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -118,7 +150,7 @@ class Recommender:
 
         # Content model: genres and tags count double, they are the strongest signal.
         docs = [
-            " ".join(m["genres"] * 2 + m["tags"] * 2).lower() + " " + m["overview"].lower()
+            " ".join(m["genres"] * 2 + m["tags"] * 2 + m.get("people", [])).lower() + " " + m["overview"].lower()
             for m in movies
         ]
         self.vectorizer = TfidfVectorizer(
@@ -128,18 +160,25 @@ class Recommender:
         self.content_sim = self.X @ self.X.T
         np.fill_diagonal(self.content_sim, 0)
 
-        # Collaborative model: adjusted-cosine item-item similarity.
-        self.ratings = simulate_ratings(movies) if ratings is None else ratings
-        watched = self.ratings > 0
-        counts = np.maximum(watched.sum(axis=1, keepdims=True), 1)
-        user_mean = self.ratings.sum(axis=1, keepdims=True) / counts
-        centered = np.where(watched, self.ratings - user_mean, 0.0)
-        items = normalize(centered.T)
-        self.collab_sim = items @ items.T
+        # Collaborative model: item vectors C whose cosine is the item-item similarity.
+        self.ratings = None
+        if ratings is None and all("tmdb_recs" in m for m in movies):
+            self.collab_source = "tmdb-graph"
+            self.C, self.graph_edges = graph_vectors(movies)
+        else:
+            # Adjusted cosine over a user x movie ratings matrix (simulated unless given).
+            self.collab_source = "ratings" if ratings is not None else "simulated"
+            self.ratings = simulate_ratings(movies) if ratings is None else ratings
+            watched = self.ratings > 0
+            counts = np.maximum(watched.sum(axis=1, keepdims=True), 1)
+            user_mean = self.ratings.sum(axis=1, keepdims=True) / counts
+            centered = np.where(watched, self.ratings - user_mean, 0.0)
+            self.C = normalize(centered.T)
+        self.collab_sim = self.C @ self.C.T
         np.fill_diagonal(self.collab_sim, 0)
 
-        r = np.array([m["rating"] for m in movies])
-        self.quality = (r - r.min()) / (r.max() - r.min())
+        r = weighted_rating(movies)
+        self.quality = (r - r.min()) / (r.max() - r.min()) if r.max() > r.min() else np.ones(n)
         self.n = n
 
     # ---------- helpers ----------
@@ -213,7 +252,7 @@ class Recommender:
             # Hard relevance floor so a mood search never returns unrelated films.
             candidates &= content > 0.05
 
-        ranked = [int(i) for i in np.argsort(-score) if candidates[i]][: k * 3]
+        ranked = [int(i) for i in np.argsort(-score, kind="stable") if candidates[i]][: k * 3]
         chosen = self._mmr(ranked, score, k) if mode != "popular" else ranked[:k]
 
         mood_terms = self._mood_terms(mood) if mood else set()
@@ -268,7 +307,7 @@ class Recommender:
             raise KeyError(movie_id)
         i = self.by_id[movie_id]
         sim = 0.6 * self.content_sim[i] + 0.4 * self.collab_sim[i]
-        order = [int(j) for j in np.argsort(-sim) if j != i][:k]
+        order = [int(j) for j in np.argsort(-sim, kind="stable") if j != i][:k]
         base = _tokens(self.movies[i])
         return [
             self._card(j, similarity=round(float(sim[j]), 4), shared=sorted(_tokens(self.movies[j]) & base)[:4])
@@ -276,19 +315,38 @@ class Recommender:
         ]
 
     def meta(self) -> dict:
-        watched = self.ratings > 0
-        return {
+        info = {
             "movies": self.n,
-            "simulated_users": int(self.ratings.shape[0]),
-            "ratings": int(watched.sum()),
-            "sparsity": round(1 - float(watched.mean()), 3),
+            "collab_source": self.collab_source,
             "vocabulary": len(self.vectorizer.vocabulary_),
             "weights": WEIGHTS,
             "mmr_lambda": MMR_LAMBDA,
             "genres": sorted({g for m in self.movies for g in m["genres"]}),
         }
+        if self.ratings is not None:
+            watched = self.ratings > 0
+            info.update(
+                simulated_users=int(self.ratings.shape[0]),
+                ratings=int(watched.sum()),
+                sparsity=round(1 - float(watched.mean()), 3),
+            )
+        else:
+            info.update(graph_edges=self.graph_edges, avg_degree=round(2 * self.graph_edges / self.n, 1))
+        return info
+
+
+def dataset_name() -> str:
+    """CINEMAGIC_DATASET wins; otherwise TMDB when a snapshot exists, else the curated 60."""
+    name = os.environ.get("CINEMAGIC_DATASET", "").strip().lower()
+    if name in DATASETS:
+        return name
+    return "tmdb" if DATASETS["tmdb"].exists() else "curated"
+
+
+def load_dataset(name: str) -> Recommender:
+    with open(DATASETS[name], encoding="utf-8") as f:
+        return Recommender(json.load(f))
 
 
 def load_default() -> Recommender:
-    with open(DATA_PATH, encoding="utf-8") as f:
-        return Recommender(json.load(f))
+    return load_dataset(dataset_name())

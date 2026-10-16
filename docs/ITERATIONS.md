@@ -38,15 +38,19 @@ Each iteration ships something demoable. Status: ✅ done · 🔄 in progress ·
 
 **Demo script:** open the app → hover a poster and tap ♥ on 3 sci-fi films → watch the billboard, "NEW PICK" badges and "Because you loved…" rows update → open 🧬 My Taste → search "make me cry" + Enter.
 
-## Iteration 3: Real data ⏳ (v0.3.0)
+## Iteration 3: Real-world data with TMDB 🔄 (v0.3.0, branch `feature/tmdb`)
 
-**Goal:** credibility. Recommendations learnt from real people.
+**Goal:** credibility. Real films, real audience signal, real trailers.
 
-- [ ] Loader for MovieLens `ml-latest-small` (100k ratings, 9k movies), mapped to the same schema
-- [ ] Sparse matrices (`scipy.sparse`) so the engine scales to thousands of movies
-- [ ] Extend the poster fetcher to the larger catalogue (lazy loading, TMDB optional)
-- [ ] Row virtualisation for large catalogues
-- [ ] Keep simulated data as an offline fallback (`--demo-data`)
+- [x] TMDB catalogue builder (most-voted + popular, keywords, cast, director, backdrops, trailers)
+- [x] Collaborative filtering from TMDB's recommendation graph (replaces simulated ratings)
+- [x] Vote-weighted quality prior; director/cast as content features
+- [x] UI: backdrops, Play Trailer, cast/director/runtime, TMDB attribution
+- [x] Offline tests + JS parity for the graph engine; sparse static model
+- [ ] Build the snapshot with a real key and review recommendation quality
+- [ ] Optional: live TMDB search to love films outside the snapshot
+- [ ] Optional: MovieLens ratings as a second collaborative signal
+- [ ] Merge to `main` and redeploy GitHub Pages
 
 ## Iteration 4: Measure it ⏳ (v0.4.0)
 
