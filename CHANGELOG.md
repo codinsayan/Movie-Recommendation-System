@@ -17,6 +17,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - **TMDB snapshot** `backend/data/tmdb_movies.json`: 447 films (1957–2026), 1,275 recommendation-graph links (avg. 5.7 neighbours), backdrops and trailers for all 447. 12/12 sampled trailer IDs verified against YouTube.
 - Mood synonyms now map everyday words onto TMDB keywords too (`sadness`, `loss-of-loved-one`, `haunted-house`, `psychological-thriller`, …) as well as genres, so mood search works on the real catalogue.
 
+### Changed (visual polish)
+- Replaced every emoji and Unicode symbol in the UI with one consistent inline-SVG line-icon set (24px grid, 2px round strokes): mood chips, buttons, badges, arrows, preview actions, drawer, "How it works", toasts and like-burst particles.
+- The profile avatar is now a circle centred inside its circular confidence ring (it was a square inside a circle).
+- New favicon (red rounded square with a white "C"); ratings use a gold star icon; copy no longer relies on glyphs ("like and pass" instead of ♥/✕).
+- Bar animations start with a forced reflow instead of `requestAnimationFrame`, so they also render in headless/background tabs.
+
 ### Fixed
 - Mood keys matched as raw substrings, so "war" fired inside "heart**war**ming" (a cozy search returned *1917*). Keys now match only at the start of a word, in both Python and JS. A regression test was added.
 

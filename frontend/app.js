@@ -10,15 +10,44 @@
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const canHover = matchMedia("(hover: hover) and (pointer: fine)").matches;
 
+  // ---------- icons: one 24px line-icon set, inline SVG (no emoji, no icon font) ----------
+  const ICONS = {
+    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    play: '<path d="M6 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L7.5 3.64A1 1 0 0 0 6 4.5Z" fill="currentColor" stroke="none"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+    chevronRight: '<path d="m9 18 6-6-6-6"/>',
+    star: '<path d="M11.48 3.5a.56.56 0 0 1 1.04 0l2.13 5.11a.56.56 0 0 0 .48.35l5.52.44c.5.04.7.66.32.99l-4.2 3.6a.56.56 0 0 0-.18.56l1.28 5.39a.56.56 0 0 1-.84.61l-4.73-2.89a.56.56 0 0 0-.59 0l-4.73 2.89a.56.56 0 0 1-.84-.61l1.28-5.39a.56.56 0 0 0-.18-.56l-4.2-3.6a.56.56 0 0 1 .32-.99l5.52-.44a.56.56 0 0 0 .48-.35Z" fill="currentColor" stroke="none"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    reset: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    film: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 12h18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4"/>',
+    tag: '<path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.42l8.7 8.7a2.43 2.43 0 0 0 3.42 0l6.58-6.58a2.43 2.43 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    // mood chips
+    moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>',
+    infinity: '<path d="M18.18 8c5.1 0 5.1 8 0 8-5.1 0-7.14-8-12.74-8-4.59 0-4.59 8 0 8 5.6 0 7.64-8 12.74-8Z"/>',
+    droplet: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/>',
+    zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
+    smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
+    mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3Z"/>',
+    rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+  };
+  const icon = (name, cls = "") =>
+    `<svg class="ic ic-${name} ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
+
   const MOODS = [
-    ["🌧️", "Cozy night in", "cozy and heartwarming"],
-    ["🌀", "Mind-bending", "mind-bending with a twist"],
-    ["😭", "Make me cry", "emotional, make me cry"],
-    ["😱", "Edge of my seat", "scary suspense thriller"],
-    ["😂", "Laugh out loud", "funny and quirky"],
-    ["⚔️", "Epic adventure", "epic heroic adventure"],
-    ["💘", "Date night", "romantic date night"],
-    ["🚀", "Into space", "space sci-fi"],
+    ["moon", "Cozy night in", "cozy and heartwarming"],
+    ["infinity", "Mind-bending", "mind-bending with a twist"],
+    ["droplet", "Make me cry", "emotional, make me cry"],
+    ["zap", "Edge of my seat", "scary suspense thriller"],
+    ["smile", "Laugh out loud", "funny and quirky"],
+    ["mountain", "Epic adventure", "epic heroic adventure"],
+    ["heart", "Date night", "romantic date night"],
+    ["rocket", "Into space", "space sci-fi"],
   ];
   const GENRE_TITLES = {
     "Sci-Fi": "Mind-Expanding Sci-Fi", Comedy: "Feel-Good Comedies", Animation: "Animated Worlds",
@@ -82,7 +111,7 @@
 
   function fallbackHTML(m) {
     const [c1, c2] = m.palette || ["#1f1f1f", "#7f1d1d"];
-    return `<div class="fallback" style="--c1:${c1};--c2:${c2}"><span class="emoji">${m.emoji || "🎬"}</span><b>${esc(m.title)}</b></div>`;
+    return `<div class="fallback" style="--c1:${c1};--c2:${c2}"><span class="emoji">${icon("film")}</span><b>${esc(m.title)}</b></div>`;
   }
   function imgHTML(m, cls = "") {
     return m.poster
@@ -94,7 +123,7 @@
     return rec && personalised() ? `<span class="match">${rec.match}% Match</span>` : "";
   }
   function metaHTML(m) {
-    return `${matchHTML(m)}<span>${m.year}</span><span>★ ${m.rating}</span><span class="hd">HD</span>`;
+    return `${matchHTML(m)}<span>${m.year}</span><span class="rating">${icon("star")}${m.rating}</span><span class="hd">HD</span>`;
   }
 
   // ---------- tiles & rows ----------
@@ -103,7 +132,7 @@
     return `
       <div class="tile ${fresh ? "fresh" : ""} ${state.disliked.has(m.id) ? "noped" : ""}" data-id="${m.id}" tabindex="0" role="button" aria-label="${esc(m.title)}" style="--i:${i}">
         ${imgHTML(m)}
-        ${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">♥</span>` : ""}
+        ${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">${icon("heart")}</span>` : ""}
         ${showMatch && rec && personalised() ? `<span class="badge-match">${rec.match}%</span>` : ""}
         ${isNew ? `<span class="badge-new">NEW PICK</span>` : ""}
       </div>`;
@@ -113,7 +142,7 @@
     return `
       <div class="tile" data-id="${m.id}" tabindex="0" role="button" aria-label="Number ${rank}: ${esc(m.title)}">
         <div class="rank" aria-hidden="true">${rank}</div>
-        <div class="poster-box">${imgHTML(m)}${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">♥</span>` : ""}</div>
+        <div class="poster-box">${imgHTML(m)}${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">${icon("heart")}</span>` : ""}</div>
       </div>`;
   }
 
@@ -131,9 +160,9 @@
           ${row.sub ? `<span class="row-sub">${row.sub}</span>` : ""}
         </div>
         <div class="row-wrap">
-          <button class="arrow left" data-scroll="-1" aria-label="Scroll left"><span>‹</span></button>
+          <button class="arrow left" data-scroll="-1" aria-label="Scroll left">${icon("chevronLeft")}</button>
           <div class="scroller">${tiles}</div>
-          <button class="arrow right" data-scroll="1" aria-label="Scroll right"><span>›</span></button>
+          <button class="arrow right" data-scroll="1" aria-label="Scroll right">${icon("chevronRight")}</button>
         </div>
       </section>`;
   }
@@ -148,8 +177,8 @@
         m.title.toLowerCase().includes(q) || m.tags.some((t) => t.includes(q)) || m.genres.some((g) => g.toLowerCase().includes(q)));
       rows.push({
         key: "search", title: `Results for “${esc(state.query)}”`, items: hits.slice(0, ROW_LIMIT),
-        sub: "Press Enter to conjure films that <i>feel</i> like this ✦",
-        empty: "No titles match. Press Enter and I'll search by mood instead ✦",
+        sub: "Press Enter to conjure films that <i>feel</i> like this",
+        empty: "No titles match. Press Enter and I'll search by mood instead.",
       });
     }
 
@@ -160,8 +189,8 @@
     }[state.mode];
     rows.push({
       key: "picks", title: pickTitle, items: state.scored.slice(0, 14), showMatch: true, freshIds,
-      sub: state.mode === "personal" ? "Re-ranked live from every ♥ and ✕" : state.mode === "popular" ? "♥ a few titles to make this yours" : "",
-      empty: "Nothing matched that mood. Try different words ✦",
+      sub: state.mode === "personal" ? "Re-ranked live from every like and pass" : state.mode === "popular" ? "Like a few titles to make this yours" : "",
+      empty: "Nothing matched that mood. Try different words.",
     });
 
     const myList = [...state.liked].reverse().map(byId).filter(Boolean);
@@ -208,8 +237,8 @@
     const n = state.liked.size;
     $("#onboard").innerHTML = n >= 3 ? "" : `
       <div class="onboard">
-        <b>✦ ${["Love 3 titles to unlock your Taste DNA", "Great start! Love 2 more…", "One more ♥ and the magic kicks in…"][n]}</b>
-        <span>Hover any poster and tap ♥, or press <kbd>L</kbd> on a focused title.</span>
+        <b>${["Love 3 titles to unlock your Taste DNA", "Great start! Love 2 more…", "One more like and your profile unlocks…"][n]}</b>
+        <span>Hover any poster and tap the heart, or press <kbd>L</kbd> on a focused title.</span>
         <div class="steps">${[0, 1, 2].map((i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</div>
       </div>`;
   }
@@ -217,8 +246,8 @@
   function renderMoods() {
     const known = MOODS.some(([, , q]) => q === state.mood);
     $("#moods").innerHTML =
-      MOODS.map(([emo, label, q]) => `<button class="mood ${q === state.mood ? "active" : ""}" data-mood="${esc(q)}">${emo} ${esc(label)}</button>`).join("") +
-      (state.mood && !known ? `<button class="mood active" data-mood="${esc(state.mood)}">✦ ${esc(state.mood)} ✕</button>` : "");
+      MOODS.map(([emo, label, q]) => `<button class="mood ${q === state.mood ? "active" : ""}" data-mood="${esc(q)}">${icon(emo)}<span>${esc(label)}</span></button>`).join("") +
+      (state.mood && !known ? `<button class="mood active" data-mood="${esc(state.mood)}">${icon("search")}<span>${esc(state.mood)}</span>${icon("x")}</button>` : "");
   }
 
   // ---------- billboard ----------
@@ -262,8 +291,8 @@
 
     const kicker = {
       popular: `<b>#${i + 1}</b> Trending tonight`,
-      mood: `<b>✦</b> Conjured for “${esc(state.mood)}”`,
-      personal: `<b>✦ ${i + 1}</b> Top pick for you`,
+      mood: `<b>For</b> “${esc(state.mood)}”`,
+      personal: `<b>#${i + 1}</b> Top pick for you`,
     }[state.mode];
     const reason = rec?.because ? `Because you loved <b>&nbsp;${esc(rec.because.title)}</b>` : state.mode === "mood" && rec ? esc(rec.reason) : "";
     const content = $("#bbContent");
@@ -276,10 +305,10 @@
         ${reason ? `<p class="bb-reason">${reason}</p>` : ""}
       </div>
       <div class="bb-actions">
-        ${m.trailer ? `<button class="btn btn-white" data-trailer="${m.id}">▶&nbsp; Play Trailer</button>` : ""}
-        <button class="btn ${m.trailer ? "btn-grey" : "btn-white"}" data-open="${m.id}">ⓘ&nbsp; More Info</button>
-        <button class="btn btn-grey" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">♥&nbsp; Love it</button>
-        <button class="btn btn-grey" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me">✕</button>
+        ${m.trailer ? `<button class="btn btn-white" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
+        <button class="btn ${m.trailer ? "btn-grey" : "btn-white"}" data-open="${m.id}">${icon("info")}More Info</button>
+        <button class="btn btn-grey" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it</button>
+        <button class="btn btn-grey" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me">${icon("x")}</button>
       </div>`;
     content.classList.remove("bb-anim");
     void content.offsetWidth;
@@ -314,16 +343,16 @@
       </div>
       <div class="pv-body">
         <div class="pv-actions">
-          ${m.trailer ? `<button class="circle solid" data-trailer="${m.id}" aria-label="Play trailer" title="Play trailer">▶</button>`
-            : `<button class="circle solid" data-open="${m.id}" aria-label="More info" title="More info">ⓘ</button>`}
-          <button class="circle love" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}" aria-label="Love it" title="Love it (L)">♥</button>
-          <button class="circle nope" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me" title="Not for me (D)">✕</button>
-          <button class="circle more" data-open="${m.id}" aria-label="Details" title="Details">⌄</button>
+          ${m.trailer ? `<button class="circle solid" data-trailer="${m.id}" aria-label="Play trailer" title="Play trailer">${icon("play")}</button>`
+            : `<button class="circle solid" data-open="${m.id}" aria-label="More info" title="More info">${icon("info")}</button>`}
+          <button class="circle love" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}" aria-label="Love it" title="Love it (L)">${icon("heart")}</button>
+          <button class="circle nope" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me" title="Not for me (D)">${icon("x")}</button>
+          <button class="circle more" data-open="${m.id}" aria-label="Details" title="Details">${icon("chevronDown")}</button>
         </div>
         <div class="meta" style="font-size:.85rem">${metaHTML(m)}</div>
         <div class="pv-genres">${m.genres.map((g) => `<span>${esc(g)}</span>`).join("")}</div>
-        ${rec?.because ? `<p class="pv-reason">✦ Because you loved <b>${esc(rec.because.title)}</b></p>`
-          : rec?.shared?.length && personalised() ? `<p class="pv-reason">✦ ${rec.shared.map((t) => esc(prettyTag(t))).join(" · ")}</p>` : ""}
+        ${rec?.because ? `<p class="pv-reason">Because you loved <b>${esc(rec.because.title)}</b></p>`
+          : rec?.shared?.length && personalised() ? `<p class="pv-reason">${rec.shared.map((t) => esc(prettyTag(t))).join(" · ")}</p>` : ""}
       </div>`;
     pv.setAttribute("aria-hidden", "false");
     previewTile = tile;
@@ -362,14 +391,14 @@
     const taste = state.taste || { genres: [], tags: [], confidence: 0 };
     const pct = Math.round(taste.confidence * 100);
     const top = taste.genres.slice(0, 2).map((g) => g.name.toLowerCase());
-    const hint = n === 0 ? "Love a few titles and I'll map your taste." : n < 3 ? `${3 - n} more ♥ to unlock your full profile.` : `You're drawn to ${top.join(" & ")}.`;
+    const hint = n === 0 ? "Love a few titles and I'll map your taste." : n < 3 ? `${3 - n} more likes to unlock your full profile.` : `You're drawn to ${top.join(" & ")}.`;
     const pick = (id, cls) => {
       const m = byId(id);
-      return m ? `<div class="pick ${cls}" title="${esc(m.title)}">${imgHTML(m)}<button data-remove="${id}" aria-label="Remove ${esc(m.title)}">✕</button></div>` : "";
+      return m ? `<div class="pick ${cls}" title="${esc(m.title)}">${imgHTML(m)}<button data-remove="${id}" aria-label="Remove ${esc(m.title)}">${icon("x")}</button></div>` : "";
     };
     $("#drawer").innerHTML = `
-      <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">✕</button>
-      <h2>Your Taste DNA ${n >= 3 ? "✨" : "🧬"}</h2>
+      <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">${icon("x")}</button>
+      <h2>Your Taste DNA</h2>
       <p class="hint">${hint}</p>
       <div class="meter-row"><span>Taste confidence</span><span>${pct}%</span></div>
       <div class="meter-track"><div class="meter-fill" data-w="${pct}"></div></div>
@@ -383,15 +412,16 @@
       <div class="pick-list">${[...state.liked].reverse().map((id) => pick(id, "")).join("") || `<p class="empty" style="grid-column:1/-1">No loved titles yet.</p>`}</div>
       ${state.disliked.size ? `<h3>Not for me · ${state.disliked.size}</h3><div class="pick-list">${[...state.disliked].map((id) => pick(id, "nope")).join("")}</div>` : ""}
       <div class="drawer-foot">
-        <button class="btn btn-grey btn-sm" id="resetBtn">↺ Start over</button>
-        <button class="btn btn-white btn-sm" data-how>🔮 How it works</button>
+        <button class="btn btn-grey btn-sm" id="resetBtn">${icon("reset")}Start over</button>
+        <button class="btn btn-white btn-sm" data-how>${icon("help")}How it works</button>
       </div>`;
     if ($("#drawer").classList.contains("open")) animateBars($("#drawer"));
     $("#avatarRing").style.strokeDashoffset = RING * (1 - taste.confidence);
   }
 
   function animateBars(root) {
-    nextFrame(() => $$("[data-w]", root).forEach((el) => (el.style.width = `${el.dataset.w}%`)));
+    void root.offsetWidth; // commit the 0-width state so the width transition runs
+    $$("[data-w]", root).forEach((el) => (el.style.width = `${el.dataset.w}%`));
   }
   function toggleDrawer(open) {
     hidePreview();
@@ -428,10 +458,10 @@
         renderRows(fresh);
         setBillboardItems(state.scored.slice(0, 5));
         renderDrawer();
-        if (announce && fresh) toast(fresh.size ? `✦ Taste updated: ${fresh.size} new pick${fresh.size > 1 ? "s" : ""} for you` : "✦ Taste updated: picks re-ranked");
+        if (announce && fresh) toast(fresh.size ? `Taste updated: ${fresh.size} new pick${fresh.size > 1 ? "s" : ""} for you` : "Taste updated: picks re-ranked");
       } catch (err) {
         console.error(err);
-        toast("⚠️ Couldn't reach the recommender. Is the server running?");
+        toast("Couldn't reach the recommender. Is the server running?");
       }
     }, immediate ? 0 : 150);
   }
@@ -445,8 +475,8 @@
     adding ? set.add(id) : set.delete(id);
     save();
     syncStates();
-    if (adding && origin) burst(origin, kind === "love" ? ["❤️", "♥", "✦", "💖"] : ["💨", "·", "✕"]);
-    if (adding && kind === "love" && state.liked.size === 3) toast("🔓 Taste DNA unlocked. Open 🧬 to see your profile.");
+    if (adding && origin) burst(origin, kind === "love" ? "love" : "nope");
+    if (adding && kind === "love" && state.liked.size === 3) toast("Taste DNA unlocked. Open your profile to see it.");
     if (adding && kind === "nope") toast(`Got it. Fewer films like ${byId(id).title}.`);
     refresh({ announce: true });
   }
@@ -460,14 +490,20 @@
     $$(".tile[data-id]").forEach((t) => t.classList.toggle("noped", state.disliked.has(Number(t.dataset.id))));
   }
 
-  function burst(el, glyphs) {
+  const PARTICLES = {
+    love: [icon("heart", "p-red"), icon("heart", "p-white"), '<i class="dot red"></i>'],
+    nope: ['<i class="dot"></i>'],
+    spark: [icon("star", "p-white"), '<i class="dot white"></i>'],
+  };
+  function burst(el, kind) {
+    const glyphs = PARTICLES[kind];
     if (reducedMotion) return;
     const r = el.getBoundingClientRect();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     for (let i = 0; i < 14; i++) {
       const p = document.createElement("span");
       p.className = "particle";
-      p.textContent = glyphs[i % glyphs.length];
+      p.innerHTML = glyphs[i % glyphs.length];
       p.style.left = `${cx}px`;
       p.style.top = `${cy}px`;
       document.body.appendChild(p);
@@ -495,8 +531,8 @@
     state.query = "";
     hidePreview();
     if (state.mood) {
-      if (origin) burst(origin, ["✨", "✦", "⭐", "🪄"]);
-      toast(`🪄 Conjuring films for “${state.mood}”…`);
+      if (origin) burst(origin, "spark");
+      toast(`Finding films for “${state.mood}”…`);
     }
     renderMoods();
     refresh({ immediate: true });
@@ -507,7 +543,7 @@
   let modalMovieId = null;
   function openModal(html) {
     hidePreview();
-    $("#modalBody").innerHTML = `<button class="m-close" data-close aria-label="Close">✕</button>${html}`;
+    $("#modalBody").innerHTML = `<button class="m-close" data-close aria-label="Close">${icon("x")}</button>${html}`;
     $("#modal").classList.add("open");
     $("#modal").scrollTop = 0;
     document.body.style.overflow = "hidden";
@@ -532,8 +568,8 @@
       <div class="trailer-bar">
         <div><b>${esc(m.title)}</b> <span class="meta" style="display:inline-flex;margin-left:8px">${metaHTML(m)}</span></div>
         <div class="bb-actions" style="margin:0">
-          <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">♥&nbsp; Love it</button>
-          <button class="btn btn-white btn-sm" data-open="${m.id}">ⓘ&nbsp; Details</button>
+          <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it</button>
+          <button class="btn btn-white btn-sm" data-open="${m.id}">${icon("info")}Details</button>
         </div>
       </div>`);
   }
@@ -564,9 +600,9 @@
           <h2 id="modalTitle">${esc(m.title)}</h2>
           ${m.tagline ? `<p class="tagline">${esc(m.tagline)}</p>` : ""}
           <div class="bb-actions" style="margin-top:0">
-            ${m.trailer ? `<button class="btn btn-white btn-sm" data-trailer="${m.id}">▶&nbsp; Play Trailer</button>` : ""}
-            <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">♥&nbsp; Love it <kbd>L</kbd></button>
-            <button class="btn btn-grey btn-sm" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}">✕&nbsp; Not for me <kbd>D</kbd></button>
+            ${m.trailer ? `<button class="btn btn-white btn-sm" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
+            <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it <kbd>L</kbd></button>
+            <button class="btn btn-grey btn-sm" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}">${icon("x")}Not for me <kbd>D</kbd></button>
           </div>
         </div>
       </div>
@@ -594,13 +630,13 @@
       if (modalMovieId !== id) return;
       $("#similarGrid").innerHTML = sims.map((s, i) => {
         const r = state.recMap.get(s.id);
-        const label = state.liked.has(s.id) ? "♥ In My List" : r && personalised() ? `${r.match}% Match` : `★ ${s.rating}`;
+        const label = state.liked.has(s.id) ? `${icon("heart")}In My List` : r && personalised() ? `${r.match}% Match` : `${icon("star")}${s.rating}`;
         return `
           <article class="like-card" data-sim="${s.id}" style="--i:${i}" tabindex="0">
             <div class="lc-img">${s.backdrop ? `<img src="${esc(s.backdrop.replace("/w1280/", "/w500/"))}" alt="" loading="lazy">` : imgHTML(s)}</div>
             <div class="lc-body">
               <div class="lc-top"><span class="match">${label}</span>
-                <button class="circle love" data-act="love" data-id="${s.id}" aria-pressed="${state.liked.has(s.id)}" aria-label="Love ${esc(s.title)}">♥</button></div>
+                <button class="circle love" data-act="love" data-id="${s.id}" aria-pressed="${state.liked.has(s.id)}" aria-label="Love ${esc(s.title)}">${icon("heart")}</button></div>
               <div class="lc-title">${esc(s.title)}</div>
               <div>${s.year} · ${s.genres.slice(0, 2).map(esc).join(", ")}</div>
             </div>
@@ -619,14 +655,14 @@
     const graph = meta?.collab_source === "tmdb-graph";
     openModal(`
       <div class="how">
-        <h2 id="modalTitle">How the magic works 🔮</h2>
-        <p>Cinemagic is a <b>hybrid recommender</b>. Every time you tap ♥ or ✕, three signals are blended and re-ranked in a few milliseconds.</p>
+        <h2 id="modalTitle">How the recommendations work</h2>
+        <p>Cinemagic is a <b>hybrid recommender</b>. Every time you like or pass on a film, three signals are blended and re-ranked in a few milliseconds.</p>
         <div class="pipeline">
-          <div class="stage">🧬<b>Content · ${Math.round(w.content * 100)}%</b><p>TF-IDF vectors over genres, mood tags and plot. Your likes form a taste vector; cosine similarity finds neighbours.</p></div>
-          <div class="stage">👥<b>Collaborative · ${Math.round(w.collab * 100)}%</b><p>${graph
+          <div class="stage">${icon("tag")}<b>Content · ${Math.round(w.content * 100)}%</b><p>TF-IDF vectors over genres, mood tags and plot. Your likes form a taste vector; cosine similarity finds neighbours.</p></div>
+          <div class="stage">${icon("users")}<b>Collaborative · ${Math.round(w.collab * 100)}%</b><p>${graph
             ? `Item-item similarity over TMDB's audience-driven recommendation graph (${meta.graph_edges.toLocaleString()} links): films that share neighbours share fans.`
             : `Item-item adjusted-cosine similarity from ${meta ? meta.ratings.toLocaleString() : "thousands of"} ratings: "people who loved X also loved Y".`}</p></div>
-          <div class="stage">⭐<b>Quality · ${Math.round(w.quality * 100)}%</b><p>A vote-weighted rating nudges towards good, well-known films, then MMR re-ranking (λ=${meta?.mmr_lambda ?? 0.75}) keeps every row diverse.</p></div>
+          <div class="stage">${icon("star")}<b>Quality · ${Math.round(w.quality * 100)}%</b><p>A vote-weighted rating nudges towards good, well-known films, then MMR re-ranking (λ=${meta?.mmr_lambda ?? 0.75}) keeps every row diverse.</p></div>
         </div>
         ${meta ? `<div class="stats">
           <div class="stat"><b>${meta.movies}</b><span>films</span></div>
@@ -636,7 +672,7 @@
           <div class="stat"><b>${meta.vocabulary.toLocaleString()}</b><span>TF-IDF terms</span></div>
         </div>` : ""}
         ${graph ? `<p style="margin-top:18px;font-size:.85rem">Movie data, posters and trailers from <a href="https://www.themoviedb.org" target="_blank" rel="noopener" style="color:#01b4e4">TMDB</a>.</p>` : ""}
-        ${engine ? `<p style="margin-top:18px;font-size:.85rem">⚡ This build runs the recommender <b>entirely in your browser</b>: the model trained in Python is exported to JSON and scored by a JavaScript port of the same engine.</p>` : ""}
+        ${engine ? `<p style="margin-top:18px;font-size:.85rem">This build runs the recommender <b>entirely in your browser</b>: the model trained in Python is exported to JSON and scored by a JavaScript port of the same engine.</p>` : ""}
         <p style="margin-top:18px;font-size:.85rem">Search understands moods: type "make me cry" and press Enter. Shortcuts: <kbd>/</kbd> search · <kbd>L</kbd>/<kbd>D</kbd> love/pass a focused title · <kbd>Enter</kbd> details · <kbd>Esc</kbd> close.</p>
       </div>`);
   }
@@ -690,7 +726,7 @@
         state.liked.clear(); state.disliked.clear(); save();
         toggleDrawer(false);
         conjure("");
-        toast("↺ Fresh start. Tell me what you love.");
+        toast("Fresh start. Tell me what you love.");
         return;
       }
       if (t.closest("[data-how]")) return openHow();
