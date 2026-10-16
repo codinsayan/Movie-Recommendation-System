@@ -19,16 +19,20 @@ import recommender as rec  # noqa: E402
 DEFAULT_OUT = ROOT / "frontend" / "data" / "model.json"
 
 
+def sparse_rows(matrix) -> list[list[list[float]]]:
+    return [[[int(j), float(row[j])] for j in row.nonzero()[0]] for row in matrix]
+
+
 def build_model(engine: rec.Recommender) -> dict:
-    sparse_rows = [[[int(j), float(row[j])] for j in row.nonzero()[0]] for row in engine.X]
+    # Similarity matrices are n x n, so ship the sparse item vectors instead and
+    # let the browser compute X·Xᵀ and C·Cᵀ on load (milliseconds for ~500 films).
     return {
-        "version": 1,
+        "version": 2,
         "movies": engine.movies,
         "vocab": {t: int(i) for t, i in engine.vectorizer.vocabulary_.items()},
         "idf": engine.vectorizer.idf_.tolist(),
-        "X": sparse_rows,
-        "contentSim": engine.content_sim.tolist(),
-        "collabSim": engine.collab_sim.tolist(),
+        "X": sparse_rows(engine.X),
+        "C": sparse_rows(engine.C),
         "quality": engine.quality.tolist(),
         "meta": engine.meta(),
         "config": {

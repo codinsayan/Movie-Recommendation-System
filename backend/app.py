@@ -11,7 +11,7 @@ from recommender import load_default
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-app = FastAPI(title="Cinemagic Recommender", version="0.2.0")
+app = FastAPI(title="Cinemagic Recommender", version="0.3.0")
 engine = load_default()
 
 

@@ -75,3 +75,9 @@ def test_taste_profile(engine):
 def test_unknown_ids_are_ignored(engine):
     out = engine.recommend(liked=[9999], k=3)
     assert out["mode"] == "popular"
+
+
+def test_mood_keys_match_word_starts_only(engine):
+    # "war" must not fire inside "heartwarming"; "inspir" should still match "inspiring".
+    assert "world-war-ii" not in engine.expand_mood("cozy and heartwarming")
+    assert "inspirational" in engine.expand_mood("something inspiring")

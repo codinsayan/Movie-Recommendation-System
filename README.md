@@ -29,6 +29,24 @@ Run the tests:
 python -m pytest -q
 ```
 
+## Real-world catalogue (TMDB)
+
+Cinemagic can run on a real catalogue of about 450 of the most-voted films from [TMDB](https://www.themoviedb.org), with backdrops, trailers, cast, director and keywords:
+
+```bash
+cp .env.example .env          # then paste your TMDB API Read Access Token (or v3 API key)
+python scripts/build_tmdb_catalog.py      # writes backend/data/tmdb_movies.json (about 1-2 min)
+python run.py                              # serves the TMDB catalogue automatically
+```
+
+- Get a free key at https://www.themoviedb.org/settings/api. `.env` is git-ignored.
+- The snapshot `tmdb_movies.json` is committed, so the app, tests and GitHub Pages never need the key at runtime.
+- Collaborative filtering uses **TMDB's recommendation graph** (audience-driven "people also watched") instead of simulated ratings; quality uses an **IMDb-style vote-weighted rating**.
+- Switch catalogues with `CINEMAGIC_DATASET=curated` or `CINEMAGIC_DATASET=tmdb` (the default when the snapshot exists).
+- Options: `--pages 20` (×20 most-voted films), `--popular-pages 5`, `--min-votes 300`.
+
+> This product uses the TMDB API but is not endorsed or certified by TMDB.
+
 ## Deployment (GitHub Pages)
 
 GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
@@ -68,6 +86,7 @@ frontend/
   posters/            cached poster images (<id>.jpg)
 scripts/
   fetch_posters.py    downloads posters from Wikipedia (re-run to refresh)
+  build_tmdb_catalog.py  builds the real-world catalogue from the TMDB API
   export_static.py    exports the trained model to JSON for engine.js
 .github/workflows/
   pages.yml           test + export + deploy to GitHub Pages

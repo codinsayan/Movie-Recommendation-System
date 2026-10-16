@@ -7,6 +7,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
 
+## [0.3.0] - 2026-10-16 (Iteration 3: real-world data with TMDB)
+
+### Added
+- `scripts/build_tmdb_catalog.py`: builds a real catalogue (about 450 most-voted + currently popular films) from the TMDB API, with keywords, cast, director, runtime, tagline, poster, backdrop, YouTube trailer and TMDB recommendations. Reads `TMDB_READ_ACCESS_TOKEN` / `TMDB_API_KEY` from the environment or a git-ignored `.env` (`.env.example` provided). Retries on 429, certifi TLS.
+- **Graph-based collaborative filtering**: item vectors from TMDB's audience-driven recommendation graph (symmetrised, with self-loops); cosine = shared neighbourhood.
+- **Vote-weighted quality** (IMDb-style Bayesian average with the median vote count as prior).
+- Director and top cast as content features ("Because you loved Inception · christopher nolan").
+- Dataset switch: `CINEMAGIC_DATASET=tmdb|curated` (TMDB is the default when a snapshot exists).
+- UI: real backdrops in the billboard, hover previews, modal and "More Like This"; **▶ Play Trailer** (YouTube, privacy-enhanced) in the billboard, previews and modal; tagline, runtime, director and cast in the modal; TMDB attribution.
+- `tests/test_tmdb.py` (8 tests, offline): payload normalisation, slugs, trailer choice, graph CF, people explanations, weighted rating, and JS parity on a graph catalogue. `tests/conftest.py` pins the existing tests to the curated dataset.
+
+- **TMDB snapshot** `backend/data/tmdb_movies.json`: 447 films (1957–2026), 1,275 recommendation-graph links (avg. 5.7 neighbours), backdrops and trailers for all 447. 12/12 sampled trailer IDs verified against YouTube.
+- Mood synonyms now map everyday words onto TMDB keywords too (`sadness`, `loss-of-loved-one`, `haunted-house`, `psychological-thriller`, …) as well as genres, so mood search works on the real catalogue.
+
+### Changed (visual polish)
+- Replaced every emoji and Unicode symbol in the UI with one consistent inline-SVG line-icon set (24px grid, 2px round strokes): mood chips, buttons, badges, arrows, preview actions, drawer, "How it works", toasts and like-burst particles.
+- The profile avatar is now a circle centred inside its circular confidence ring (it was a square inside a circle).
+- New favicon (red rounded square with a white "C"); ratings use a gold star icon; copy no longer relies on glyphs ("like and pass" instead of ♥/✕).
+- Bar animations start with a forced reflow instead of `requestAnimationFrame`, so they also render in headless/background tabs.
+
+### Fixed
+- Mood keys matched as raw substrings, so "war" fired inside "heart**war**ming" (a cozy search returned *1917*). Keys now match only at the start of a word, in both Python and JS. A regression test was added.
+
+### Changed
+- Static model format v2 ships sparse item vectors (`X`, `C`); the browser computes the similarity matrices on load, keeping `model.json` small for large catalogues.
+- Ranking uses a stable sort, so tie order is deterministic and identical in Python and JS.
+- Genre and search rows are capped at 30 titles.
+
 ## [0.2.1] - 2026-10-16 (GitHub Pages deployment)
 
 ### Added

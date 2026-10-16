@@ -42,9 +42,27 @@ No real rating data is bundled, so `simulate_ratings()` generates a reproducible
 
 The result is about 7.3k ratings and about 80% sparsity, a realistic shape. Iteration 2 replaces this with MovieLens.
 
+### TMDB mode: the recommendation graph
+
+With the TMDB catalogue, **R** is replaced by TMDB's recommendation graph, which is built from real audience behaviour. For every film, TMDB lists the films its viewers also engage with; edges outside the catalogue are dropped. Then:
+
+```
+A = I + adjacency (symmetrised: i→j or j→i gives an edge)
+C = rows of A, L2-normalised
+collab_sim = C · Cᵀ      (cosine = overlap of audience neighbourhoods; direct links count via the self-loops)
+```
+
+The scoring formulas above stay the same; only the item vectors change.
+
 ## 3. Quality prior
 
-Critic rating min-max scaled to [0, 1]. It is a small nudge towards good films and breaks ties.
+The rating is min-max scaled to [0, 1]. It is a small nudge towards good films and breaks ties. When vote counts are available (TMDB), the rating is first shrunk towards the catalogue mean (IMDb-style Bayesian average):
+
+```
+WR = v/(v+m) · R + m/(v+m) · C      v = votes, R = average rating, C = mean rating, m = median votes
+```
+
+so a 9.5 with 10 votes cannot outrank an 8.5 with 100k votes.
 
 ## 4. Blending
 

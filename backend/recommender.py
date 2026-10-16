@@ -1,9 +1,10 @@
 """Hybrid movie recommender.
 
 Combines three signals into one score:
-  * content    - TF-IDF over genres, tags and overview (what the movie *is*)
-  * collab     - item-item collaborative filtering over a ratings matrix (what *people* co-enjoy)
-  * quality    - normalised critic rating (a gentle prior towards good movies)
+  * content    - TF-IDF over genres, tags, people and overview (what the movie *is*)
+  * collab     - item-item collaborative filtering (what *people* co-enjoy), learnt from either
+                 TMDB's audience-driven recommendation graph or a simulated ratings matrix
+  * quality    - vote-weighted rating (a gentle prior towards good, well-known movies)
 
 The final list is re-ranked with Maximal Marginal Relevance (MMR) so it stays diverse.
 See docs/ALGORITHM.md for the full write-up.
@@ -11,13 +12,17 @@ See docs/ALGORITHM.md for the full write-up.
 from __future__ import annotations
 
 import json
+import os
+import re
 from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 
-DATA_PATH = Path(__file__).parent / "data" / "movies.json"
+DATA_DIR = Path(__file__).parent / "data"
+DATASETS = {"curated": DATA_DIR / "movies.json", "tmdb": DATA_DIR / "tmdb_movies.json"}
+DATA_PATH = DATASETS["curated"]
 
 WEIGHTS = {"content": 0.55, "collab": 0.35, "quality": 0.10}
 MOOD_WEIGHTS = {"content": 0.80, "collab": 0.0, "quality": 0.20}
@@ -25,43 +30,57 @@ DISLIKE_PENALTY = 0.5
 MOOD_BOOST = 1.5
 MMR_LAMBDA = 0.75
 
-# Everyday words -> vocabulary the catalogue actually uses.
+# Everyday words -> vocabulary the catalogues actually use. Each key matches at the
+# start of a word ("inspir" -> inspiring, but "war" never fires inside "heartwarming").
+# Values mix curated tags, TMDB keywords and genre names; terms missing from the
+# active catalogue's vocabulary are simply ignored by TF-IDF.
 MOOD_SYNONYMS = {
-    "cozy": "cozy heartwarming feel-good whimsical",
-    "comfort": "cozy heartwarming feel-good",
-    "chill": "cozy quiet feel-good",
-    "funny": "comedy quirky witty fun",
-    "laugh": "comedy fun witty",
-    "comedy": "comedy fun",
-    "scary": "horror scary suspense",
-    "spooky": "horror scary supernatural",
-    "horror": "horror scary",
-    "cry": "emotional bittersweet drama",
-    "sad": "emotional bittersweet drama",
-    "emotional": "emotional heartwarming",
-    "romantic": "romance love",
-    "love": "romance love",
-    "date": "romance feel-good witty",
-    "mind": "mind-bending cerebral twist",
-    "smart": "cerebral clever",
-    "think": "cerebral mind-bending",
-    "twist": "twist psychological",
-    "action": "action adrenaline",
-    "exciting": "adrenaline action thriller",
-    "thrill": "thriller suspense",
-    "epic": "epic adventure heroic",
-    "space": "space sci-fi",
-    "future": "sci-fi cyberpunk ai",
-    "dark": "dark gritty",
-    "kid": "family animation",
-    "family": "family animation heartwarming",
-    "inspir": "uplifting inspiring mentor",
-    "motivat": "uplifting inspiring ambition",
-    "magic": "magical fantasy whimsical",
-    "music": "music musical",
-    "history": "history true-story",
-    "true": "true-story",
-    "war": "war intense",
+    "cozy": "cozy heartwarming feel-good whimsical family animation comedy friendship kindness joyful cheerful playful holiday",
+    "cosy": "cozy heartwarming feel-good family animation comedy friendship kindness joyful",
+    "comfort": "cozy heartwarming feel-good family comedy friendship kindness",
+    "chill": "cozy quiet feel-good comedy friendship",
+    "wholesome": "heartwarming feel-good family friendship kindness",
+    "funny": "comedy quirky witty fun amused dark-comedy absurd parody playful",
+    "laugh": "comedy fun witty amused parody spoof absurd",
+    "comedy": "comedy fun amused",
+    "scary": "horror scary suspense suspenseful demon ghost haunted-house supernatural slasher",
+    "scare": "horror scary suspense demon ghost haunted-house supernatural",
+    "spooky": "horror scary supernatural ghost haunted-house demon halloween witch curse",
+    "horror": "horror scary demon ghost slasher",
+    "cry": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one dying-and-death grief sentimental",
+    "sad": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one dying-and-death grief",
+    "tear": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one",
+    "emotional": "emotional heartwarming drama sadness melancholy sentimental loss-of-loved-one",
+    "romantic": "romance love romantic falling-in-love first-love love-of-one-s-life love-triangle",
+    "romance": "romance love romantic falling-in-love love-of-one-s-life",
+    "love": "romance love romantic love-of-one-s-life",
+    "date": "romance feel-good witty romantic love comedy",
+    "mind": "mind-bending cerebral twist psychological-thriller nonlinear-timeline dreams time-travel",
+    "smart": "cerebral clever psychological-thriller investigation",
+    "think": "cerebral mind-bending psychological-thriller dreams",
+    "twist": "twist psychological psychological-thriller nonlinear-timeline",
+    "action": "action adrenaline fight martial-arts",
+    "exciting": "adrenaline action thriller excited suspenseful race-against-time",
+    "thrill": "thriller suspense suspenseful psychological-thriller intense",
+    "epic": "epic adventure heroic quest battle fantasy",
+    "hero": "superhero heroic hero super-power",
+    "superhero": "superhero based-on-comic super-power",
+    "space": "space sci-fi space-travel spacecraft alien space-opera",
+    "future": "sci-fi cyberpunk ai future futuristic dystopia artificial-intelligence-a-i android",
+    "dark": "dark gritty dark-comedy psychopath serial-killer",
+    "kid": "family animation cartoon",
+    "family": "family animation heartwarming parent-child-relationship",
+    "inspir": "uplifting inspiring mentor inspirational admiring based-on-true-story",
+    "motivat": "uplifting inspiring ambition inspirational",
+    "magic": "magical fantasy whimsical magic witch fairy-tale school-of-witchcraft",
+    "music": "music musical singer dance",
+    "history": "history true-story based-on-true-story historical-fiction period-drama biography",
+    "true": "true-story based-on-true-story biography",
+    "war": "war intense world-war-ii army battle",
+    "heist": "heist robbery con-artist caper",
+    "revenge": "revenge vigilante assassin",
+    "christmas": "holiday christmas family",
+    "zombie": "zombie post-apocalyptic-future survival horror",
     "anime": "animation japanese",
     "classic": "classic iconic",
 }
@@ -70,7 +89,35 @@ TOKEN_PATTERN = r"(?u)\b[a-z0-9][a-z0-9\-]+\b"
 
 
 def _tokens(movie: dict) -> set[str]:
-    return {g.lower() for g in movie["genres"]} | set(movie["tags"])
+    return {g.lower() for g in movie["genres"]} | set(movie["tags"]) | set(movie.get("people", []))
+
+
+def weighted_rating(movies: list[dict]) -> np.ndarray:
+    """IMDb-style Bayesian rating: shrink films with few votes towards the mean."""
+    r = np.array([m["rating"] for m in movies], dtype=float)
+    if not all("votes" in m for m in movies):
+        return r
+    v = np.array([m["votes"] for m in movies], dtype=float)
+    prior = float(np.median(v))
+    return v / (v + prior) * r + prior / (v + prior) * r.mean()
+
+
+def graph_vectors(movies: list[dict]) -> tuple[np.ndarray, int]:
+    """Item vectors from TMDB's recommendation graph.
+
+    A[i, j] = 1 when TMDB recommends j for i (or i for j), plus a self-loop so a
+    direct link also counts. Cosine between rows = how much two films share
+    their audience-driven neighbourhood.
+    """
+    index = {m["id"]: i for i, m in enumerate(movies)}
+    A = np.eye(len(movies))
+    for i, m in enumerate(movies):
+        for rec_id in m.get("tmdb_recs", []):
+            j = index.get(rec_id)
+            if j is not None and j != i:
+                A[i, j] = A[j, i] = 1.0
+    edges = int((A.sum() - len(movies)) // 2)
+    return normalize(A), edges
 
 
 def _minmax(x: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -118,7 +165,7 @@ class Recommender:
 
         # Content model: genres and tags count double, they are the strongest signal.
         docs = [
-            " ".join(m["genres"] * 2 + m["tags"] * 2).lower() + " " + m["overview"].lower()
+            " ".join(m["genres"] * 2 + m["tags"] * 2 + m.get("people", [])).lower() + " " + m["overview"].lower()
             for m in movies
         ]
         self.vectorizer = TfidfVectorizer(
@@ -128,18 +175,25 @@ class Recommender:
         self.content_sim = self.X @ self.X.T
         np.fill_diagonal(self.content_sim, 0)
 
-        # Collaborative model: adjusted-cosine item-item similarity.
-        self.ratings = simulate_ratings(movies) if ratings is None else ratings
-        watched = self.ratings > 0
-        counts = np.maximum(watched.sum(axis=1, keepdims=True), 1)
-        user_mean = self.ratings.sum(axis=1, keepdims=True) / counts
-        centered = np.where(watched, self.ratings - user_mean, 0.0)
-        items = normalize(centered.T)
-        self.collab_sim = items @ items.T
+        # Collaborative model: item vectors C whose cosine is the item-item similarity.
+        self.ratings = None
+        if ratings is None and all("tmdb_recs" in m for m in movies):
+            self.collab_source = "tmdb-graph"
+            self.C, self.graph_edges = graph_vectors(movies)
+        else:
+            # Adjusted cosine over a user x movie ratings matrix (simulated unless given).
+            self.collab_source = "ratings" if ratings is not None else "simulated"
+            self.ratings = simulate_ratings(movies) if ratings is None else ratings
+            watched = self.ratings > 0
+            counts = np.maximum(watched.sum(axis=1, keepdims=True), 1)
+            user_mean = self.ratings.sum(axis=1, keepdims=True) / counts
+            centered = np.where(watched, self.ratings - user_mean, 0.0)
+            self.C = normalize(centered.T)
+        self.collab_sim = self.C @ self.C.T
         np.fill_diagonal(self.collab_sim, 0)
 
-        r = np.array([m["rating"] for m in movies])
-        self.quality = (r - r.min()) / (r.max() - r.min())
+        r = weighted_rating(movies)
+        self.quality = (r - r.min()) / (r.max() - r.min()) if r.max() > r.min() else np.ones(n)
         self.n = n
 
     # ---------- helpers ----------
@@ -148,7 +202,7 @@ class Recommender:
 
     def expand_mood(self, mood: str) -> str:
         text = mood.lower()
-        extra = [v for k, v in MOOD_SYNONYMS.items() if k in text]
+        extra = [v for k, v in MOOD_SYNONYMS.items() if re.search(rf"(?<![a-z]){re.escape(k)}", text)]
         return " ".join([text, *extra])
 
     def _mood_terms(self, mood: str) -> set[str]:
@@ -213,7 +267,7 @@ class Recommender:
             # Hard relevance floor so a mood search never returns unrelated films.
             candidates &= content > 0.05
 
-        ranked = [int(i) for i in np.argsort(-score) if candidates[i]][: k * 3]
+        ranked = [int(i) for i in np.argsort(-score, kind="stable") if candidates[i]][: k * 3]
         chosen = self._mmr(ranked, score, k) if mode != "popular" else ranked[:k]
 
         mood_terms = self._mood_terms(mood) if mood else set()
@@ -268,7 +322,7 @@ class Recommender:
             raise KeyError(movie_id)
         i = self.by_id[movie_id]
         sim = 0.6 * self.content_sim[i] + 0.4 * self.collab_sim[i]
-        order = [int(j) for j in np.argsort(-sim) if j != i][:k]
+        order = [int(j) for j in np.argsort(-sim, kind="stable") if j != i][:k]
         base = _tokens(self.movies[i])
         return [
             self._card(j, similarity=round(float(sim[j]), 4), shared=sorted(_tokens(self.movies[j]) & base)[:4])
@@ -276,19 +330,38 @@ class Recommender:
         ]
 
     def meta(self) -> dict:
-        watched = self.ratings > 0
-        return {
+        info = {
             "movies": self.n,
-            "simulated_users": int(self.ratings.shape[0]),
-            "ratings": int(watched.sum()),
-            "sparsity": round(1 - float(watched.mean()), 3),
+            "collab_source": self.collab_source,
             "vocabulary": len(self.vectorizer.vocabulary_),
             "weights": WEIGHTS,
             "mmr_lambda": MMR_LAMBDA,
             "genres": sorted({g for m in self.movies for g in m["genres"]}),
         }
+        if self.ratings is not None:
+            watched = self.ratings > 0
+            info.update(
+                simulated_users=int(self.ratings.shape[0]),
+                ratings=int(watched.sum()),
+                sparsity=round(1 - float(watched.mean()), 3),
+            )
+        else:
+            info.update(graph_edges=self.graph_edges, avg_degree=round(2 * self.graph_edges / self.n, 1))
+        return info
+
+
+def dataset_name() -> str:
+    """CINEMAGIC_DATASET wins; otherwise TMDB when a snapshot exists, else the curated 60."""
+    name = os.environ.get("CINEMAGIC_DATASET", "").strip().lower()
+    if name in DATASETS:
+        return name
+    return "tmdb" if DATASETS["tmdb"].exists() else "curated"
+
+
+def load_dataset(name: str) -> Recommender:
+    with open(DATASETS[name], encoding="utf-8") as f:
+        return Recommender(json.load(f))
 
 
 def load_default() -> Recommender:
-    with open(DATA_PATH, encoding="utf-8") as f:
-        return Recommender(json.load(f))
+    return load_dataset(dataset_name())

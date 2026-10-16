@@ -22,6 +22,22 @@
     const r = Math.round(x);
     return Math.abs(x % 1) === 0.5 && r % 2 !== 0 ? r - 1 : r;
   }
+  /** Gram matrix S = R·Rᵀ of sparse rows ([[col, val], ...]) with a zero diagonal. */
+  function gram(rows) {
+    const n = rows.length;
+    const postings = new Map();
+    rows.forEach((row, i) => row.forEach(([j, v]) => {
+      if (!postings.has(j)) postings.set(j, []);
+      postings.get(j).push([i, v]);
+    }));
+    return rows.map((row, i) => {
+      const out = new Float64Array(n);
+      for (const [j, v] of row) for (const [k, w] of postings.get(j)) out[k] += v * w;
+      out[i] = 0;
+      return out;
+    });
+  }
+
   const round = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
   const argmaxFirst = (arr) => arr.reduce((best, v, i) => (v > arr[best] ? i : best), 0);
   const sortedStrings = (set) => [...set].sort();
@@ -32,14 +48,14 @@
       this.vocab = model.vocab;
       this.idf = model.idf;
       this.X = model.X;
-      this.contentSim = model.contentSim;
-      this.collabSim = model.collabSim;
+      this.contentSim = gram(model.X);
+      this.collabSim = gram(model.C);
       this.quality = model.quality;
       this.metaInfo = model.meta;
       this.cfg = model.config;
       this.n = this.movies.length;
       this.byId = new Map(this.movies.map((m, i) => [m.id, i]));
-      this.tokenSets = this.movies.map((m) => new Set([...m.genres.map((g) => g.toLowerCase()), ...m.tags]));
+      this.tokenSets = this.movies.map((m) => new Set([...m.genres.map((g) => g.toLowerCase()), ...m.tags, ...(m.people || [])]));
     }
 
     static async load(url) {
@@ -60,7 +76,8 @@
 
     expandMood(mood) {
       const text = mood.toLowerCase();
-      const extra = Object.entries(this.cfg.moodSynonyms).filter(([k]) => text.includes(k)).map(([, v]) => v);
+      // keys match at the start of a word, exactly like the Python engine
+      const extra = Object.entries(this.cfg.moodSynonyms).filter(([k]) => new RegExp(`(?<![a-z])${k}`).test(text)).map(([, v]) => v);
       return [text, ...extra].join(" ");
     }
 
