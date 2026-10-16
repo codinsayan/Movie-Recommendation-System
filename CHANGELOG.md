@@ -3,7 +3,11 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer](https://semver.org/).
 
-## [Unreleased] (branch `feature/tmdb`, Iteration 3: real-world data)
+## [Unreleased]
+
+Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
+
+## [0.3.0] - 2026-10-16 (Iteration 3: real-world data with TMDB)
 
 ### Added
 - `scripts/build_tmdb_catalog.py`: builds a real catalogue (about 450 most-voted + currently popular films) from the TMDB API, with keywords, cast, director, runtime, tagline, poster, backdrop, YouTube trailer and TMDB recommendations. Reads `TMDB_READ_ACCESS_TOKEN` / `TMDB_API_KEY` from the environment or a git-ignored `.env` (`.env.example` provided). Retries on 429, certifi TLS.

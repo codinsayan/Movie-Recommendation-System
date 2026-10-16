@@ -38,7 +38,7 @@ Each iteration ships something demoable. Status: ✅ done · 🔄 in progress ·
 
 **Demo script:** open the app → hover a poster and tap ♥ on 3 sci-fi films → watch the billboard, "NEW PICK" badges and "Because you loved…" rows update → open 🧬 My Taste → search "make me cry" + Enter.
 
-## Iteration 3: Real-world data with TMDB 🔄 (v0.3.0, branch `feature/tmdb`)
+## Iteration 3: Real-world data with TMDB ✅ (v0.3.0)
 
 **Goal:** credibility. Real films, real audience signal, real trailers.
 
@@ -52,7 +52,7 @@ Each iteration ships something demoable. Status: ✅ done · 🔄 in progress ·
 - [ ] Tune MMR for mood searches (diversity occasionally pulls in loose matches)
 - [ ] Optional: live TMDB search to love films outside the snapshot
 - [ ] Optional: MovieLens ratings as a second collaborative signal
-- [ ] Merge to `main` and redeploy GitHub Pages
+- [x] Merge to `main` and redeploy GitHub Pages
 
 ## Iteration 4: Measure it ⏳ (v0.4.0)
 
