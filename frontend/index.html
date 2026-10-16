@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cinemagic</title>
+  <meta name="description" content="A hybrid movie recommender that learns your taste in seconds." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav" id="nav">
+    <a class="logo" href="#top" aria-label="Cinemagic home">CINEMAGIC</a>
+    <ul class="nav-links">
+      <li><a href="#top" class="active">Home</a></li>
+      <li><a href="#row-picks">Top Picks</a></li>
+      <li><a href="#row-top10">Top 10</a></li>
+      <li><a href="#row-mylist">My List</a></li>
+    </ul>
+    <div class="nav-right">
+      <form class="search" id="searchForm" autocomplete="off" role="search">
+        <button type="button" class="icon-btn" id="searchToggle" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <input id="searchInput" type="text" maxlength="200" placeholder="Titles, or a mood… press Enter ✦" aria-label="Search titles or describe a mood" />
+      </form>
+      <button class="icon-btn" id="howBtn" aria-label="How it works" title="How it works">🔮</button>
+      <button class="avatar" id="tasteBtn" aria-label="Open my taste profile" title="My Taste">
+        <svg class="avatar-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" /><circle class="fill" id="avatarRing" cx="20" cy="20" r="18" /></svg>
+        <span>🧬</span>
+      </button>
+    </div>
+  </nav>
+
+  <header class="billboard" id="top">
+    <div class="bb-bg" id="bbBg" aria-hidden="true"></div>
+    <div class="bb-shade" aria-hidden="true"></div>
+    <div class="bb-content" id="bbContent"></div>
+    <img class="bb-poster" id="bbPoster" alt="" hidden />
+    <div class="bb-dots" id="bbDots"></div>
+  </header>
+
+  <main class="rows" id="rows">
+    <section class="mood-strip" aria-label="Moods">
+      <span class="mood-label">✦ What's the mood tonight?</span>
+      <div class="moods" id="moods"></div>
+    </section>
+    <div id="onboard"></div>
+    <div id="rowList"></div>
+    <footer class="footer">
+      <p>Cinemagic is a hybrid recommender: content-based + collaborative filtering + MMR diversity.</p>
+      <p>Posters via Wikipedia, used for an educational project. Shortcuts: <kbd>/</kbd> search · <kbd>L</kbd>/<kbd>D</kbd> love/pass focused title · <kbd>Esc</kbd> close</p>
+    </footer>
+  </main>
+
+  <div class="preview" id="preview" role="dialog" aria-hidden="true"></div>
+
+  <aside class="drawer" id="drawer" aria-label="My taste profile" aria-hidden="true"></aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal" id="modalBody"></div>
+  </div>
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
