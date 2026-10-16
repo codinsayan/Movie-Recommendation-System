@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
 
+## [0.2.1] - 2026-10-16 (GitHub Pages deployment)
+
+### Added
+- Live static deployment at https://codinsayan.github.io/Movie-Recommendation-System/.
+- `frontend/engine.js`: a JavaScript port of the recommender (TF-IDF mood transform, hybrid blending, MMR, explanations, taste profile, similar movies) that answers the same `/api/*` paths in the browser.
+- `scripts/export_static.py`: exports the trained model to `frontend/data/model.json` (about 180 KB).
+- `tests/test_static_engine.py`: 11 parity tests checking that the JS and Python engines return identical picks, order, match %, reasons and taste profiles.
+- `.github/workflows/pages.yml`: test → export → deploy on every push to `main`.
+- "How it works" notes when the app is running fully in the browser.
+
+### Changed
+- The frontend uses the in-browser engine automatically on `*.github.io`, or when the API is unreachable.
+
 ## [0.2.0] - 2026-10-16 (Iteration 2: Netflix-style redesign)
 
 ### Added

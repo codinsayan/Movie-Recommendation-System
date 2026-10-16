@@ -12,6 +12,8 @@ Built as a college project to show the three classic recommender techniques work
 | **Collaborative filtering** | what *people* co-enjoy | item-item adjusted-cosine over a user × movie ratings matrix |
 | **Diversity re-ranking** | avoiding 10 near-identical picks | Maximal Marginal Relevance (MMR) |
 
+**Live demo:** https://codinsayan.github.io/Movie-Recommendation-System/
+
 ## Quick start
 
 ```bash
@@ -26,6 +28,18 @@ Run the tests:
 ```bash
 python -m pytest -q
 ```
+
+## Deployment (GitHub Pages)
+
+GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
+
+1. `scripts/export_static.py` exports the trained model (TF-IDF vectors, similarity matrices, vocabulary, config) to `frontend/data/model.json` (about 180 KB).
+2. `frontend/engine.js` is a JavaScript port of `backend/recommender.py` that answers the same `/api/*` paths. `tests/test_static_engine.py` checks it gives the same results as Python.
+3. `.github/workflows/pages.yml` runs the tests, exports the model and publishes `frontend/` on every push to `main`.
+
+The app uses the in-browser engine automatically on `*.github.io`, or whenever no API server can be reached. Locally, `python run.py` still uses the FastAPI backend.
+
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## Features
 
@@ -50,9 +64,13 @@ frontend/
   index.html          page shell (nav, billboard, rows, drawer, modal)
   styles.css          Netflix-style design system + animations
   app.js              state, API calls, rows, billboard, previews, modal
+  engine.js           in-browser port of the recommender (GitHub Pages)
   posters/            cached poster images (<id>.jpg)
 scripts/
   fetch_posters.py    downloads posters from Wikipedia (re-run to refresh)
+  export_static.py    exports the trained model to JSON for engine.js
+.github/workflows/
+  pages.yml           test + export + deploy to GitHub Pages
 tests/                engine + API tests (pytest)
 docs/                 architecture, algorithm, iteration plan
 run.py                one-command launcher

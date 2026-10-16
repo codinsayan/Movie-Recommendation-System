@@ -26,6 +26,15 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Static mode (GitHub Pages)
+
+```
+CI: pytest ─► export_static.py ─► frontend/data/model.json ─► Pages artifact
+Browser: app.js ─► api(path) ─► engine.js (same /api/* routes, no server)
+```
+
+`api()` sends requests to `CinemagicEngine.handle()` when the page is served from `*.github.io` or when the FastAPI server is unreachable. The engine works on the *exported* matrices instead of re-training, so the browser does only the per-request maths. Results are identical to Python (enforced by `tests/test_static_engine.py`).
+
 ## Design decisions
 
 | Decision | Why |
