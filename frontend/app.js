@@ -57,7 +57,15 @@
   }
 
   // ---------- helpers ----------
+  // On GitHub Pages there is no Python server: the same engine runs in the browser.
+  let engine = null;
+  const STATIC_HOST = location.hostname.endsWith("github.io");
+  async function useStaticEngine() {
+    engine = await CinemagicEngine.load("data/model.json");
+  }
+
   async function api(path, body) {
+    if (engine) return engine.handle(path, body);
     const res = await fetch(path, body
       ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
       : undefined);
@@ -588,6 +596,7 @@
           <div class="stat"><b>${(meta.sparsity * 100).toFixed(0)}%</b><span>matrix sparsity</span></div>
           <div class="stat"><b>${meta.vocabulary}</b><span>TF-IDF terms</span></div>
         </div>` : ""}
+        ${engine ? `<p style="margin-top:18px;font-size:.85rem">⚡ This build runs the recommender <b>entirely in your browser</b>: the model trained in Python is exported to JSON and scored by a JavaScript port of the same engine.</p>` : ""}
         <p style="margin-top:18px;font-size:.85rem">Search understands moods: type "make me cry" and press Enter. Shortcuts: <kbd>/</kbd> search · <kbd>L</kbd>/<kbd>D</kbd> love/pass a focused title · <kbd>Enter</kbd> details · <kbd>Esc</kbd> close.</p>
       </div>`);
   }
@@ -711,10 +720,16 @@
     renderMoods();
     $("#rowList").innerHTML = skeletonRows();
     try {
+      if (STATIC_HOST) await useStaticEngine();
       state.movies = await api("/api/movies");
     } catch {
-      $("#rowList").innerHTML = `<p class="empty" style="padding:0 4%">Couldn't reach the API. Start the server with <code>python run.py</code>.</p>`;
-      return;
+      try {
+        await useStaticEngine(); // no server reachable: fall back to the in-browser engine
+        state.movies = await api("/api/movies");
+      } catch {
+        $("#rowList").innerHTML = `<p class="empty" style="padding:0 4%">Couldn't load the recommender. Start the server with <code>python run.py</code>.</p>`;
+        return;
+      }
     }
     state.byId = new Map(state.movies.map((m) => [m.id, m]));
     renderOnboard();
