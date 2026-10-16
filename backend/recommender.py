@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import numpy as np
@@ -29,43 +30,57 @@ DISLIKE_PENALTY = 0.5
 MOOD_BOOST = 1.5
 MMR_LAMBDA = 0.75
 
-# Everyday words -> vocabulary the catalogue actually uses.
+# Everyday words -> vocabulary the catalogues actually use. Each key matches at the
+# start of a word ("inspir" -> inspiring, but "war" never fires inside "heartwarming").
+# Values mix curated tags, TMDB keywords and genre names; terms missing from the
+# active catalogue's vocabulary are simply ignored by TF-IDF.
 MOOD_SYNONYMS = {
-    "cozy": "cozy heartwarming feel-good whimsical",
-    "comfort": "cozy heartwarming feel-good",
-    "chill": "cozy quiet feel-good",
-    "funny": "comedy quirky witty fun",
-    "laugh": "comedy fun witty",
-    "comedy": "comedy fun",
-    "scary": "horror scary suspense",
-    "spooky": "horror scary supernatural",
-    "horror": "horror scary",
-    "cry": "emotional bittersweet drama",
-    "sad": "emotional bittersweet drama",
-    "emotional": "emotional heartwarming",
-    "romantic": "romance love",
-    "love": "romance love",
-    "date": "romance feel-good witty",
-    "mind": "mind-bending cerebral twist",
-    "smart": "cerebral clever",
-    "think": "cerebral mind-bending",
-    "twist": "twist psychological",
-    "action": "action adrenaline",
-    "exciting": "adrenaline action thriller",
-    "thrill": "thriller suspense",
-    "epic": "epic adventure heroic",
-    "space": "space sci-fi",
-    "future": "sci-fi cyberpunk ai",
-    "dark": "dark gritty",
-    "kid": "family animation",
-    "family": "family animation heartwarming",
-    "inspir": "uplifting inspiring mentor",
-    "motivat": "uplifting inspiring ambition",
-    "magic": "magical fantasy whimsical",
-    "music": "music musical",
-    "history": "history true-story",
-    "true": "true-story",
-    "war": "war intense",
+    "cozy": "cozy heartwarming feel-good whimsical family animation comedy friendship kindness joyful cheerful playful holiday",
+    "cosy": "cozy heartwarming feel-good family animation comedy friendship kindness joyful",
+    "comfort": "cozy heartwarming feel-good family comedy friendship kindness",
+    "chill": "cozy quiet feel-good comedy friendship",
+    "wholesome": "heartwarming feel-good family friendship kindness",
+    "funny": "comedy quirky witty fun amused dark-comedy absurd parody playful",
+    "laugh": "comedy fun witty amused parody spoof absurd",
+    "comedy": "comedy fun amused",
+    "scary": "horror scary suspense suspenseful demon ghost haunted-house supernatural slasher",
+    "scare": "horror scary suspense demon ghost haunted-house supernatural",
+    "spooky": "horror scary supernatural ghost haunted-house demon halloween witch curse",
+    "horror": "horror scary demon ghost slasher",
+    "cry": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one dying-and-death grief sentimental",
+    "sad": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one dying-and-death grief",
+    "tear": "emotional bittersweet drama sadness melancholy tragedy loss-of-loved-one",
+    "emotional": "emotional heartwarming drama sadness melancholy sentimental loss-of-loved-one",
+    "romantic": "romance love romantic falling-in-love first-love love-of-one-s-life love-triangle",
+    "romance": "romance love romantic falling-in-love love-of-one-s-life",
+    "love": "romance love romantic love-of-one-s-life",
+    "date": "romance feel-good witty romantic love comedy",
+    "mind": "mind-bending cerebral twist psychological-thriller nonlinear-timeline dreams time-travel",
+    "smart": "cerebral clever psychological-thriller investigation",
+    "think": "cerebral mind-bending psychological-thriller dreams",
+    "twist": "twist psychological psychological-thriller nonlinear-timeline",
+    "action": "action adrenaline fight martial-arts",
+    "exciting": "adrenaline action thriller excited suspenseful race-against-time",
+    "thrill": "thriller suspense suspenseful psychological-thriller intense",
+    "epic": "epic adventure heroic quest battle fantasy",
+    "hero": "superhero heroic hero super-power",
+    "superhero": "superhero based-on-comic super-power",
+    "space": "space sci-fi space-travel spacecraft alien space-opera",
+    "future": "sci-fi cyberpunk ai future futuristic dystopia artificial-intelligence-a-i android",
+    "dark": "dark gritty dark-comedy psychopath serial-killer",
+    "kid": "family animation cartoon",
+    "family": "family animation heartwarming parent-child-relationship",
+    "inspir": "uplifting inspiring mentor inspirational admiring based-on-true-story",
+    "motivat": "uplifting inspiring ambition inspirational",
+    "magic": "magical fantasy whimsical magic witch fairy-tale school-of-witchcraft",
+    "music": "music musical singer dance",
+    "history": "history true-story based-on-true-story historical-fiction period-drama biography",
+    "true": "true-story based-on-true-story biography",
+    "war": "war intense world-war-ii army battle",
+    "heist": "heist robbery con-artist caper",
+    "revenge": "revenge vigilante assassin",
+    "christmas": "holiday christmas family",
+    "zombie": "zombie post-apocalyptic-future survival horror",
     "anime": "animation japanese",
     "classic": "classic iconic",
 }
@@ -187,7 +202,7 @@ class Recommender:
 
     def expand_mood(self, mood: str) -> str:
         text = mood.lower()
-        extra = [v for k, v in MOOD_SYNONYMS.items() if k in text]
+        extra = [v for k, v in MOOD_SYNONYMS.items() if re.search(rf"(?<![a-z]){re.escape(k)}", text)]
         return " ".join([text, *extra])
 
     def _mood_terms(self, mood: str) -> set[str]:

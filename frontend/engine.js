@@ -76,7 +76,8 @@
 
     expandMood(mood) {
       const text = mood.toLowerCase();
-      const extra = Object.entries(this.cfg.moodSynonyms).filter(([k]) => text.includes(k)).map(([, v]) => v);
+      // keys match at the start of a word, exactly like the Python engine
+      const extra = Object.entries(this.cfg.moodSynonyms).filter(([k]) => new RegExp(`(?<![a-z])${k}`).test(text)).map(([, v]) => v);
       return [text, ...extra].join(" ");
     }
 

@@ -47,7 +47,9 @@ Each iteration ships something demoable. Status: ✅ done · 🔄 in progress ·
 - [x] Vote-weighted quality prior; director/cast as content features
 - [x] UI: backdrops, Play Trailer, cast/director/runtime, TMDB attribution
 - [x] Offline tests + JS parity for the graph engine; sparse static model
-- [ ] Build the snapshot with a real key and review recommendation quality
+- [x] Build the snapshot with a real key (447 films) and review recommendation quality
+- [x] Mood search tuned for TMDB keywords; substring-matching bug fixed
+- [ ] Tune MMR for mood searches (diversity occasionally pulls in loose matches)
 - [ ] Optional: live TMDB search to love films outside the snapshot
 - [ ] Optional: MovieLens ratings as a second collaborative signal
 - [ ] Merge to `main` and redeploy GitHub Pages
