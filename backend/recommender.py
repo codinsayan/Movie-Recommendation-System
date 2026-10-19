@@ -360,7 +360,13 @@ def dataset_name() -> str:
 
 def load_dataset(name: str) -> Recommender:
     with open(DATASETS[name], encoding="utf-8") as f:
-        return Recommender(json.load(f))
+        movies = json.load(f)
+    # A curated integer ID is not a TMDB ID. Preserve identity in both the API
+    # and static export so playback never resolves a different film by accident.
+    for movie in movies:
+        movie["source"] = name
+        movie["tmdb_id"] = movie["id"] if name == "tmdb" else movie.get("tmdb_id")
+    return Recommender(movies)
 
 
 def load_default() -> Recommender:

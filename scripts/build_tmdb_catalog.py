@@ -101,6 +101,8 @@ def normalize_movie(d: dict) -> dict | None:
     director = next((c["name"] for c in crew if c.get("job") == "Director"), None)
     return {
         "id": d["id"],
+        "source": "tmdb",
+        "tmdb_id": d["id"],
         "title": d["title"],
         "year": int(year),
         "genres": genres,
