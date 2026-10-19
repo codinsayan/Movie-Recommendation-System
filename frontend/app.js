@@ -4,7 +4,6 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const STORE_KEY = "cinemagic:v1";
   const ROTATE_MS = 8000;
   const RING = 2 * Math.PI * 18;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -72,19 +71,33 @@
     becauseRows: [],
   };
   const bb = { key: "", items: [], i: 0, timer: null };
+  let viewingStorage;
+  try { viewingStorage = window.localStorage; } catch { /* session-only viewing */ }
+  const viewing = new CinemagicViewingStore(viewingStorage);
+  const preferences = new CinemagicPreferenceStore(viewingStorage);
+  let preferenceSource = null;
+  let preferenceWarningShown = false;
+  const providers = CinemagicProviders;
+  const movieKey = (m) => providers.reference(m)?.key;
+  const canWatch = (m) => !!providers.reference(m)?.tmdbId && providers.list().length > 0;
+  const moviePlayer = new CinemagicMoviePlayer({ providers, viewing,
+    onChange: () => { if (state.movies.length) renderRows(); } });
 
   // ---------- persistence ----------
   function load() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-      state.liked = new Set(saved.liked || []);
-      state.disliked = new Set(saved.disliked || []);
-    } catch { /* storage unavailable: start fresh */ }
+    preferenceSource = state.movies[0]?.source === "tmdb" ? "tmdb" : "curated";
+    const saved = preferences.load(preferenceSource);
+    state.liked = new Set(saved.liked);
+    state.disliked = new Set(saved.disliked);
+    state.mood = saved.mood;
   }
   function save() {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ liked: [...state.liked], disliked: [...state.disliked] }));
-    } catch { /* ignore */ }
+    if (!preferenceSource) return;
+    const saved = preferences.save(preferenceSource, { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood });
+    if (!saved && !preferenceWarningShown) {
+      preferenceWarningShown = true;
+      toast("Your browser isn't allowing preferences to be saved. Changes will last for this session.");
+    }
   }
 
   // ---------- helpers ----------
@@ -196,6 +209,14 @@
     const myList = [...state.liked].reverse().map(byId).filter(Boolean);
     if (myList.length) rows.push({ key: "mylist", title: "My List", items: myList });
 
+    const savedMovies = new Map(state.movies.map((m) => [movieKey(m), m]));
+    const continuing = viewing.continueKeys().map((key) => savedMovies.get(key)).filter(Boolean);
+    if (continuing.length) rows.splice(q ? 1 : 0, 0, { key: "continue", title: "Continue Watching",
+      items: continuing, sub: "Open a movie to resume or start over" });
+    const watchlist = viewing.watchlistKeys().map((key) => savedMovies.get(key)).filter(Boolean);
+    rows.push({ key: "watchlist", title: "Watchlist", items: watchlist,
+      sub: "Saved for later, independently of your likes", empty: "Open a movie and choose Save to watchlist." });
+
     for (const { source, items } of state.becauseRows) {
       const list = items.filter((m) => !isSeen(m.id));
       if (source && list.length) rows.push({ key: `because-${source.id}`, title: `Because you loved ${esc(source.title)}`, items: list, showMatch: true });
@@ -305,7 +326,8 @@
         ${reason ? `<p class="bb-reason">${reason}</p>` : ""}
       </div>
       <div class="bb-actions">
-        ${m.trailer ? `<button class="btn btn-white" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
+        ${canWatch(m) ? `<button class="btn btn-white" data-watch="${m.id}">${icon("play")}Watch movie</button>` : ""}
+        ${m.trailer ? `<button class="btn ${canWatch(m) ? "btn-grey" : "btn-white"}" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
         <button class="btn ${m.trailer ? "btn-grey" : "btn-white"}" data-open="${m.id}">${icon("info")}More Info</button>
         <button class="btn btn-grey" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it</button>
         <button class="btn btn-grey" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me">${icon("x")}</button>
@@ -316,7 +338,7 @@
 
     $("#bbDots").innerHTML = bb.items.length > 1 ? bb.items.map((_, k) =>
       `<button class="bb-dot ${k === i ? "active" : ""} ${k < i ? "done" : ""}" data-bb="${k}" aria-label="Show pick ${k + 1}" style="--dur:${ROTATE_MS}ms"><i></i></button>`).join("") : "";
-    if (!reducedMotion && bb.items.length > 1) bb.timer = setTimeout(() => showBillboard((i + 1) % bb.items.length), ROTATE_MS);
+    if (!reducedMotion && bb.items.length > 1 && !$("#modal").classList.contains("open")) bb.timer = setTimeout(() => showBillboard((i + 1) % bb.items.length), ROTATE_MS);
   }
 
   // ---------- hover preview ----------
@@ -343,7 +365,7 @@
       </div>
       <div class="pv-body">
         <div class="pv-actions">
-          ${m.trailer ? `<button class="circle solid" data-trailer="${m.id}" aria-label="Play trailer" title="Play trailer">${icon("play")}</button>`
+          ${canWatch(m) ? `<button class="circle solid" data-watch="${m.id}" aria-label="Watch movie" title="Watch movie">${icon("play")}</button>` : m.trailer ? `<button class="circle solid" data-trailer="${m.id}" aria-label="Play trailer" title="Play trailer">${icon("play")}</button>`
             : `<button class="circle solid" data-open="${m.id}" aria-label="More info" title="More info">${icon("info")}</button>`}
           <button class="circle love" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}" aria-label="Love it" title="Love it (L)">${icon("heart")}</button>
           <button class="circle nope" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}" aria-label="Not for me" title="Not for me (D)">${icon("x")}</button>
@@ -399,6 +421,7 @@
     $("#drawer").innerHTML = `
       <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">${icon("x")}</button>
       <h2>Your Taste DNA</h2>
+      <p class="hint">${preferenceWarningShown ? "Session only: browser storage is unavailable." : "Saved in this browser. No account needed."}</p>
       <p class="hint">${hint}</p>
       <div class="meter-row"><span>Taste confidence</span><span>${pct}%</span></div>
       <div class="meter-track"><div class="meter-fill" data-w="${pct}"></div></div>
@@ -438,7 +461,7 @@
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(async () => {
       const seq = ++refreshSeq;
-      const recent = [...state.liked].slice(-2).reverse();
+      const recent = [...state.liked].filter((id) => state.byId.has(id)).slice(-2).reverse();
       try {
         const [out, ...sims] = await Promise.all([
           api("/api/recommend", { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100 }),
@@ -528,6 +551,7 @@
 
   function conjure(mood, origin) {
     state.mood = mood.trim();
+    save();
     state.query = "";
     hidePreview();
     if (state.mood) {
@@ -541,19 +565,69 @@
 
   // ---------- modal ----------
   let modalMovieId = null;
+  let modalFocus = null;
+  let modalFocusTimer = null;
+  let modalEpoch = 0;
+  let sourcePicker = null;
   function openModal(html) {
+    modalEpoch++;
     hidePreview();
+    sourcePicker?.destroy();
+    sourcePicker = null;
+    moviePlayer.close();
+    clearTimeout(bb.timer);
+    clearTimeout(modalFocusTimer);
+    if (!$("#modal").classList.contains("open")) modalFocus = document.activeElement;
+    $("#modalBody").classList.remove("has-player");
     $("#modalBody").innerHTML = `<button class="m-close" data-close aria-label="Close">${icon("x")}</button>${html}`;
     $("#modal").classList.add("open");
     $("#modal").scrollTop = 0;
     document.body.style.overflow = "hidden";
-    setTimeout(() => $("#modalBody .m-close")?.focus(), 60);
+    modalFocusTimer = setTimeout(() => $("#modalBody .m-close")?.focus(), 60);
   }
   function closeModal() {
+    modalEpoch++;
+    const closingMovieId = modalMovieId;
+    sourcePicker?.destroy();
+    sourcePicker = null;
+    moviePlayer.close();
+    clearTimeout(modalFocusTimer);
     $("#modal").classList.remove("open");
     document.body.style.overflow = "";
     modalMovieId = null;
     $("#modalBody iframe")?.remove(); // stop trailer playback
+    const focusTarget = modalFocus?.isConnected ? modalFocus : $(`.tile[data-id="${closingMovieId}"]`) || $("#searchToggle");
+    focusTarget?.focus();
+    if (!reducedMotion && bb.items.length > 1) bb.timer = setTimeout(() => showBillboard((bb.i + 1) % bb.items.length), ROTATE_MS);
+  }
+
+  function openWatch(id, startOver = false) {
+    const m = byId(id);
+    if (!canWatch(m)) return toast("Full-movie playback is unavailable for this title.");
+    modalMovieId = id;
+    const saved = viewing.progress(movieKey(m));
+    openModal(`
+      <section class="movie-player" aria-label="Movie player">
+        <div class="player-heading"><span class="player-kicker">NOW WATCHING</span>
+          <h2 id="modalTitle">${esc(m.title)}</h2><p>${esc(m.year)} · Choose another source whenever you need to.</p></div>
+        <div class="player-controls"><div class="source-picker" id="movieSourcePicker"></div><select id="movieSource" hidden aria-label="Source"></select>
+          <div class="player-actions"><button class="btn btn-grey btn-sm" id="movieRestart">${icon("reset")}Start over</button>
+          <button class="btn btn-grey btn-sm" data-watchlist="${m.id}" aria-pressed="${viewing.has(movieKey(m))}">${icon("film")}${viewing.has(movieKey(m)) ? "Saved to watchlist" : "Save to watchlist"}</button></div>
+        </div>
+        <p class="player-status" id="movieStatus" role="status" aria-live="polite"></p>
+        <div class="movie-frame" id="movieFrame"></div>
+        <div class="player-foot"><span>Playback is provided by the selected source. Press Play if your browser pauses it.</span>
+          <button class="btn btn-grey btn-sm" id="movieForget">Remove from history</button></div>
+      </section>`);
+    $("#modalBody").classList.add("has-player");
+    try {
+      moviePlayer.open(m, { host: $("#movieFrame"), select: $("#movieSource"), status: $("#movieStatus"),
+        restart: $("#movieRestart"), removeHistory: $("#movieForget") }, startOver);
+      sourcePicker = new CinemagicSourcePicker($("#movieSourcePicker"), $("#movieSource"));
+      if (saved.position > 10 && !startOver && !saved.completed) toast(`Resuming ${m.title}`);
+    } catch {
+      $("#movieStatus").textContent = "This movie could not be opened. Please choose another title.";
+    }
   }
 
   function openTrailer(id) {
@@ -600,7 +674,9 @@
           <h2 id="modalTitle">${esc(m.title)}</h2>
           ${m.tagline ? `<p class="tagline">${esc(m.tagline)}</p>` : ""}
           <div class="bb-actions" style="margin-top:0">
+            ${canWatch(m) ? `<button class="btn btn-white btn-sm" data-watch="${m.id}">${icon("play")}${viewing.progress(movieKey(m)).position > 10 && !viewing.progress(movieKey(m)).completed ? "Resume movie" : "Watch movie"}</button>` : `<span class="playback-unavailable">Full-movie playback unavailable for this catalogue entry.</span>`}
             ${m.trailer ? `<button class="btn btn-white btn-sm" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
+            <button class="btn btn-grey btn-sm" data-watchlist="${m.id}" aria-pressed="${viewing.has(movieKey(m))}">${viewing.has(movieKey(m)) ? "Saved to watchlist" : "Save to watchlist"}</button>
             <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it <kbd>L</kbd></button>
             <button class="btn btn-grey btn-sm" data-act="nope" data-id="${m.id}" aria-pressed="${state.disliked.has(m.id)}">${icon("x")}Not for me <kbd>D</kbd></button>
           </div>
@@ -621,13 +697,15 @@
         </div>
       </div>
       <div class="m-section">
+        ${viewing.progress(movieKey(m)).position > 0 ? `<div class="history-actions"><button class="btn btn-grey btn-sm" data-start-over="${m.id}">Start over</button><button class="btn btn-grey btn-sm" data-forget="${m.id}">Remove from history</button></div>` : ""}
         <h3>More Like This</h3>
         <div class="like-grid" id="similarGrid">${Array.from({ length: 6 }, () => `<div class="like-card skeleton" style="height:230px"></div>`).join("")}</div>
       </div>`);
     animateBars($("#modalBody"));
+    const detailEpoch = modalEpoch;
     try {
       const sims = await api(`/api/movies/${id}/similar?k=9`);
-      if (modalMovieId !== id) return;
+      if (modalMovieId !== id || modalEpoch !== detailEpoch) return;
       $("#similarGrid").innerHTML = sims.map((s, i) => {
         const r = state.recMap.get(s.id);
         const label = state.liked.has(s.id) ? `${icon("heart")}In My List` : r && personalised() ? `${r.match}% Match` : `${icon("star")}${s.rating}`;
@@ -643,7 +721,7 @@
           </article>`;
       }).join("");
     } catch {
-      $("#similarGrid").innerHTML = `<p class="empty">Couldn't load similar films.</p>`;
+      if (modalMovieId === id && modalEpoch === detailEpoch) $("#similarGrid").innerHTML = `<p class="empty">Couldn't load similar films.</p>`;
     }
   }
 
@@ -730,6 +808,21 @@
         return;
       }
       if (t.closest("[data-how]")) return openHow();
+      const watchlist = t.closest("[data-watchlist]");
+      if (watchlist) {
+        const m = byId(Number(watchlist.dataset.watchlist));
+        if (!m) return;
+        const saved = viewing.toggle(movieKey(m));
+        $$(`[data-watchlist="${m.id}"]`).forEach((button) => { button.setAttribute("aria-pressed", String(saved)); button.textContent = saved ? "Saved to watchlist" : "Save to watchlist"; });
+        renderRows();
+        return;
+      }
+      const forget = t.closest("[data-forget]");
+      if (forget) { const m = byId(Number(forget.dataset.forget)); viewing.removeProgress(movieKey(m)); renderRows(); return openMovie(m.id); }
+      const restart = t.closest("[data-start-over]");
+      if (restart) return openWatch(Number(restart.dataset.startOver), true);
+      const watch = t.closest("[data-watch]");
+      if (watch) { hidePreview(); return openWatch(Number(watch.dataset.watch)); }
       const trailer = t.closest("[data-trailer]");
       if (trailer) { hidePreview(); return openTrailer(Number(trailer.dataset.trailer)); }
       const open = t.closest("[data-open]");
@@ -767,7 +860,14 @@
         if ($("#drawer").classList.contains("open")) return toggleDrawer(false);
         return hidePreview();
       }
+      if (modalOpen && e.key === "Tab") {
+        const focusable = $$("button, select, input, iframe, a[href]", $("#modalBody")).filter((el) => !el.disabled && el.getClientRects().length);
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
       if (typing) return;
+      if (document.activeElement?.tagName === "SELECT" || document.activeElement?.getAttribute("role") === "combobox") return;
       const key = e.key.toLowerCase();
       if (e.key === "/" || ((e.ctrlKey || e.metaKey) && key === "k")) { e.preventDefault(); openSearch(); return; }
       if (modalOpen && modalMovieId && (key === "l" || key === "d")) {
@@ -783,6 +883,8 @@
     });
 
     addEventListener("scroll", () => $("#nav").classList.toggle("solid", scrollY > 40), { passive: true });
+    addEventListener("pagehide", () => moviePlayer.save());
+    document.addEventListener("visibilitychange", () => { if (document.hidden) moviePlayer.save(); });
   }
 
   function skeletonRows() {
@@ -793,7 +895,6 @@
   }
 
   async function boot() {
-    load();
     bindAll();
     renderMoods();
     $("#rowList").innerHTML = skeletonRows();
@@ -810,6 +911,8 @@
       }
     }
     state.byId = new Map(state.movies.map((m) => [m.id, m]));
+    load(); // Restore taste before the first recommendation request.
+    renderMoods();
     renderOnboard();
     renderDrawer();
     refresh({ immediate: true });

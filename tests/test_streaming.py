@@ -17,3 +17,40 @@ def test_dataset_identity_is_explicit():
     assert all(m["source"] == "curated" and m["tmdb_id"] is None for m in curated.movies)
     tmdb = load_dataset("tmdb")
     assert all(m["source"] == "tmdb" and m["tmdb_id"] == m["id"] for m in tmdb.movies)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_player_and_viewing_contracts():
+    proc = subprocess.run(
+        [shutil.which("node"), str(ROOT / "tests/js/test_streaming.cjs")],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_restored_preferences_reproduce_recommendations(tmp_path):
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from export_static import export
+
+    model = export(tmp_path / "model.json")
+    script = """
+const assert = require('node:assert/strict');
+const Engine = require(process.argv[1]);
+const Preferences = require(process.argv[2]);
+const engine = new Engine(require(process.argv[3]));
+const saved = new Map();
+const storage = {getItem: key => saved.get(key), setItem: (key, value) => saved.set(key, value)};
+const before = {liked: [1,2], disliked: [45], mood: 'space'};
+new Preferences(storage).save('curated', before);
+const restored = new Preferences(storage).load('curated');
+const recommend = p => engine.recommend(p.liked, p.disliked, p.mood, 12);
+assert.deepEqual(recommend(restored), recommend(before));
+assert.equal(recommend(restored).mode, 'personal');
+"""
+    proc = subprocess.run(
+        [shutil.which("node"), "-e", script, str(ROOT / "frontend/engine.js"),
+         str(ROOT / "frontend/preferences.js"), str(model)],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
