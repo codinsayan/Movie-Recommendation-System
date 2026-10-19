@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+- S4 live TMDB search with pagination, metadata-language selection, original/alternative titles, remote detail/player/watchlist support and explicit model membership.
+- Bounded SQLite search/detail cache with schema versioning, refresh timestamps, stale fallback and sanitized timeout/auth/rate-limit errors. Static/curated builds retain snapshot search.
+- Separate browser catalogue controller with debounce, cancellation, late-response rejection and saved remote metadata; discovery does not rebuild recommendation matrices.
+- Device-local recommendation profiles that persist likes, dislikes and mood, restore before the first recommendation request, migrate legacy likes once, and isolate TMDB/curated IDs. Existing watchlist and viewing-history storage remains independent.
+- Custom dark source menu with red selected states, SVG icons, keyboard navigation and outside-click dismissal.
+- Autoplay requests with position preservation on manual source changes and Start over; CineSrc also receives its documented play command when ready.
+- Movie player preview with CineSrc, VidLink and VidSrc adapters and viewer-controlled source selection; errors and timeouts never change providers automatically.
+- Standard cross-origin movie iframes without sandbox restrictions, as requested after VidLink and VidSrc rejected sandboxed playback. Origin/window validation of player messages remains enabled.
+- Browser-local resume positions, preferred source, Continue Watching, Start over, history removal and a separate Watchlist.
+- Explicit catalogue origin/TMDB IDs in the API and static export, preventing curated ID collisions during playback.
+- Offline tests for provider message validation, one-frame cleanup, manual switching and progress persistence.
+- S1-S6 streaming roadmap and a live-playback validation record. The user confirms the sources work after the iframe compatibility change; autoplay, resume and full UI verification remain pending.
+
 Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
 
 ## [0.3.0] - 2026-10-16 (Iteration 3: real-world data with TMDB)

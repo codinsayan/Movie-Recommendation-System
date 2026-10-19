@@ -1,5 +1,19 @@
 # Architecture
 
+## S4 discovery alongside the recommendation snapshot
+
+The model still owns a bounded catalogue. `backend/catalog.py` performs live TMDB title search and detail lookup separately; `frontend/catalogue.js` holds discovered metadata without adding it to the model's similarity matrices.
+
+`/api/capabilities` advertises live search without exposing credentials. `/api/search` accepts a bounded title query, page 1–500 and metadata language. `/api/movies/{id}` uses canonical TMDB movie IDs and reports `in_model`. The pre-existing similar/recommend routes continue to use the active model catalogue.
+
+Runtime metadata is cached in git-ignored SQLite storage with schema version 1, refresh timestamps and a 5,000-entry bound. Search TTL is one hour; detail TTL is one day. Existing stale entries can be used during timeouts, rate limits or upstream failures. Errors are sanitized rather than including authenticated request URLs.
+
+The browser debounces and aborts title searches, rejects late responses by sequence, and merges paginated results by TMDB ID. Opening remote details uses a modal generation guard, so an older request cannot replace a newer movie or player. Selected metadata is saved in browser storage for remote Watchlist/Continue Watching cards after reload.
+
+Discovery metadata includes original title/language and, for full details, alternative titles. Metadata language does not select playback audio. TMDB documents [title search](https://developer.themoviedb.org/reference/search-movie) and [movie details](https://developer.themoviedb.org/reference/movie-details).
+
+Remote titles have no fabricated personalized score or local similar-title result before they are indexed. Their explicit likes can be saved, but the current model ignores unknown IDs; recent-like similarity requests are restricted to indexed IDs. Static/curated builds retain snapshot/saved-title search and do not route new discovery endpoints through the static engine.
+
 ## Overview
 
 ```

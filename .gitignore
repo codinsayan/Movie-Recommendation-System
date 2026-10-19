@@ -11,3 +11,6 @@ frontend/data/
 
 # secrets
 .env
+
+# Runtime discovery cache (contains no API credentials)
+backend/data/*.sqlite3*

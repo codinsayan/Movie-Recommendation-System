@@ -23,13 +23,43 @@ python run.py            # starts http://127.0.0.1:8000 and opens your browser
 
 Options: `python run.py --no-browser`, `python run.py --reload` (auto-reload while developing).
 
+## Movie playback preview
+
+On the TMDB catalogue, open a movie and choose **Watch movie**. The player offers **CineSrc**, **VidLink**, and **VidSrc** in a visible Source selector. Select another source yourself if playback fails; the app never switches providers automatically. Trailers remain available separately.
+
+Playback positions and your preferred source are saved in this browser when the player reports progress. **Continue Watching**, **Start over**, and a separate **Watchlist** are included. The custom Source menu supports arrow keys, Enter, Escape and outside-click dismissal. Manual source changes request autoplay at the saved position; Start over also requests playback. Browser restrictions or provider behavior may still require pressing Play again.
+
+The curated catalogue needs explicit TMDB mappings before full-film playback can be offered; its local numeric IDs are not sent to streaming providers. The same playback modules are included in the static export.
+
+This is a local implementation preview. The offline player tests pass, and the user has confirmed the sources work with standard cross-origin iframes without the sandbox attribute. Autoplay and the updated source menu still need live browser verification. See [playback validation](docs/streaming/PLAYBACK_VALIDATION.md) for evidence and remaining checks. S4 adds broader live metadata search; viewing-aware ranking remains S5 work.
+
 Run the tests:
 
 ```bash
 python -m pytest -q
 ```
 
+## Remembering this browser
+
+No login is needed to keep your taste. Likes, dislikes and the selected mood are saved in `localStorage` and restored before requesting recommendations. Watchlist, viewing progress and the preferred streaming source also stay in this browser. Refreshing or closing and reopening the browser does not intentionally clear them.
+
+Existing likes from `cinemagic:v1` are migrated once into the active catalogue. TMDB and curated catalogues then keep separate taste profiles so identical numeric IDs cannot change your preferences for unrelated films. Resetting taste does not clear your watchlist or viewing history.
+
+Use the same browser profile and site address when returning: `localhost:8000` and `127.0.0.1:8000` have separate browser storage, as does a deployed site. Clearing site data or ending a private-browsing session can remove saved preferences. If storage writes fail, the app reports that changes are session-only.
+
 ## Real-world catalogue (TMDB)
+
+### Live movie search (S4)
+
+The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Type a title, wait for results, and choose **Load more** for another page. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
+
+Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. Titles outside the trained model have no personalized match score or local similar-film recommendations yet; discovery does not enlarge the model.
+
+SQLite caches searches for one hour and details for one day, with stale fallback during upstream failures. The cache is bounded to 5,000 entries and git-ignored. Set `CINEMAGIC_CACHE_PATH` to change its location. Missing credentials or upstream failures leave snapshot browsing available.
+
+GitHub Pages and curated mode retain snapshot/saved-title search. Live search requires FastAPI with the TMDB dataset; curated IDs remain isolated from TMDB IDs.
+
+### Building the snapshot
 
 Cinemagic can run on a real catalogue of about 450 of the most-voted films from [TMDB](https://www.themoviedb.org), with backdrops, trailers, cast, director and keywords:
 
@@ -102,6 +132,9 @@ CHANGELOG.md
 |---|---|---|
 | `GET` | `/api/health` | liveness check |
 | `GET` | `/api/movies` | full catalogue |
+| `GET` | `/api/capabilities` | live-search configuration and snapshot origin; no credentials returned |
+| `GET` | `/api/search?q=...&page=1&language=en-US` | paginated TMDB discovery; pages 1–500 |
+| `GET` | `/api/movies/{id}?language=en-US` | canonical TMDB details, cache status and `in_model` membership |
 | `POST` | `/api/recommend` | body `{liked: int[], disliked: int[], mood?: string, k?: 1-100}` → `{mode, items[], taste}` |
 | `GET` | `/api/movies/{id}/similar?k=6` | most similar movies |
 | `GET` | `/api/meta` | dataset & model stats (used by "How it works") |
@@ -113,6 +146,8 @@ Interactive API docs are at `http://127.0.0.1:8000/docs`.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system design and request flow
 - [docs/ALGORITHM.md](docs/ALGORITHM.md): the maths behind the recommendations
 - [docs/ITERATIONS.md](docs/ITERATIONS.md): roadmap, iteration by iteration
+- [docs/streaming/README.md](docs/streaming/README.md): phased movie playback upgrade with manual source selection
+- [docs/STREAMING_PROVIDERS.md](docs/STREAMING_PROVIDERS.md): provider research and verification status
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version
 
 ## A note on the data

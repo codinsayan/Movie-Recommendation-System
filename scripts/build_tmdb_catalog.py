@@ -104,6 +104,9 @@ def normalize_movie(d: dict) -> dict | None:
         "source": "tmdb",
         "tmdb_id": d["id"],
         "title": d["title"],
+        "original_title": d.get("original_title") or d["title"],
+        "original_language": d.get("original_language") or "",
+        "alternative_titles": [t["title"] for t in (d.get("alternative_titles") or {}).get("titles", []) if t.get("title")],
         "year": int(year),
         "genres": genres,
         "tags": [k for k in keywords if k],
@@ -141,7 +144,7 @@ def build(pages: int, popular_pages: int, min_votes: int) -> list[dict]:
     print(f"Fetching details for {len(ids)} movies…")
     movies = []
     for n, mid in enumerate(ids, 1):
-        detail = tmdb.get(f"/movie/{mid}", append_to_response="keywords,credits,videos,recommendations", language="en-US")
+        detail = tmdb.get(f"/movie/{mid}", append_to_response="keywords,credits,videos,recommendations,alternative_titles", language="en-US")
         movie = normalize_movie(detail)
         if movie and movie["votes"] >= min_votes and movie["genres"]:
             movies.append(movie)

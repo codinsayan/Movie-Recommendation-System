@@ -339,6 +339,11 @@ kbd { font-family: inherit; font-size: 0.72rem; padding: 1px 6px; border: 1px so
 .like-card .lc-title { color: #fff; font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
 
 /* movie playback: source selection remains outside the third-party frame */
+.catalogue-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px var(--gutter) 0; font-size: .8rem; color: var(--muted); }
+.catalogue-controls select { color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font: inherit; }
+.catalogue-controls span { flex: 1; min-width: 180px; }
+.catalogue-controls button:disabled { opacity: .6; cursor: wait; }
+.catalogue-note { color: var(--muted); font-size: .85rem; margin-top: 12px; }
 .modal.has-player { width: min(1100px, 100%); }
 .player-heading { padding: 30px 28px 16px; }
 .player-kicker { color: #ff6b73; font-size: .7rem; letter-spacing: .18em; font-weight: 700; }

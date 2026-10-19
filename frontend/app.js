@@ -77,6 +77,7 @@
   const preferences = new CinemagicPreferenceStore(viewingStorage);
   let preferenceSource = null;
   let preferenceWarningShown = false;
+  let catalogue = null;
   const providers = CinemagicProviders;
   const movieKey = (m) => providers.reference(m)?.key;
   const canWatch = (m) => !!providers.reference(m)?.tmdbId && providers.list().length > 0;
@@ -117,7 +118,7 @@
     return res.json();
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const byId = (id) => state.byId.get(id);
+  const byId = (id) => catalogue?.get(id) || state.byId.get(id);
   const isSeen = (id) => state.liked.has(id) || state.disliked.has(id);
   const nextFrame = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
   const personalised = () => state.mode !== "popular";
@@ -136,7 +137,7 @@
     return rec && personalised() ? `<span class="match">${rec.match}% Match</span>` : "";
   }
   function metaHTML(m) {
-    return `${matchHTML(m)}<span>${m.year}</span><span class="rating">${icon("star")}${m.rating}</span><span class="hd">HD</span>`;
+    return `${matchHTML(m)}<span>${m.year || "Year unknown"}</span><span class="rating">${icon("star")}${m.rating || "Not rated"}</span>`;
   }
 
   // ---------- tiles & rows ----------
@@ -177,7 +178,17 @@
           <div class="scroller">${tiles}</div>
           <button class="arrow right" data-scroll="1" aria-label="Scroll right">${icon("chevronRight")}</button>
         </div>
+        ${row.key === "search" ? searchControlsHTML() : ""}
       </section>`;
+  }
+
+  function searchControlsHTML() {
+    const remote = catalogue?.state;
+    const live = catalogue?.live;
+    const language = catalogue?.language || "en-US";
+    const languages = [["en-US", "English"], ["hi-IN", "Hindi"], ["ta-IN", "Tamil"], ["te-IN", "Telugu"], ["ja-JP", "Japanese"], ["ko-KR", "Korean"], ["fr-FR", "French"], ["es-ES", "Spanish"]];
+    const status = remote?.error || (remote?.loading ? "Searching movies…" : remote?.stale ? "Showing cached results; live search is temporarily unavailable." : live ? `Page ${remote?.page || 1} · Movie details language does not change playback audio` : "Downloaded catalogue only · Live search is available in the configured backend app");
+    return `<div class="catalogue-controls">${live ? `<label for="catalogueLanguage">Details language</label><select id="catalogueLanguage">${languages.map(([code, label]) => `<option value="${code}" ${code === language ? "selected" : ""}>${label}</option>`).join("")}</select>` : ""}<span role="status">${esc(status)}</span>${live && remote?.page < remote?.totalPages ? `<button class="btn btn-grey btn-sm" data-search-more ${remote.loading ? "disabled" : ""}>${remote.loading ? "Loading…" : "Load more"}</button>` : ""}${remote?.error ? `<button class="btn btn-grey btn-sm" data-search-retry>Retry search</button>` : ""}</div>`;
   }
 
   function buildRows(freshIds) {
@@ -186,12 +197,14 @@
     const notDisliked = (m) => !state.disliked.has(m.id);
 
     if (q) {
-      const hits = state.movies.filter((m) =>
-        m.title.toLowerCase().includes(q) || m.tags.some((t) => t.includes(q)) || m.genres.some((g) => g.toLowerCase().includes(q)));
+      const local = [...state.movies, ...(catalogue?.savedMovies() || [])].filter((m) =>
+        [m.title, m.original_title, ...(m.alternative_titles || []), ...m.tags, ...m.genres].some((text) => String(text || "").toLowerCase().includes(q)));
+      const remote = catalogue?.state;
+      const hits = catalogue?.live && remote?.query.toLowerCase() === q && !remote.error ? remote.items : [...new Map([...(remote?.items || []), ...local].map((movie) => [movie.id, movie])).values()];
       rows.push({
-        key: "search", title: `Results for “${esc(state.query)}”`, items: hits.slice(0, ROW_LIMIT),
+        key: "search", title: `Results for “${esc(state.query)}”`, items: catalogue?.live ? hits : hits.slice(0, ROW_LIMIT),
         sub: "Press Enter to conjure films that <i>feel</i> like this",
-        empty: "No titles match. Press Enter and I'll search by mood instead.",
+        empty: remote?.loading ? "Searching movies…" : "No titles match. Press Enter to search by mood instead.",
       });
     }
 
@@ -209,7 +222,7 @@
     const myList = [...state.liked].reverse().map(byId).filter(Boolean);
     if (myList.length) rows.push({ key: "mylist", title: "My List", items: myList });
 
-    const savedMovies = new Map(state.movies.map((m) => [movieKey(m), m]));
+    const savedMovies = new Map([...state.movies, ...(catalogue?.savedMovies() || [])].map((m) => [movieKey(m), m]));
     const continuing = viewing.continueKeys().map((key) => savedMovies.get(key)).filter(Boolean);
     if (continuing.length) rows.splice(q ? 1 : 0, 0, { key: "continue", title: "Continue Watching",
       items: continuing, sub: "Open a movie to resume or start over" });
@@ -244,6 +257,7 @@
   }
 
   function renderRows(freshIds = null) {
+    const restoreLanguageFocus = document.activeElement?.id === "catalogueLanguage";
     const list = $("#rowList");
     const prevKeys = new Set($$(".row", list).map((r) => r.dataset.row));
     const scroll = new Map($$(".row", list).map((r) => [r.dataset.row, $(".scroller", r).scrollLeft]));
@@ -252,6 +266,7 @@
       const left = scroll.get(r.dataset.row);
       if (left) $(".scroller", r).scrollLeft = left;
     });
+    if (restoreLanguageFocus) $("#catalogueLanguage")?.focus();
   }
 
   function renderOnboard() {
@@ -497,6 +512,7 @@
     other.delete(id);
     adding ? set.add(id) : set.delete(id);
     save();
+    catalogue?.remember(byId(id));
     syncStates();
     if (adding && origin) burst(origin, kind === "love" ? "love" : "nope");
     if (adding && kind === "love" && state.liked.size === 3) toast("Taste DNA unlocked. Open your profile to see it.");
@@ -553,6 +569,7 @@
     state.mood = mood.trim();
     save();
     state.query = "";
+    catalogue?.setQuery("");
     hidePreview();
     if (state.mood) {
       if (origin) burst(origin, "spark");
@@ -604,6 +621,7 @@
   function openWatch(id, startOver = false) {
     const m = byId(id);
     if (!canWatch(m)) return toast("Full-movie playback is unavailable for this title.");
+    catalogue?.remember(m);
     modalMovieId = id;
     const saved = viewing.progress(movieKey(m));
     openModal(`
@@ -652,10 +670,19 @@
   const prettyTag = (t) => (t === "sci-fi" ? t : t.replace(/-/g, " "));
 
   async function openMovie(id) {
-    const m = byId(id);
+    let m = byId(id);
     if (!m) return;
     modalMovieId = id;
-    const rec = state.recMap.get(id);
+    let detailsUnavailable = false;
+    if (catalogue?.live && (!state.byId.has(id) || catalogue.get(id)) && !m.full_details) {
+      openModal(`<div class="how"><h2 id="modalTitle">${esc(m.title)}</h2><p role="status">Loading movie details…</p></div>`);
+      const epoch = modalEpoch;
+      try { m = await catalogue.details(id); }
+      catch { detailsUnavailable = true; }
+      if (modalEpoch !== epoch || modalMovieId !== id) return;
+    }
+    catalogue?.remember(m);
+    const rec = state.byId.has(id) ? state.recMap.get(id) : null;
     const share = (k) => (rec ? rec.breakdown[k] / Math.max(rec.score, 0.001) : 0);
     const why = rec && personalised() ? `
       <div class="why">
@@ -686,6 +713,9 @@
         <div>
           <div class="meta">${metaHTML(m)}${m.runtime ? `<span>${runtimeText(m.runtime)}</span>` : ""}</div>
           <p class="overview">${esc(m.overview)}</p>
+          ${m.original_title && m.original_title !== m.title ? `<p class="catalogue-note">Original title: ${esc(m.original_title)}</p>` : ""}
+          ${m.original_language ? `<p class="catalogue-note">Original language: ${esc(m.original_language)}</p>` : ""}
+          ${detailsUnavailable ? `<p class="catalogue-note">Full details are temporarily unavailable. Showing saved information.</p>` : ""}
           ${why}
         </div>
         <div class="m-side">
@@ -702,6 +732,10 @@
         <div class="like-grid" id="similarGrid">${Array.from({ length: 6 }, () => `<div class="like-card skeleton" style="height:230px"></div>`).join("")}</div>
       </div>`);
     animateBars($("#modalBody"));
+    if (!state.byId.has(id)) {
+      $("#similarGrid").innerHTML = `<p class="empty">Similar recommendations aren't available for this title yet. You can still watch it or save it for later.</p>`;
+      return;
+    }
     const detailEpoch = modalEpoch;
     try {
       const sims = await api(`/api/movies/${id}/similar?k=9`);
@@ -764,11 +798,12 @@
       const had = !!state.query;
       state.query = input.value.trim();
       hidePreview();
+      catalogue?.setQuery(state.query);
       renderRows();
       if (state.query && !had) scrollTo({ top: $("#rows").offsetTop - 80, behavior: reducedMotion ? "auto" : "smooth" });
     });
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { input.value = ""; state.query = ""; renderRows(); input.blur(); form.classList.remove("open"); }
+      if (e.key === "Escape") { input.value = ""; state.query = ""; catalogue?.setQuery(""); renderRows(); input.blur(); form.classList.remove("open"); }
     });
     input.addEventListener("blur", () => { if (!input.value) form.classList.remove("open"); });
     form.addEventListener("submit", (e) => {
@@ -784,6 +819,9 @@
   function bindAll() {
     const openSearch = bindSearch();
     bindPreview();
+    document.addEventListener("change", (event) => {
+      if (event.target.id === "catalogueLanguage") catalogue?.setQuery(state.query, event.target.value);
+    });
 
     // Swap broken posters for the generated gradient fallback.
     document.addEventListener("error", (e) => {
@@ -796,6 +834,8 @@
 
     document.addEventListener("click", (e) => {
       const t = e.target;
+      if (t.closest("[data-search-more]")) return catalogue?.more();
+      if (t.closest("[data-search-retry]")) return catalogue?.setQuery(state.query);
       const act = t.closest("[data-act]");
       if (act) { e.stopPropagation(); setTaste(Number(act.dataset.id), act.dataset.act, act); return; }
       if (t.closest("[data-close]") || t.id === "modal") return closeModal();
@@ -812,6 +852,7 @@
       if (watchlist) {
         const m = byId(Number(watchlist.dataset.watchlist));
         if (!m) return;
+        catalogue?.remember(m);
         const saved = viewing.toggle(movieKey(m));
         $$(`[data-watchlist="${m.id}"]`).forEach((button) => { button.setAttribute("aria-pressed", String(saved)); button.textContent = saved ? "Saved to watchlist" : "Save to watchlist"; });
         renderRows();
@@ -911,11 +952,13 @@
       }
     }
     state.byId = new Map(state.movies.map((m) => [m.id, m]));
+    catalogue = new CinemagicCatalogueBrowser(state.movies, { storage: viewingStorage, onChange: () => renderRows() });
     load(); // Restore taste before the first recommendation request.
     renderMoods();
     renderOnboard();
     renderDrawer();
     refresh({ immediate: true });
+    catalogue.configure(!engine).then(() => { if (state.query) catalogue.setQuery(state.query); });
   }
 
   boot();

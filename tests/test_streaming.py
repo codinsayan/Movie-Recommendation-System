@@ -29,6 +29,15 @@ def test_player_and_viewing_contracts():
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_catalogue_browser_contracts():
+    proc = subprocess.run(
+        [shutil.which("node"), str(ROOT / "tests/js/test_catalogue.cjs")],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_restored_preferences_reproduce_recommendations(tmp_path):
     sys.path.insert(0, str(ROOT / "scripts"))
     from export_static import export
