@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ## [Unreleased]
 
 ### Added
+- S5 opt-in viewing-aware recommendations with measured unique watch intervals, capped repeat-session influence, ?Because you watched? rows and matching Python/browser scoring.
+- Device-local recent-playback filtering with a seven-day TTL, provider-specific failure invalidation and eligibility applied before top-k/MMR.
+- Browser history-schema migration without inferring watch time from resume positions; clearing history preserves explicit taste and Watchlist.
+- Bounded snapshot refresh with a 500-film budget and optional prioritized TMDB IDs; no model expansion was performed.
+- Reproducible viewing-signal evaluation, model/runtime measurements and curated/TMDB parity tests; 97 tests pass; one informal relevance review is recorded, with broader relevance/browser acceptance pending.
 - S4 live TMDB search with pagination, metadata-language selection, original/alternative titles, remote detail/player/watchlist support and explicit model membership.
 - Bounded SQLite search/detail cache with schema versioning, refresh timestamps, stale fallback and sanitized timeout/auth/rate-limit errors. Static/curated builds retain snapshot search.
 - Separate browser catalogue controller with debounce, cancellation, late-response rejection and saved remote metadata; discovery does not rebuild recommendation matrices.

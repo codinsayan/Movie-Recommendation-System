@@ -137,10 +137,22 @@ def collect_ids(tmdb: TMDB, pages: int, popular_pages: int, min_votes: int) -> l
     return list(ids)
 
 
-def build(pages: int, popular_pages: int, min_votes: int) -> list[dict]:
+def select_model_ids(ids: list[int], include_ids=(), max_movies: int = 500) -> list[int]:
+    """Offline refresh budget: prioritize explicit canonical IDs without growing unbounded."""
+    if not 1 <= max_movies <= 500:
+        raise ValueError("max_movies must be between 1 and 500; measure a larger model before raising this cap")
+    include_ids = list(dict.fromkeys(include_ids))
+    if len(include_ids) > max_movies or any(type(mid) is not int or not 1 <= mid <= 2147483647 for mid in include_ids):
+        raise ValueError("Included TMDB IDs must be positive integers and fit within the model budget")
+    return list(dict.fromkeys([*include_ids, *ids]))[:max_movies]
+
+
+def build(pages: int, popular_pages: int, min_votes: int, max_movies: int = 500, include_ids=()) -> list[dict]:
+    # Validate the budget before reading credentials or making any network requests.
+    select_model_ids([], include_ids, max_movies)
     load_env()
     tmdb = TMDB(os.environ.get("TMDB_READ_ACCESS_TOKEN"), os.environ.get("TMDB_API_KEY"))
-    ids = collect_ids(tmdb, pages, popular_pages, min_votes)
+    ids = select_model_ids(collect_ids(tmdb, pages, popular_pages, min_votes), include_ids, max_movies)
     print(f"Fetching details for {len(ids)} movies…")
     movies = []
     for n, mid in enumerate(ids, 1):
@@ -163,9 +175,18 @@ def main() -> None:
     ap.add_argument("--pages", type=int, default=20, help="pages of most-voted films (20 per page)")
     ap.add_argument("--popular-pages", type=int, default=5, help="pages of currently popular films")
     ap.add_argument("--min-votes", type=int, default=300, help="minimum TMDB vote count")
+    ap.add_argument("--max-movies", type=int, default=500, help="active model budget, 1-500 (default: 500)")
+    ap.add_argument("--include-tmdb-id", type=int, action="append", default=[],
+                    help="prioritize a discovered TMDB ID in the bounded refresh; repeat for more IDs")
     args = ap.parse_args()
+    if not 0 <= args.pages <= 500 or not 0 <= args.popular_pages <= 500 or args.min_votes < 0:
+        ap.error("pages and popular-pages must be 0-500; min-votes must be nonnegative")
+    try:
+        select_model_ids([], args.include_tmdb_id, args.max_movies)
+    except ValueError as error:
+        ap.error(str(error))
 
-    movies = build(args.pages, args.popular_pages, args.min_votes)
+    movies = build(args.pages, args.popular_pages, args.min_votes, args.max_movies, args.include_tmdb_id)
     OUT.write_text("[\n" + ",\n".join("  " + json.dumps(m, ensure_ascii=False) for m in movies) + "\n]\n", encoding="utf-8")
     edges = sum(len(m["tmdb_recs"]) for m in movies)
     trailers = sum(1 for m in movies if m["trailer"])

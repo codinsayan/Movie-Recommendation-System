@@ -28,6 +28,7 @@ class Element {
   dispatchEvent(event) { this.dispatch(event.type, event); }
 }
 function fixture() {
+  let now = 1000000, visible = true;
   const document = new Element("document", null);
   document.createElement = (tag) => new Element(tag, document);
   document.defaultView = { Event: class { constructor(type) { this.type = type; } } };
@@ -36,11 +37,13 @@ function fixture() {
   let id = 0;
   const callbacks = new Map();
   const timers = { setTimeout: (callback) => { callbacks.set(++id, callback); return id; }, clearTimeout: (i) => callbacks.delete(i) };
-  const viewing = new ViewingStore(memory());
-  const player = new MoviePlayer({ providers: Providers, viewing, eventTarget, timers });
+  const storage = memory();
+  const viewing = new ViewingStore(storage, () => now);
+  const player = new MoviePlayer({ providers: Providers, viewing, eventTarget, timers, now: () => now, isVisible: () => visible });
   const send = (data, override = {}) => eventTarget.dispatch("message", { origin: player.session.provider.origin,
     source: player.session.frame.contentWindow, data, ...override });
-  return { player, viewing, ui, document, eventTarget, callbacks, send };
+  return { player, viewing, ui, document, eventTarget, callbacks, send, storage,
+    tick: (ms) => { now += ms; }, visible: (value) => { visible = value; } };
 }
 
 test("movie identity never interprets a curated integer as a TMDB ID", () => {
@@ -295,4 +298,150 @@ test("invalid preferences and denied storage do not crash or corrupt session tas
   const denied = new PreferenceStore({ getItem() { throw Error("denied"); }, setItem() { throw Error("denied"); } });
   assert.equal(denied.save("tmdb", { liked: [1], mood: "space" }), false);
   assert.deepEqual(denied.load("tmdb"), { liked: [1], disliked: [], mood: "space" });
+});
+
+
+function watch(f, seconds = 180, duration = 600) {
+  f.send({ type: "cinesrc:play" });
+  f.send({ type: "cinesrc:timeupdate", currentTime: 0, duration });
+  for (let t = 5; t <= seconds; t += 5) {
+    f.tick(5000);
+    f.send({ type: "cinesrc:timeupdate", currentTime: t, duration });
+  }
+}
+
+test("S5 measures unique watched intervals and migrates old resume positions without inferring taste", () => {
+  const storage = memory();
+  storage.setItem("cinemagic:viewing:v1", JSON.stringify({ version: 1, progress: {
+    "tmdb:47533": { position: 599, duration: 600, updatedAt: 10, completed: true }
+  }, watchlist: { "tmdb:47533": 10 }, preferredSource: "vidsrc" }));
+  const migrated = new ViewingStore(storage);
+  assert.equal(migrated.progress("tmdb:47533").position, 599);
+  assert.equal(migrated.has("tmdb:47533"), true);
+  assert.deepEqual(migrated.signals(), []);
+  assert.equal(migrated.request().viewing, null);
+  const f = fixture(); f.player.open(movie, f.ui); watch(f);
+  assert.deepEqual(f.viewing.signals().map((s) => [s.watched_seconds, s.plays]), [[180, 1]]);
+  f.viewing.setOptions({ use_viewing: true, recent_playback_only: true });
+  f.player.close();
+  const restored = new ViewingStore(f.storage);
+  assert.equal(restored.state.version, 2);
+  assert.equal(restored.signals()[0].watched_seconds, 180);
+  assert.equal(restored.request().viewing.playback[0].provider, "cinesrc");
+  assert.equal(restored.options().use_viewing, true);
+  assert.equal(restored.options().recent_playback_only, true);
+});
+
+test("S5 play clicks, seeks, pauses, background gaps and ended events do not fabricate viewing", () => {
+  const f = fixture(); f.player.open(movie, f.ui);
+  f.send({ type: "cinesrc:play" });
+  f.send({ type: "cinesrc:timeupdate", currentTime: 0, duration: 600 });
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 580, duration: 600 });
+  f.send({ type: "cinesrc:seeked" });
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 585, duration: 600 });
+  f.send({ type: "cinesrc:pause" });
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 590, duration: 600 });
+  f.send({ type: "cinesrc:play" }); f.visible(false);
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 595, duration: 600 });
+  f.visible(true); f.player.suspend();
+  f.send({ type: "cinesrc:ended" });
+  f.player.close();
+  assert.deepEqual(f.viewing.signals(), []);
+  assert.deepEqual(f.viewing.state.playback, {});
+});
+
+test("S5 rapid callbacks, silent gaps and cross-origin messages cannot credit watch duration", () => {
+  const f = fixture(); f.player.open(movie, f.ui);
+  f.send({ type: "cinesrc:play" });
+  for (let t = 0; t <= 500; t += 5) f.send({ type: "cinesrc:timeupdate", currentTime: t, duration: 600 });
+  f.tick(60000); f.send({ type: "cinesrc:timeupdate", currentTime: 560, duration: 600 });
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 565, duration: 600 }, { origin: "https://other.example" });
+  f.player.close();
+  assert.deepEqual(f.viewing.signals(), []);
+  assert.deepEqual(f.viewing.state.playback, {});
+});
+
+test("S5 replay strength counts substantial sessions and not repeated play events or source changes", () => {
+  const f = fixture(); f.player.open(movie, f.ui); watch(f);
+  watch(f); // same intervals and same player session
+  assert.equal(f.viewing.signals()[0].watched_seconds, 180);
+  assert.equal(f.viewing.signals()[0].plays, 1);
+  f.ui.select.value = "vidsrc"; f.ui.select.dispatch("change");
+  f.ui.select.value = "cinesrc"; f.ui.select.dispatch("change");
+  watch(f);
+  assert.equal(f.viewing.signals()[0].plays, 1);
+  f.player.close(); f.player.open(movie, f.ui); watch(f);
+  assert.equal(f.viewing.signals()[0].plays, 2);
+  assert.equal(f.viewing.signals()[0].watched_seconds, 180);
+  f.player.close();
+});
+
+test("S5 source errors invalidate playback evidence without becoming dislikes or erasing measured viewing", () => {
+  const f = fixture(); f.player.open(movie, f.ui); watch(f);
+  f.viewing.setOptions({ use_viewing: true, recent_playback_only: true });
+  const before = f.viewing.signals()[0].watched_seconds;
+  f.tick(1); f.send({ type: "cinesrc:error" });
+  let evidence = f.viewing.request().viewing.playback[0];
+  assert.ok(evidence.failed_at > evidence.verified_at);
+  f.tick(5000); f.send({ type: "cinesrc:timeupdate", currentTime: 185, duration: 600 });
+  assert.equal(f.viewing.signals()[0].watched_seconds, before);
+  watch(f, 10);
+  evidence = f.viewing.request().viewing.playback[0];
+  assert.ok(evidence.verified_at > evidence.failed_at);
+  assert.equal(f.viewing.has("tmdb:47533"), false);
+  f.player.close();
+});
+
+test("S5 a playing heartbeat supports measured viewing without a separate play message", () => {
+  const f = fixture(); f.player.open(movie, f.ui);
+  f.ui.select.value = "vidsrc"; f.ui.select.dispatch("change");
+  for (let t = 0; t <= 180; t += 5) {
+    f.tick(5000);
+    f.send({ type: "PLAYER_EVENT", data: { player_info: { tmdb: 47533, mediaType: "movie" },
+      player_status: "playing", player_progress: t, player_duration: 600 } });
+  }
+  assert.equal(f.viewing.signals()[0].watched_seconds, 180);
+  assert.ok(f.viewing.state.playback["tmdb:47533"].vidsrc.verified_at);
+  f.player.close();
+});
+
+test("S5 clearing history during playback cannot resurrect signals, and preserves watchlist and explicit taste", () => {
+  const f = fixture(); f.player.open(movie, f.ui); watch(f);
+  const prefs = new PreferenceStore(f.storage);
+  prefs.save("tmdb", { liked: [47533], disliked: [2], mood: "cozy" });
+  f.viewing.toggle("tmdb:47533");
+  f.player.forget(true);
+  watch(f); f.player.close();
+  const restored = new ViewingStore(f.storage);
+  assert.deepEqual(restored.signals(), []);
+  assert.deepEqual(restored.state.playback, {});
+  assert.deepEqual(restored.progress("tmdb:47533"), {});
+  assert.equal(restored.has("tmdb:47533"), true);
+  assert.deepEqual(new PreferenceStore(f.storage).load("tmdb"), { liked: [47533], disliked: [2], mood: "cozy" });
+});
+
+test("S5 denied storage keeps measured evidence in session and does not send history while opted out", () => {
+  const store = new ViewingStore({ getItem() { throw Error(); }, setItem() { throw Error(); } });
+  store.recordInterval("tmdb:47533", 0, 180, 600, {});
+  store.persist();
+  assert.equal(store.signals()[0].watched_seconds, 180);
+  assert.equal(store.request().viewing, null);
+  store.setOptions({ use_viewing: true });
+  assert.equal(store.request().viewing.signals.length, 1);
+  assert.deepEqual(store.request().viewing.playback, []);
+});
+
+
+test("S5 starting over preserves measured history and allows a substantial replay", () => {
+  const f = fixture(); f.player.open(movie, f.ui); watch(f); f.player.close();
+  f.player.open(movie, f.ui, true);
+  assert.equal(f.player.session.position, 0);
+  assert.equal(f.viewing.signals()[0].plays, 1);
+  watch(f);
+  assert.equal(f.viewing.signals()[0].plays, 2);
+  f.ui.restart.dispatch("click");
+  assert.equal(f.viewing.signals()[0].plays, 2);
+  watch(f);
+  assert.equal(f.viewing.signals()[0].plays, 3);
+  f.player.close();
 });

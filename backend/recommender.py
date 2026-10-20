@@ -14,11 +14,13 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
+from viewing import VIEWING_CONFIG, canonical_key, viewing_evidence
 
 DATA_DIR = Path(__file__).parent / "data"
 DATASETS = {"curated": DATA_DIR / "movies.json", "tmdb": DATA_DIR / "tmdb_movies.json"}
@@ -227,8 +229,14 @@ class Recommender:
         return {**self.movies[idx], **extra}
 
     # ---------- public API ----------
-    def recommend(self, liked=(), disliked=(), mood: str | None = None, k: int = 12) -> dict:
+    def recommend(self, liked=(), disliked=(), mood: str | None = None, k: int = 12,
+                  viewing=None, use_viewing=False, recent_playback_only=False, eligible_keys=None, now=None) -> dict:
         liked_i, disliked_i = self._indices(liked), self._indices(disliked)
+        # An explicit dislike always wins, including conflicting imported profiles.
+        liked_i = [i for i in liked_i if i not in disliked_i]
+        signals, recent = viewing_evidence(viewing, self.movies, set(liked_i + disliked_i),
+                                          time.time() * 1000 if now is None else now)
+        signals = signals if use_viewing else []
         mood = (mood or "").strip()
         n = self.n
 
@@ -249,6 +257,12 @@ class Recommender:
 
         candidates = np.ones(n, dtype=bool)
         candidates[liked_i + disliked_i] = False
+        candidates[[s["index"] for s in signals]] = False
+        if eligible_keys is not None:
+            allowed = set(eligible_keys)
+            candidates &= np.array([canonical_key(m) in allowed for m in self.movies])
+        if recent_playback_only:
+            candidates &= np.array([canonical_key(m) in recent for m in self.movies])
 
         if not liked_i and not disliked_i and not mood:
             weights, mode = {"content": 0, "collab": 0, "quality": 1}, "popular"
@@ -262,6 +276,16 @@ class Recommender:
             "collab": _minmax(collab, candidates),
             "quality": _minmax(self.quality, candidates),
         }
+        if signals:
+            # Bound the entire implicit contribution to 10%; explicit baseline retains 90%.
+            implicit = sum(s["strength"] / VIEWING_CONFIG["maxStrength"] *
+                           (0.6 * self.content_sim[s["index"]] + 0.4 * self.collab_sim[s["index"]])
+                           for s in signals) / len(signals)
+            parts["viewing"] = np.clip(implicit, 0, 1)
+            weights = {name: weight * (1 - VIEWING_CONFIG["blend"]) for name, weight in weights.items()}
+            weights["viewing"] = VIEWING_CONFIG["blend"]
+            if mode == "popular":
+                mode = "viewing"
         score = sum(weights[name] * parts[name] for name in parts)
         if mood:
             # Hard relevance floor so a mood search never returns unrelated films.
@@ -280,10 +304,16 @@ class Recommender:
                 j = liked_i[int(np.argmax(link))]
                 because = {"id": self.movies[j]["id"], "title": self.movies[j]["title"]}
                 shared = sorted(_tokens(self.movies[idx]) & _tokens(self.movies[j]))
+            elif signals and parts["viewing"][idx] > 0:
+                j = max(signals, key=lambda s: s["strength"] *
+                        (0.6 * self.content_sim[idx, s["index"]] + 0.4 * self.collab_sim[idx, s["index"]]))["index"]
+                because = {"id": self.movies[j]["id"], "title": self.movies[j]["title"], "type": "watched"}
+                shared = sorted(_tokens(self.movies[idx]) & _tokens(self.movies[j]))
             if mood_terms:
                 shared = sorted(set(shared) | (_tokens(self.movies[idx]) & mood_terms))
             if because:
-                reason = f"Because you loved {because['title']}"
+                verb = "watched" if because.get("type") == "watched" else "loved"
+                reason = f"Because you {verb} {because['title']}"
             elif mood:
                 reason = f"Matches “{mood}”"
             else:
@@ -298,7 +328,16 @@ class Recommender:
                 breakdown={name: round(float(weights[name] * parts[name][idx]), 4) for name in parts},
             ))
 
-        return {"mode": mode, "items": items, "taste": self.taste_profile(liked_i, disliked_i)}
+        watched_rows = []
+        for signal in signals[:2]:
+            j = signal["index"]
+            relevance = .6 * self.content_sim[j] + .4 * self.collab_sim[j]
+            pool = [int(i) for i in np.argsort(-relevance, kind="stable") if candidates[i] and relevance[i] > 0][:42]
+            watched_rows.append({"source": self.movies[j], "watched_seconds": signal["watched_seconds"],
+                                 "duration": signal["duration"],
+                                 "items": [self._card(i) for i in self._mmr(pool, relevance, 14)]})
+        return {"mode": mode, "items": items, "taste": self.taste_profile(liked_i, disliked_i),
+                "watched_rows": watched_rows}
 
     def taste_profile(self, liked_i: list[int], disliked_i: list[int]) -> dict:
         genre_w: dict[str, float] = {}
@@ -336,6 +375,7 @@ class Recommender:
             "vocabulary": len(self.vectorizer.vocabulary_),
             "weights": WEIGHTS,
             "mmr_lambda": MMR_LAMBDA,
+            "viewing": VIEWING_CONFIG,
             "genres": sorted({g for m in self.movies for g in m["genres"]}),
         }
         if self.ratings is not None:

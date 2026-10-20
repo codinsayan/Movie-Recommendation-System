@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Path as ApiPath
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from recommender import load_default
 from catalog import Catalog, CatalogError
@@ -56,11 +57,46 @@ def movie_details(movie_id: int = ApiPath(ge=1, le=2147483647),
         catalogue_error(error)
 
 
+MovieKey = Annotated[str, Field(pattern=r"^(tmdb|curated):[1-9]\d*$", max_length=40)]
+
+
+class ViewedSignal(BaseModel):
+    key: MovieKey
+    watched_seconds: float = Field(ge=0, le=86400, strict=True, allow_inf_nan=False)
+    duration: float = Field(gt=0, le=86400, strict=True, allow_inf_nan=False)
+    plays: int = Field(ge=0, le=100, strict=True)
+    updated_at: float = Field(default=0, ge=0, strict=True, allow_inf_nan=False)
+
+
+class PlaybackEvidence(BaseModel):
+    key: MovieKey
+    provider: Literal["cinesrc", "vidlink", "vidsrc"]
+    verified_at: float = Field(default=0, ge=0, strict=True, allow_inf_nan=False)
+    failed_at: float = Field(default=0, ge=0, strict=True, allow_inf_nan=False)
+
+
+class ViewingEvidence(BaseModel):
+    version: Literal[1]
+    signals: list[ViewedSignal] = Field(default_factory=list, max_length=500)
+    playback: list[PlaybackEvidence] = Field(default_factory=list, max_length=1500)
+
+    @field_validator("version", mode="before")
+    @classmethod
+    def strict_version(cls, value):
+        if type(value) is not int or value != 1:
+            raise ValueError("Unsupported viewing contract version")
+        return value
+
+
 class RecommendRequest(BaseModel):
     liked: list[int] = Field(default_factory=list)
     disliked: list[int] = Field(default_factory=list)
     mood: str | None = Field(default=None, max_length=200)
     k: int = Field(default=12, ge=1, le=100)
+    viewing: ViewingEvidence | None = None
+    use_viewing: bool = Field(default=False, strict=True)
+    recent_playback_only: bool = Field(default=False, strict=True)
+    eligible_keys: list[MovieKey] | None = Field(default=None, max_length=5000)
 
 
 @app.get("/api/health")
@@ -80,7 +116,10 @@ def movies():
 
 @app.post("/api/recommend")
 def recommend(req: RecommendRequest):
-    return engine.recommend(req.liked, req.disliked, req.mood, req.k)
+    return engine.recommend(req.liked, req.disliked, req.mood, req.k,
+                            viewing=req.viewing.model_dump() if req.viewing else None,
+                            use_viewing=req.use_viewing, recent_playback_only=req.recent_playback_only,
+                            eligible_keys=req.eligible_keys)
 
 
 @app.get("/api/movies/{movie_id}/similar")

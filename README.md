@@ -31,7 +31,7 @@ Playback positions and your preferred source are saved in this browser when the 
 
 The curated catalogue needs explicit TMDB mappings before full-film playback can be offered; its local numeric IDs are not sent to streaming providers. The same playback modules are included in the static export.
 
-This is a local implementation preview. The offline player tests pass, and the user has confirmed the sources work with standard cross-origin iframes without the sandbox attribute. Autoplay and the updated source menu still need live browser verification. See [playback validation](docs/streaming/PLAYBACK_VALIDATION.md) for evidence and remaining checks. S4 adds broader live metadata search; viewing-aware ranking remains S5 work.
+This is a local implementation preview. The offline player tests pass, and the user has confirmed the sources work with standard cross-origin iframes without the sandbox attribute. Autoplay and the updated source menu still need live browser verification. See [playback validation](docs/streaming/PLAYBACK_VALIDATION.md) for evidence and remaining checks. S4 adds broader live metadata search; S5 adds optional viewing-aware recommendations.
 
 Run the tests:
 
@@ -46,6 +46,16 @@ No login is needed to keep your taste. Likes, dislikes and the selected mood are
 Existing likes from `cinemagic:v1` are migrated once into the active catalogue. TMDB and curated catalogues then keep separate taste profiles so identical numeric IDs cannot change your preferences for unrelated films. Resetting taste does not clear your watchlist or viewing history.
 
 Use the same browser profile and site address when returning: `localhost:8000` and `127.0.0.1:8000` have separate browser storage, as does a deployed site. Clearing site data or ending a private-browsing session can remove saved preferences. If storage writes fail, the app reports that changes are session-only.
+
+## Viewing-aware recommendations (S5)
+
+Open **My Taste** and enable **Use viewing history** to try the experimental blend. After both two minutes and 30% of a film are measured playing, it can inform a **Because you watched** row. Unique watched intervals are measured separately from resume position: seeking, source changes, errors and pressing Play alone are not preference signals. Older saved positions do not acquire viewing evidence automatically.
+
+Explicit taste retains 90% of the score when this option has qualified signals; viewing contributes at most 10%. Substantial repeat sessions have a capped influence. Likes/dislikes and Taste DNA remain explicit. Viewing outside the trained snapshot stays history-only until a deliberate bounded rebuild indexes that title.
+
+**Top picks: played recently on this device** optionally filters picks using ten measured playing seconds within seven days. Later source errors invalidate that source's record. This is local evidence, not guaranteed availability; ordinary search and browsing remain available when the filter is empty. **Clear viewing history** removes progress and viewing/playback evidence while keeping likes, mood and Watchlist. Both options persist in this browser and work in FastAPI and static mode.
+
+The new blend is opt-in: a small reproducible proxy evaluation found unchanged hit rate and slight NDCG differences, which do not establish real-user improvement. One informal review was broadly positive; broader relevance and rendered-browser acceptance remain pending. See [S5 implementation](docs/streaming/05-recommendations.md) and [evaluation](docs/EVALUATION.md).
 
 ## Real-world catalogue (TMDB)
 

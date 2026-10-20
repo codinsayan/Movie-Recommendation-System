@@ -4,7 +4,7 @@ Each iteration ships something demoable. Status: ✅ done · 🔄 in progress ·
 
 ## Streaming upgrade: active implementation roadmap
 
-The product work follows [the streaming roadmap](streaming/README.md), with **viewer-controlled manual source switching**. CineSrc is the default, with VidLink and VidSrc available for manual selection. Per the latest user request, movie players use standard cross-origin iframes without the sandbox attribute. S1-S4 code is available as a local preview; live playback/browser acceptance remains pending. See [validation evidence](streaming/PLAYBACK_VALIDATION.md).
+The product work follows [the streaming roadmap](streaming/README.md), with **viewer-controlled manual source switching**. CineSrc is the default, with VidLink and VidSrc available for manual selection. Per the latest user request, movie players use standard cross-origin iframes without the sandbox attribute. S1-S5 code is available as a local preview; S5 viewing-aware ranking is opt-in pending broader relevance review; live playback/browser acceptance remains pending. See [validation evidence](streaming/PLAYBACK_VALIDATION.md).
 
 | Phase | Planned result |
 |---|---|
@@ -12,7 +12,7 @@ The product work follows [the streaming roadmap](streaming/README.md), with **vi
 | [S2](streaming/02-player-and-manual-switching.md) | Movie player with a visible manual Source selector |
 | [S3](streaming/03-progress-and-watchlist.md) | Resume, Continue watching and an independent watchlist |
 | [S4](streaming/04-search-and-catalogue.md) | Implemented: paginated live search and cached remote details; API/client checks passed |
-| [S5](streaming/05-recommendations.md) | Viewing-aware recommendations and evaluated ranking changes |
+| [S5](streaming/05-recommendations.md) | Implemented: opt-in viewing signals, recent-playback filtering, parity tests and proxy evaluation |
 | [S6](streaming/06-release.md) | Deployment and end-to-end release evidence |
 
 S1-S2 form the first demo milestone. The evaluation/model/polish iterations below retain their original numbering and remain future work; relevant tasks are incorporated into S5/S6 without implying those older iterations are complete.

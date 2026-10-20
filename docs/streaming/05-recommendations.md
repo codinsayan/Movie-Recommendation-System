@@ -1,37 +1,50 @@
 # S5: Recommendations informed by viewing
 
-Status: planned. Depends on [S3](03-progress-and-watchlist.md) and [S4](04-search-and-catalogue.md). Next: [S6](06-release.md).
+Status: implemented as an opt-in experiment; automated contracts/parity and reproducible proxy evaluation pass. One informal user relevance review is recorded; broader relevance review and rendered-browser acceptance remain pending. Depends on [S3](03-progress-and-watchlist.md) and [S4](04-search-and-catalogue.md). Next: [S6](06-release.md). Evidence: [evaluation](../EVALUATION.md).
 
 ## Outcome
 
-The existing hybrid engine recommends movies using explicit taste plus carefully evaluated viewing signals, with honest explanations and optional playback eligibility filtering.
+My Taste offers **Use viewing history** and **Top picks: played recently on this device**. Explicit ranking remains the default. FastAPI and the static engine support the same signal contract and scoring policy. No model-size increase was made.
 
 ## Work
 
-- [ ] Define a versioned viewing-signal contract shared by API requests and the browser engine. Explicit likes/dislikes remain strongest initially.
-- [ ] Treat actual watched duration and repeated viewing as candidate weak signals. Do not use source errors, provider changes or a Play click as movie-preference evidence.
-- [ ] Resolve viewed external titles through canonical IDs; titles outside the current model remain history-only until indexed through a bounded refresh process.
-- [ ] Keep a bounded active model for the first release. New metadata records do not automatically enlarge all pairwise matrices.
-- [ ] Before substantially increasing the active model, retain sparse features/graph neighbours and retrieve a bounded candidate pool, then apply the existing blend, MMR and explanations.
-- [ ] Add **Because you watched** while preserving **Because you loved**. Explain the actual signal behind each row.
-- [ ] Offer an optional **Verified playback recently** filter only for titles with recorded successful playback evidence and a visible freshness policy. Unknown status remains unknown; a working URL is not sufficient evidence.
-- [ ] Apply supported eligibility constraints before final top-k selection and MMR; do not truncate first and return an accidentally empty list.
-- [ ] Update Python and browser implementations together where capability overlaps. Document backend-only behavior rather than claiming full parity for unavailable static data.
-- [ ] Compare the current engine with the proposed signal blend using a reproducible evaluation protocol and a small human relevance review before shipping new weights.
+- [x] Versioned contract: `viewing: {version: 1, signals, playback}`, `use_viewing`, `recent_playback_only`, optional canonical `eligible_keys`. API/browser validation bounds payload sizes and numeric values.
+- [x] Measure short forward playing intervals against wall time; merge overlaps and reject seeks, paused/background gaps, source changes, errors and Play-only events as preference evidence.
+- [x] Qualify after both two minutes and 30% unique coverage. Count repeated substantial sessions with capped strength; completion remains separate.
+- [x] Retain the original blend at 90% and cap viewing at 10%, only when opted in. Dislikes override conflicting positives; Taste DNA reflects explicit taste.
+- [x] Resolve canonical IDs within the active model. Remote unindexed titles stay history-only without fabricated scores.
+- [x] Add bounded snapshot refresh: at most 500 requested IDs, with optional prioritized remote IDs. Retain sparse exports and the 60/447-film models.
+- [x] Add ?Because you watched? beside ?Because you loved,? with honest billboard/detail explanations and a viewing score component.
+- [x] Offer device-local recent-playback filtering: seven-day freshness, ten measured playing seconds, provider-specific failure invalidation, and explicit unknown/empty states.
+- [x] Filter eligibility before normalization, candidate-pool truncation, MMR and top-k. Search/general browsing remain independent.
+- [x] Keep Python/JavaScript in parity on curated and TMDB graph catalogues.
+- [x] Reproducibly compare popularity, explicit hybrid and hybrid plus viewing; label synthetic ratings/viewing and graph overlap in [EVALUATION.md](../EVALUATION.md).
+- [x] Collect one informal user relevance review: broadly relevant, with Tenet missing from their displayed picks; scope and discrepancy are recorded in the evaluation.
+- [ ] Complete broader relevance review and rendered-browser acceptance before default activation. The feature remains opt-in.
+- [ ] Before raising the 500-film refresh budget, implement sparse candidate retrieval and measure memory, latency and real browser responsiveness on the larger catalogue. This phase does not raise that budget.
 
-## Expected files
+## Acceptance evidence
 
-`backend/recommender.py`, `backend/app.py`, `frontend/engine.js`, `frontend/viewing.js`, `scripts/export_static.py`, `frontend/app.js`, focused parity/ranking tests and `docs/EVALUATION.md`.
+The full suite passes **97 tests**, including 26 JavaScript playback/preferences cases. Live API smoke checks and static export pass; no rendered browser is attached.
 
-## Acceptance
+- [x] Signals, scores, explanations, taste and watched rows agree between Python and JavaScript for both datasets.
+- [x] Dislikes, errors, completion, unknown IDs, duplicate signals and stale callbacks are handled independently in focused tests.
+- [x] Eligibility fills top-k where enough candidates exist; expired/future/failed-only evidence cannot qualify.
+- [x] Legacy resume positions acquire no evidence. Storage denial retains session state; history clearing cannot resurrect active-player evidence and preserves explicit taste/watchlists.
+- [x] Evaluation records input/profile hashes, seed, metrics, timing and model sizes. HR@10 is unchanged; small NDCG changes do not establish real-user improvement.
+- [ ] Browser verification: opt in, watch substantially, inspect the row, refresh, toggle the recent filter, clear history and confirm search remains available.
 
-- [ ] Identical supported signals/configurations produce equivalent Python and JavaScript results.
-- [ ] Explicit dislikes, completion behavior and source failures are handled independently.
-- [ ] The candidate filter can fill top-k where enough eligible candidates exist; explanation text matches the underlying signal.
-- [ ] A remote unindexed title does not crash ranking or acquire a fabricated similarity score.
-- [ ] The evaluation records dataset provenance, baselines, metrics and limitations. Synthetic ratings and TMDB graph signals are labeled accurately.
-- [ ] Larger-catalogue measurements include memory, candidate latency and browser responsiveness before any model-size increase.
+## Bounded refresh
+
+To intentionally index a discovered ID, rebuild explicitly using the existing TMDB credential:
+
+```bash
+python scripts/build_tmdb_catalog.py --max-movies 500 --include-tmdb-id 45745
+python scripts/export_static.py
+```
+
+Review the snapshot, re-run tests/evaluation and restart FastAPI. Metadata/quality checks still apply; requested IDs may be skipped. No automatic indexing or account synchronization is added. No snapshot refresh was run during S5.
 
 ## Demo
 
-Show the difference between a film liked explicitly, one watched substantially and one abandoned because of a source error. Demonstrate the corresponding recommendation rows without treating playback problems as dislikes.
+Enable viewing history in My Taste. Watch at least two minutes and 30% of a film, close playback and inspect ?Because you watched.? Compare an explicit like and an error-only session. Toggle recent playback, then clear viewing history while retaining taste and Watchlist.

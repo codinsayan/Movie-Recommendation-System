@@ -107,9 +107,17 @@ Everyday words are mapped to catalogue vocabulary before TF-IDF, e.g.
 
 Matching is substring-based (`"inspir"` matches *inspiring* and *inspirational*). See `MOOD_SYNONYMS`.
 
+## S5: optional measured-viewing signal
+
+The explicit formulas above remain the default. With **Use viewing history** enabled, a measured title qualifies after both 120 seconds and 30% unique watched coverage. A qualifying session has strength 0.15; substantial repeat sessions can raise this to 0.20 and then 0.25. Seeks, errors, source changes, Play messages and completion flags alone provide no preference evidence.
+
+The new score is `0.90 * existing_score + 0.10 * viewing_part`, where `viewing_part` is the clipped mean of `(strength/0.25) * (0.6*content_similarity + 0.4*collaborative_similarity)` across qualified indexed seeds. It is not min-max scaled, so weak evidence cannot acquire full strength through normalization. Disliked films cannot act as positive seeds or candidates; likes remain the primary explanations and Taste DNA stays explicit. Without qualified opted-in signals the old scores are unchanged.
+
+Canonical eligibility constraints, including optional device-local recent-playback evidence, are applied before normalization, top-3k selection and MMR. Requests add no remote titles to the model. Python and JavaScript return matching scores, explanations and ?Because you watched? rows. [EVALUATION.md](EVALUATION.md) records reproducible proxy comparisons and why the new blend remains experimental.
+
 ## Complexity
 
-With n movies, t terms and U users: start-up is O(n·t + U·n + n²); each request is O(n·t + n·|L|), effectively instant for n=60, and fine into the tens of thousands with sparse matrices.
+With n movies, t terms and U users: start-up is O(n·t + U·n + n²); each request is O(n·t + n·|L|), measured on the current 60/447-film catalogues. Runtime feature/similarity matrices are dense; the refresh budget is capped at 500. Sparse exports alone do not make runtime scaling safe for tens of thousands of films.
 
 ## Evaluation (planned, Iteration 3)
 

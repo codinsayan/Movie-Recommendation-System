@@ -69,6 +69,7 @@
     taste: null,
     mode: "popular",
     becauseRows: [],
+    watchedRows: [],
   };
   const bb = { key: "", items: [], i: 0, timer: null };
   let viewingStorage;
@@ -82,7 +83,7 @@
   const movieKey = (m) => providers.reference(m)?.key;
   const canWatch = (m) => !!providers.reference(m)?.tmdbId && providers.list().length > 0;
   const moviePlayer = new CinemagicMoviePlayer({ providers, viewing,
-    onChange: () => { if (state.movies.length) renderRows(); } });
+    onChange: () => { if (state.movies.length) { renderRows(); refresh(); } } });
 
   // ---------- persistence ----------
   function load() {
@@ -212,11 +213,12 @@
       popular: "Trending Now",
       mood: `Because you're in the mood for “${esc(state.mood)}”`,
       personal: state.mood ? `Top Picks for You × “${esc(state.mood)}”` : "Top Picks for You",
+      viewing: "Inspired by Your Viewing",
     }[state.mode];
     rows.push({
       key: "picks", title: pickTitle, items: state.scored.slice(0, 14), showMatch: true, freshIds,
-      sub: state.mode === "personal" ? "Re-ranked live from every like and pass" : state.mode === "popular" ? "Like a few titles to make this yours" : "",
-      empty: "Nothing matched that mood. Try different words.",
+      sub: viewing.options().recent_playback_only ? "Only titles with playback recorded on this device in the last 7 days; availability may change" : state.mode === "viewing" ? "A small influence from substantial viewing; likes and dislikes remain explicit" : state.mode === "personal" ? "Re-ranked live from every like and pass" : state.mode === "popular" ? "Like a few titles to make this yours" : "",
+      empty: viewing.options().recent_playback_only ? "No matching titles have recent playback evidence on this device. Turn off the filter in My Taste to see more picks." : "Nothing matched that mood. Try different words.",
     });
 
     const myList = [...state.liked].reverse().map(byId).filter(Boolean);
@@ -233,6 +235,12 @@
     for (const { source, items } of state.becauseRows) {
       const list = items.filter((m) => !isSeen(m.id));
       if (source && list.length) rows.push({ key: `because-${source.id}`, title: `Because you loved ${esc(source.title)}`, items: list, showMatch: true });
+    }
+    for (const { source, items } of state.watchedRows) {
+      const list = items.filter((m) => !isSeen(m.id));
+      if (source && list.length) rows.push({ key: `watched-${source.source}-${source.id}`,
+        title: `Because you watched ${esc(source.title)}`, items: list,
+        sub: "At least 30% and 2 minutes measured playing · Viewing does not mark a film as liked" });
     }
 
     const top10 = [...state.movies].filter(notDisliked).sort((a, b) => b.rating - a.rating).slice(0, 10);
@@ -329,8 +337,9 @@
       popular: `<b>#${i + 1}</b> Trending tonight`,
       mood: `<b>For</b> “${esc(state.mood)}”`,
       personal: `<b>#${i + 1}</b> Top pick for you`,
+      viewing: `<b>For you</b> Inspired by your viewing`,
     }[state.mode];
-    const reason = rec?.because ? `Because you loved <b>&nbsp;${esc(rec.because.title)}</b>` : state.mode === "mood" && rec ? esc(rec.reason) : "";
+    const reason = rec?.because ? `Because you ${rec.because.type === "watched" ? "watched" : "loved"} <b>&nbsp;${esc(rec.because.title)}</b>` : state.mode === "mood" && rec ? esc(rec.reason) : "";
     const content = $("#bbContent");
     content.innerHTML = `
       <div class="bb-kicker">${kicker}</div>
@@ -424,6 +433,8 @@
 
   // ---------- drawer ----------
   function renderDrawer() {
+    const focusedControl = ["useViewing", "recentPlaybackOnly", "clearViewing"].includes(document.activeElement?.id) ? document.activeElement.id : null;
+    const options = viewing.options();
     const n = state.liked.size;
     const taste = state.taste || { genres: [], tags: [], confidence: 0 };
     const pct = Math.round(taste.confidence * 100);
@@ -438,6 +449,13 @@
       <h2>Your Taste DNA</h2>
       <p class="hint">${preferenceWarningShown ? "Session only: browser storage is unavailable." : "Saved in this browser. No account needed."}</p>
       <p class="hint">${hint}</p>
+      <div class="viewing-options">
+        <label><input type="checkbox" id="useViewing" ${options.use_viewing ? "checked" : ""}> Use viewing history <span>Experimental</span></label>
+        <p class="hint">Starts after at least 30% and 2 minutes measured playing. Earlier resume positions aren't treated as watched time. Likes and dislikes stay primary; playback problems aren't ratings.</p>
+        <label><input type="checkbox" id="recentPlaybackOnly" ${options.recent_playback_only ? "checked" : ""}> Top picks: played recently on this device</label>
+        <p class="hint">At least 10 seconds measured playing in the last 7 days. A later source error invalidates that source's record. This is no guarantee it still plays.</p>
+        <button class="btn btn-grey btn-sm" id="clearViewing">Clear viewing history</button>
+      </div>
       <div class="meter-row"><span>Taste confidence</span><span>${pct}%</span></div>
       <div class="meter-track"><div class="meter-fill" data-w="${pct}"></div></div>
       <h3>Genre affinity</h3>
@@ -455,6 +473,7 @@
       </div>`;
     if ($("#drawer").classList.contains("open")) animateBars($("#drawer"));
     $("#avatarRing").style.strokeDashoffset = RING * (1 - taste.confidence);
+    if (focusedControl) $(`#${focusedControl}`)?.focus();
   }
 
   function animateBars(root) {
@@ -479,7 +498,7 @@
       const recent = [...state.liked].filter((id) => state.byId.has(id)).slice(-2).reverse();
       try {
         const [out, ...sims] = await Promise.all([
-          api("/api/recommend", { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100 }),
+          api("/api/recommend", { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100, ...viewing.request() }),
           ...recent.map((id) => api(`/api/movies/${id}/similar?k=14`)),
         ]);
         if (seq !== refreshSeq) return; // superseded by a newer request
@@ -489,6 +508,7 @@
         state.taste = out.taste;
         state.mode = out.mode;
         state.becauseRows = recent.map((id, k) => ({ source: byId(id), items: sims[k] }));
+        state.watchedRows = out.watched_rows || [];
 
         const fresh = announce && prevPicks.size ? new Set(state.scored.slice(0, 14).map((m) => m.id).filter((id) => !prevPicks.has(id))) : null;
         renderOnboard();
@@ -683,12 +703,12 @@
     }
     catalogue?.remember(m);
     const rec = state.byId.has(id) ? state.recMap.get(id) : null;
-    const share = (k) => (rec ? rec.breakdown[k] / Math.max(rec.score, 0.001) : 0);
+    const share = (k) => (rec ? (rec.breakdown[k] || 0) / Math.max(rec.score, 0.001) : 0);
     const why = rec && personalised() ? `
       <div class="why">
         <h4>Why we picked this · ${rec.match}% match</h4>
         <div class="dna">
-          ${[["content", "Story & vibe match"], ["collab", "Fans like you"], ["quality", "Critic quality"]].map(([k, label]) => `
+          ${[["content", "Story & vibe match"], ["collab", "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown).map(([k, label]) => `
             <div class="dna-row"><span>${label}</span><div class="dna-bar"><i data-w="${share(k) * 100}"></i></div><em>${Math.round(share(k) * 100)}%</em></div>`).join("")}
         </div>
         ${rec.shared.length ? `<p class="pv-reason" style="margin-top:12px">Shares: <b>${rec.shared.map((t) => esc(prettyTag(t))).join(", ")}</b></p>` : ""}
@@ -776,6 +796,7 @@
             : `Item-item adjusted-cosine similarity from ${meta ? meta.ratings.toLocaleString() : "thousands of"} ratings: "people who loved X also loved Y".`}</p></div>
           <div class="stage">${icon("star")}<b>Quality · ${Math.round(w.quality * 100)}%</b><p>A vote-weighted rating nudges towards good, well-known films, then MMR re-ranking (λ=${meta?.mmr_lambda ?? 0.75}) keeps every row diverse.</p></div>
         </div>
+        <p style="margin-top:18px;font-size:.85rem">Optionally enable <b>Use viewing history</b> in My Taste. Substantial, measured viewing contributes up to 10% of the score; the existing blend retains 90%. Rewatching has a capped influence. Playback errors, source changes and seeking never create likes or dislikes. The recent-playback filter uses only this device's last 7 days of evidence.</p>
         ${meta ? `<div class="stats">
           <div class="stat"><b>${meta.movies}</b><span>films</span></div>
           ${graph
@@ -821,6 +842,10 @@
     bindPreview();
     document.addEventListener("change", (event) => {
       if (event.target.id === "catalogueLanguage") catalogue?.setQuery(state.query, event.target.value);
+      if (event.target.id === "useViewing" || event.target.id === "recentPlaybackOnly") {
+        viewing.setOptions(event.target.id === "useViewing" ? { use_viewing: event.target.checked } : { recent_playback_only: event.target.checked });
+        refresh({ immediate: true });
+      }
     });
 
     // Swap broken posters for the generated gradient fallback.
@@ -840,6 +865,7 @@
       if (act) { e.stopPropagation(); setTaste(Number(act.dataset.id), act.dataset.act, act); return; }
       if (t.closest("[data-close]") || t.id === "modal") return closeModal();
       if (t.closest("[data-close-drawer]") || t.id === "scrim") return toggleDrawer(false);
+      if (t.closest("#clearViewing")) { moviePlayer.forget(true); toast("Viewing history cleared. Your likes and watchlist are kept."); return; }
       if (t.closest("#resetBtn")) {
         state.liked.clear(); state.disliked.clear(); save();
         toggleDrawer(false);
@@ -859,7 +885,7 @@
         return;
       }
       const forget = t.closest("[data-forget]");
-      if (forget) { const m = byId(Number(forget.dataset.forget)); viewing.removeProgress(movieKey(m)); renderRows(); return openMovie(m.id); }
+      if (forget) { const m = byId(Number(forget.dataset.forget)); viewing.removeProgress(movieKey(m)); refresh(); renderRows(); return openMovie(m.id); }
       const restart = t.closest("[data-start-over]");
       if (restart) return openWatch(Number(restart.dataset.startOver), true);
       const watch = t.closest("[data-watch]");
@@ -925,7 +951,7 @@
 
     addEventListener("scroll", () => $("#nav").classList.toggle("solid", scrollY > 40), { passive: true });
     addEventListener("pagehide", () => moviePlayer.save());
-    document.addEventListener("visibilitychange", () => { if (document.hidden) moviePlayer.save(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) moviePlayer.suspend(); });
   }
 
   function skeletonRows() {

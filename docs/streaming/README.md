@@ -2,7 +2,7 @@
 
 Decision date: 20 October 2026. Branch: `feature/streaming-platform`.
 
-Status: S1-S4 code is implemented; final rendered-browser acceptance is pending. This roadmap implements the user's latest choice: **the viewer switches sources manually**. It replaces the automatic-switching proposal in the earlier research notes. See [validation evidence](PLAYBACK_VALIDATION.md).
+Status: S1-S5 code is implemented; S5 is opt-in while broader relevance and rendered-browser acceptance remain pending. This roadmap implements the user's latest choice: **the viewer switches sources manually**. It replaces the automatic-switching proposal in the earlier research notes. See [validation evidence](PLAYBACK_VALIDATION.md).
 
 ## Provider decision
 
@@ -35,7 +35,7 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S2: Player and manual switching](02-player-and-manual-switching.md) | Watch movie action, player overlay, three-source selector, failure UI | S1 | Code implemented; browser acceptance pending |
 | [S3: Personal viewing state](03-progress-and-watchlist.md) | Resume, Continue watching, independent watchlist, position transfer | S2 | Code implemented; browser acceptance pending |
 | [S4: Search and catalogue growth](04-search-and-catalogue.md) | Paginated TMDB-backed discovery, metadata cache, broader language coverage | S2; reuse S3 identity conventions | Implemented; API/client checks passed |
-| [S5: Viewing-aware recommendations](05-recommendations.md) | Evaluated viewing signals, candidate eligibility and explanations | S3 and S4 | Planned |
+| [S5: Viewing-aware recommendations](05-recommendations.md) | Measured viewing, device-local playback eligibility and explanations | S3 and S4 | Implemented as opt-in; evaluation/parity passed |
 | [S6: Release and operational checks](06-release.md) | Verified deployment, provider configuration, regression evidence | S1-S5 | Planned |
 
 **First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S6 grow and release the product.
@@ -64,7 +64,7 @@ Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated I
 
 Each phase has checkboxes, affected files, a demo and acceptance criteria in its linked document. Mark a phase done only when its acceptance evidence exists. Deterministic tests use simulated provider messages; live checks verify a small permitted-film set without making third-party network availability a CI dependency.
 
-The current suite passes 50 tests, including seven JavaScript catalogue cases, 17 playback/preferences cases, and cache/API checks. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
+The full suite passes 97 tests. S5 adds ranking/eligibility and Python/JavaScript parity checks for both catalogues, plus 26 JavaScript playback/preferences cases and seven catalogue cases. See [S5 evaluation](../EVALUATION.md) for evidence and limits. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
 
 ## Deferred work
 

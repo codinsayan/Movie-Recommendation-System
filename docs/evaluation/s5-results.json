@@ -1,0 +1,181 @@
+{
+  "protocol_version": 1,
+  "seed": 2026,
+  "k": 10,
+  "viewing_policy": {
+    "version": 1,
+    "minSeconds": 120,
+    "minFraction": 0.3,
+    "baseStrength": 0.15,
+    "repeatStrength": 0.05,
+    "maxStrength": 0.25,
+    "blend": 0.1,
+    "freshnessMs": 604800000
+  },
+  "default_enabled": false,
+  "python": "3.13.5",
+  "numpy": "2.3.2",
+  "datasets": {
+    "curated": {
+      "movies": 60,
+      "collaborative_source": "simulated",
+      "profiles": 60,
+      "snapshot_sha256": "f9f6159282c55f91759f57f975114cbe064d4fd084e8a20bffb4eadfe69bbdca",
+      "profiles_sha256": "81d5d6512c9d7b2cf7660a1bda5b4a9a01b77709e44e6462eea891bb3b865167",
+      "provenance": "seed-42 simulated ratings; synthetic viewing",
+      "metrics": {
+        "popularity": {
+          "hit_rate_at_10": 0.2333,
+          "ndcg_at_10": 0.0995,
+          "coverage": 0.2,
+          "intra_list_diversity": 0.9387,
+          "median_ms": 0.12,
+          "p95_ms": 0.553
+        },
+        "explicit_hybrid": {
+          "hit_rate_at_10": 0.5,
+          "ndcg_at_10": 0.2491,
+          "coverage": 1.0,
+          "intra_list_diversity": 0.9127,
+          "median_ms": 0.486,
+          "p95_ms": 1.456
+        },
+        "hybrid_with_viewing": {
+          "hit_rate_at_10": 0.5,
+          "ndcg_at_10": 0.2503,
+          "coverage": 1.0,
+          "intra_list_diversity": 0.9132,
+          "median_ms": 0.671,
+          "p95_ms": 1.42
+        }
+      },
+      "python_startup_ms": 6.176,
+      "python_model_arrays_mib": 0.557,
+      "static_model_kib": 247.377,
+      "node": {
+        "available": true,
+        "runtime": "v24.6.0",
+        "startup_ms": 29.22,
+        "heap_delta_mib": 1.73,
+        "array_buffer_delta_mib": 0.097,
+        "median_request_ms": 0.664,
+        "p95_request_ms": 3.074
+      },
+      "review": {
+        "liked": "Inception",
+        "watched": "Interstellar",
+        "recommendations": [
+          {
+            "title": "The Matrix",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Ex Machina",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Shutter Island",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "The Dark Knight",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Eternal Sunshine of the Spotless Mind",
+            "reason": "Because you loved Inception"
+          }
+        ],
+        "human_review": "not reviewed; experimental ranking remains opt-in"
+      }
+    },
+    "tmdb": {
+      "movies": 447,
+      "collaborative_source": "tmdb-graph",
+      "profiles": 60,
+      "snapshot_sha256": "a23e4a0b654634696ccc76fd5957ab4abf9abe01b161064b832d95a88ceab00c",
+      "profiles_sha256": "0afe8609118189e4587106fe198722ddefa1fca84ab80f6c566500edc246fa86",
+      "provenance": "bundled TMDB graph; transductive neighbour recovery; synthetic viewing",
+      "metrics": {
+        "popularity": {
+          "hit_rate_at_10": 0.0333,
+          "ndcg_at_10": 0.01,
+          "coverage": 0.0246,
+          "intra_list_diversity": 0.9847,
+          "median_ms": 0.257,
+          "p95_ms": 0.411
+        },
+        "explicit_hybrid": {
+          "hit_rate_at_10": 0.6333,
+          "ndcg_at_10": 0.3194,
+          "coverage": 0.5705,
+          "intra_list_diversity": 0.9179,
+          "median_ms": 1.827,
+          "p95_ms": 3.572
+        },
+        "hybrid_with_viewing": {
+          "hit_rate_at_10": 0.6333,
+          "ndcg_at_10": 0.3239,
+          "coverage": 0.5705,
+          "intra_list_diversity": 0.9181,
+          "median_ms": 1.552,
+          "p95_ms": 2.354
+        }
+      },
+      "python_startup_ms": 57.56,
+      "python_model_arrays_mib": 29.796,
+      "static_model_kib": 1286.452,
+      "node": {
+        "available": true,
+        "runtime": "v24.6.0",
+        "startup_ms": 51.295,
+        "heap_delta_mib": 13.997,
+        "array_buffer_delta_mib": 5.019,
+        "median_request_ms": 12.808,
+        "p95_request_ms": 23.293
+      },
+      "review": {
+        "liked": "Inception",
+        "watched": "Interstellar",
+        "recommendations": [
+          {
+            "title": "Now You See Me 2",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Tenet",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Minority Report",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Sicario",
+            "reason": "Because you loved Inception"
+          },
+          {
+            "title": "Eternal Sunshine of the Spotless Mind",
+            "reason": "Because you loved Inception"
+          }
+        ],
+        "human_review": {
+          "date": "2026-10-20",
+          "profile": "TMDB example: liked Inception; substantially watched Interstellar",
+          "prompted_titles": [
+            "Now You See Me 2",
+            "Tenet",
+            "Minority Report",
+            "Sicario",
+            "Eternal Sunshine of the Spotless Mind"
+          ],
+          "user_response": "tenet is not there though, but it is pretty relevant",
+          "assessment": "Broadly relevant; user reports Tenet absent from their displayed picks.",
+          "scope": "One informal review of the TMDB example; the user's browser/profile state was not inspected. Curated results were not reviewed.",
+          "follow_up": "Tenet exists in the committed snapshot and the fixed-profile evaluation. The local backend was still pre-S5 and was refreshed; current user taste or mood may also differ from the fixed profile.",
+          "default_enabled": false
+        }
+      }
+    }
+  }
+}

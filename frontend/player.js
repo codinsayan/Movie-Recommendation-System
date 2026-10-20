@@ -2,12 +2,15 @@
 (function (root) {
   "use strict";
   class MoviePlayer {
-    constructor({ providers, viewing, eventTarget = root, timers = root, onChange = () => {} }) {
+    constructor({ providers, viewing, eventTarget = root, timers = root, onChange = () => {},
+      now = () => Date.now(), isVisible = () => !root.document?.hidden }) {
       this.providers = providers;
       this.viewing = viewing;
       this.eventTarget = eventTarget;
       this.timers = timers;
       this.onChange = onChange;
+      this.now = now;
+      this.isVisible = isVisible;
       this.session = null;
       this.generation = 0;
     }
@@ -19,11 +22,11 @@
       const sources = this.providers.list();
       if (!sources.length) throw new Error("No movie sources are enabled");
       const saved = this.viewing.progress(ref.key);
-      if (startOver) this.viewing.removeProgress(ref.key);
+      if (startOver) this.viewing.restartProgress(ref.key);
       const preferred = this.providers.get(this.viewing.preferredSource) || sources[0];
       const position = startOver || saved.completed ? 0 : saved.position || 0;
       this.session = { movie, ref, host, select, status, restart, removeHistory,
-        position, duration: saved.duration || 0, generation: this.generation };
+        position, duration: saved.duration || 0, generation: this.generation, evidenceRun: {} };
       select.replaceChildren(...sources.map((source) => {
         const option = select.ownerDocument.createElement("option");
         option.value = source.key; option.textContent = source.label;
@@ -35,12 +38,13 @@
         if (!this.session) return;
         this.session.position = 0;
         this.session.forget = false;
-        this.viewing.removeProgress(ref.key);
+        this.session.evidenceRun = {};
+        this.viewing.restartProgress(ref.key);
         this.selectSource(select.value, false, true);
         this.onChange();
       };
       restart?.addEventListener("click", this.restartHandler);
-      this.removeHandler = () => { this.viewing.removeProgress(ref.key); this.session.forget = true; this.onChange(); this.setStatus("Removed from viewing history."); };
+      this.removeHandler = () => { this.forget(); this.setStatus("Removed from viewing history."); };
       removeHistory?.addEventListener("click", this.removeHandler);
       this.selectSource(preferred.key, false);
     }
@@ -49,6 +53,33 @@
     save() {
       const s = this.session;
       if (s && !s.forget && s.position > 0 && s.duration > 0) this.viewing.saveProgress(s.ref.key, s.position, s.duration, s.completed);
+      this.viewing.persist();
+    }
+    suspend() { if (this.session) this.session.anchor = null; this.save(); }
+    forget(all = false) {
+      if (all) this.viewing.clearHistory();
+      else if (this.session) this.viewing.removeProgress(this.session.ref.key);
+      if (this.session) { this.session.forget = true; this.session.anchor = null; }
+      this.onChange();
+    }
+    observe(position, duration) {
+      const s = this.session, now = this.now();
+      if (!s || s.forget || s.failed || !s.playing || !this.isVisible()) { if (s) s.anchor = null; return; }
+      const previous = s.anchor;
+      s.anchor = { position, duration, time: now };
+      if (!previous || Math.abs(previous.duration - duration) > 2) return;
+      const wall = (now - previous.time) / 1000, delta = position - previous.position;
+      // Reject seek jumps, long silent gaps, reverse progress and implausible clocks.
+      if (!(wall > 0 && wall <= 15 && delta > 0 && delta <= 15 && delta <= wall * 1.25 + .25)) return;
+      const before = this.viewing.signals().some((signal) => signal.key === s.ref.key);
+      const qualifies = this.viewing.recordInterval(s.ref.key, previous.position, position, duration, s.evidenceRun);
+      s.sourceSeconds += delta;
+      if (!s.verified && s.sourceSeconds >= 10) {
+        s.verified = true;
+        this.viewing.recordPlayback(s.ref.key, s.provider.key);
+        this.onChange();
+      }
+      if (!before && qualifies) this.onChange();
     }
     detachFrame() {
       const s = this.session;
@@ -69,6 +100,9 @@
       s.completed = false;
       s.failed = false;
       s.playing = false;
+      s.anchor = null;
+      s.sourceSeconds = 0;
+      s.verified = false;
       s.autoplay = autoplay;
       s.playCommandSent = false;
       if (remember) this.viewing.prefer(key);
@@ -94,11 +128,18 @@
         this.timers.clearTimeout(s.timer);
         if (normalized.type === "error") {
           s.failed = true;
+          s.playing = false;
+          s.anchor = null;
+          s.sourceSeconds = 0;
+          s.verified = false;
+          if (!s.forget) this.viewing.recordPlayback(s.ref.key, provider.key, true);
           this.save();
+          this.onChange();
           this.setStatus("This source could not play the movie. Choose another source above.");
         } else if (normalized.type === "playing") {
           s.failed = false;
           s.playing = true;
+          s.anchor = null;
           s.autoplay = false;
           this.setStatus(`Playing with ${provider.label}. You can change the source at any time.`);
         } else if (normalized.type === "ready" && !s.failed && !s.playing) {
@@ -109,6 +150,7 @@
           } else if (!s.autoplay) this.setStatus(`${provider.label} is ready. Press Play to watch.`);
         } else if (normalized.type === "paused" && !s.failed) {
           s.playing = false;
+          s.anchor = null;
           s.autoplay = false;
           this.save();
           this.setStatus("Paused. Choose another source if you need to.");
@@ -121,13 +163,19 @@
           }
           s.position = normalized.position;
           s.duration = normalized.duration;
+          this.observe(normalized.position, normalized.duration);
           // Completion is a resume/UI state, not an implicit movie rating.
-          if (Date.now() - lastSaved >= 5000) { this.save(); lastSaved = Date.now(); }
+          if (this.now() - lastSaved >= 5000) { this.save(); lastSaved = this.now(); }
         } else if (normalized.type === "ended") {
+          s.playing = false;
+          s.anchor = null;
           s.completed = true;
           this.save();
           this.setStatus("Finished. Choose another movie whenever you're ready.");
           this.onChange();
+        } else if (normalized.type === "seeking" || normalized.type === "seeked") {
+          s.anchor = null;
+          s.sourceSeconds = 0;
         }
       };
       this.eventTarget.addEventListener("message", s.handler);

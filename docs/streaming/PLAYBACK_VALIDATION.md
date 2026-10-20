@@ -12,8 +12,8 @@ CineSrc is the default and has user-confirmed movie playback. The user reported 
 
 | Check | Result |
 |---|---|
-| Existing and new pytest suite | 50 passed; includes catalogue/cache/API checks, JavaScript contracts and preference-restoration integration |
-| JavaScript playback contracts | 17 passed using Node's test runner without external network requests, including autoplay, source-menu keyboard behavior, preference migration and persistent local state |
+| Existing and new pytest suite | 97 passed; includes S5 ranking/eligibility, curated/TMDB parity, catalogue/cache/API checks and preference-restoration integration |
+| JavaScript playback contracts | 26 passed using Node's test runner without external network requests, including autoplay, source-menu keyboard behavior, preference migration and persistent local state |
 | JavaScript catalogue contracts | Seven passed: pagination, response ordering, language changes, static fallback and remote metadata restoration |
 | Live S4 discovery | Batman pages 1/2 returned 20 results each; Sintel (TMDB 45745) details loaded in English/Hindi outside the model; saved metadata restored; model stayed at 447 movies |
 | JavaScript syntax | Checked all new modules and `app.js` |
@@ -23,7 +23,7 @@ CineSrc is the default and has user-confirmed movie playback. The user reported 
 | Live external movie playback | User confirms the sources work after removing the sandbox. Autoplay-on-switch and the redesigned menu require a new browser check. Film IDs, device and detailed resume behavior not yet recorded |
 | Desktop/mobile visual and keyboard checks | Pending; no browser is available through the attached browser automation tool |
 
-Tests simulate provider events and a small DOM surface. They verify contract/lifecycle behavior; they do not render a browser or verify a third-party player. No implicit viewing-preference signals have been added to the recommendation engine.
+Tests simulate provider events and a small DOM surface. They verify contract/lifecycle behavior; they do not render a browser or verify a third-party player. S5 now offers opt-in recommendations from measured viewing intervals and a device-local recent-playback filter. See [evaluation](../EVALUATION.md) for the proxy results, informal relevance review and remaining acceptance checks.
 
 ## Manual verification to collect
 

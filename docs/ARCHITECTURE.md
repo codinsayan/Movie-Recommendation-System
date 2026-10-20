@@ -1,5 +1,15 @@
 # Architecture
 
+## S5 device-reported viewing evidence
+
+`frontend/player.js` measures short visible playing intervals against an injected wall clock. The viewing store merges unique intervals, separates completion/resume position, and credits only substantial repeat sessions. Its internal schema migrates from version 1 to 2 without inferring preference from old resume data. The existing storage key stays stable. Opt-in controls and evidence remain browser-local; only enabled evidence is included in recommendation requests.
+
+The version-1 request contract supplies bounded `signals` and provider-specific `playback` records, plus `use_viewing`, `recent_playback_only` and optional canonical `eligible_keys`. `backend/viewing.py` resolves only indexed identities, rejects invalid/duplicate evidence and evaluates seven-day playback freshness. This is client-reported evidence, not a server playback probe. FastAPI remains stateless.
+
+The Python and JavaScript engines retain 90% of the explicit baseline and add at most 10% from qualified viewing when enabled. Dislikes override positive seeds. Candidate eligibility precedes normalization, top-pool selection and MMR. Responses add `watched_rows`; the UI retains explicit ?Because you loved? rows and shows the actual viewing contribution in explanations. Static exports include the same policy. Unknown remote films never expand matrices during a request.
+
+The builder's explicit refresh budget is at most 500 requested IDs, with selected remote IDs optionally prioritized. The active snapshot remains 447 films. Larger models require sparse candidate retrieval and measured memory/latency/browser responsiveness before raising that cap. See [evaluation](EVALUATION.md) for benchmarks, provenance, limits and pending human/browser checks.
+
 ## S4 discovery alongside the recommendation snapshot
 
 The model still owns a bounded catalogue. `backend/catalog.py` performs live TMDB title search and detail lookup separately; `frontend/catalogue.js` holds discovered metadata without adding it to the model's similarity matrices.

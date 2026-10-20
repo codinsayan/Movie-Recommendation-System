@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-20",
+  "profile": "TMDB example: liked Inception; substantially watched Interstellar",
+  "prompted_titles": ["Now You See Me 2", "Tenet", "Minority Report", "Sicario", "Eternal Sunshine of the Spotless Mind"],
+  "user_response": "tenet is not there though, but it is pretty relevant",
+  "assessment": "Broadly relevant; user reports Tenet absent from their displayed picks.",
+  "scope": "One informal review of the TMDB example; the user's browser/profile state was not inspected. Curated results were not reviewed.",
+  "follow_up": "Tenet exists in the committed snapshot and the fixed-profile evaluation. The local backend was still pre-S5 and was refreshed; current user taste or mood may also differ from the fixed profile.",
+  "default_enabled": false
+}

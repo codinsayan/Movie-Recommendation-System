@@ -9,7 +9,7 @@ Viewing state survives refresh, manual source changes can resume where supported
 ## Work
 
 - [x] Create `frontend/viewing.js` with versioned, browser-local storage and namespaced movie identities; unknown schema versions start a fresh viewing session without touching taste.
-- [x] Store preferred provider, position, duration, update time and completion state. No implicit ranking signals are collected yet; watched-interval evidence is S5 work.
+- [x] Store preferred provider, position, duration, update time and completion state. Resume state stays independent; S5 adds measured watched-interval evidence for opt-in ranking.
 - [x] Save valid progress periodically, on pause and before disposing a player; handle storage failure without interrupting playback.
 - [x] On manual source change, snapshot the last valid position before disposal and pass it through the new adapter's supported resume parameter.
 - [ ] If the next source cannot resume, say that playback will restart. Do not promise exact continuity across different film cuts or audio editions.

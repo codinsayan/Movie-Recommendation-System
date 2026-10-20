@@ -42,6 +42,7 @@ def build_model(engine: rec.Recommender) -> dict:
             "moodBoost": rec.MOOD_BOOST,
             "mmrLambda": rec.MMR_LAMBDA,
             "moodSynonyms": rec.MOOD_SYNONYMS,
+            "viewing": rec.VIEWING_CONFIG,
         },
     }
 
