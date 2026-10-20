@@ -67,6 +67,37 @@ kbd { font-family: inherit; font-size: 0.72rem; padding: 1px 6px; border: 1px so
 .search input { width: 0; opacity: 0; background: none; border: none; outline: none; font-size: 0.875rem; transition: width 0.35s var(--ease), opacity 0.2s; }
 .search.open { background: rgba(0, 0, 0, 0.75); border-color: rgba(255, 255, 255, 0.85); }
 .search.open input { width: 260px; opacity: 1; padding-right: 10px; }
+.search { border-radius: 4px; }
+.search:focus-within { border-color: var(--red); }
+.search-clear { flex-shrink: 0; color: var(--muted); }
+.search:not(.open) .search-clear { display: none; }
+
+/* Search replaces the home rows with a landscape gallery. */
+body.searching .billboard, body.searching .mood-strip, body.searching #onboard { display: none; }
+body.searching .nav { background: var(--bg); }
+body.searching .rows { margin-top: 0; padding-top: 110px; min-height: 100vh; }
+.search-results .row-head { align-items: baseline; flex-wrap: wrap; margin-bottom: 24px; }
+.search-results h1 { font-size: clamp(1.5rem, 2.2vw, 2rem); }
+.search-results .row-sub { color: var(--muted); overflow-wrap: anywhere; }
+.search-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 36px 12px; padding: 0 var(--gutter); }
+.search-grid > .empty { grid-column: 1 / -1; padding: 40px 0; }
+.tile.search-tile { aspect-ratio: auto; background: transparent; overflow: visible; }
+.search-artwork { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 5px; background: var(--surface-2); }
+.search-artwork img { display: block; }
+.search-artwork.poster-artwork img { object-position: center 25%; }
+.search-caption { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; padding-top: 9px; font-size: .8rem; }
+.search-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-year { flex-shrink: 0; color: var(--muted); font-size: .72rem; }
+.search-hint { padding: 18px var(--gutter) 0; font-size: .8rem; color: var(--faint); }
+@media (max-width: 1200px) { .search-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 801px) and (max-width: 1200px) { .nav:has(.search.open) .nav-links { display: none; } }
+@media (max-width: 800px) { .search-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 12px; } }
+@media (max-width: 560px) {
+  .search-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.searching .rows { padding-top: 130px; }
+  .nav:has(.search.open) .search { position: absolute; left: var(--gutter); right: var(--gutter); top: 68px; background: var(--bg); }
+  .nav .search.open input { flex: 1; min-width: 0; width: 100%; }
+}
 
 .icon-btn .ic { width: 22px; height: 22px; }
 /* Circular avatar centred inside a circular confidence ring */

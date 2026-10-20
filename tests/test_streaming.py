@@ -38,6 +38,15 @@ def test_catalogue_browser_contracts():
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_search_gallery_contracts():
+    proc = subprocess.run(
+        [shutil.which("node"), str(ROOT / "tests/js/test_search.cjs")],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_billboard_empty_filter_recovery(tmp_path):
     sys.path.insert(0, str(ROOT / "scripts"))
     from export_static import export

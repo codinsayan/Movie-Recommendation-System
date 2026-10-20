@@ -63,7 +63,7 @@ The recent-playback option is a strict filter, so it can have no eligible picks.
 
 ### Live movie search (S4)
 
-The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Type a title, wait for results, and choose **Load more** for another page. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
+The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Matching movies load automatically after a **300 ms typing pause**; no Enter is needed. Search replaces the home banner/rows with a responsive landscape grid, using backdrops where available and showing titles and years. Choose **Load more** for another page, or clear the search with **×** / **Esc** to return home. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
 
 Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. Titles outside the trained model have no personalized match score or local similar-film recommendations yet; discovery does not enlarge the model.
 

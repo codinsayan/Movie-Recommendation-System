@@ -42,6 +42,12 @@ The backend deployment can discover movies outside the existing 447-film snapsho
 
 The updated preview runs at `http://127.0.0.1:8000`. Existing `.env` credentials were used without printing their values. No new credential is currently needed.
 
+## Search gallery follow-up (20 October 2026)
+
+The existing 300 ms automatic title search now uses a dedicated landscape grid instead of a horizontal row among home recommendations. It shows six columns on wide desktop layouts and two on phones, uses backdrops with poster/gradient fallbacks, and includes visible titles/years. Clear search, Escape or a navigation link restores the home view without resetting taste. Static mode shows all matching local titles; live mode keeps Load more, language and retry controls. Enter retains mood search.
+
+Five focused JavaScript interaction cases cover typing-pause fetching, clear/late-response handling, pagination/failure, static matching/escaping and composition/Escape. The full pytest suite passes **99 tests**. The local app serves the updated HTML/JS/CSS over HTTP 200; a live `spider` search returned 20 films, 17 with backdrop images. No browser is attached to automation; desktop/mobile appearance and real click-through remain pending visual acceptance. This follow-up does not implement S5A-S5D, S6 or S7.
+
 ## Demo
 
 Find a permitted film outside the snapshot, open its details, select a source and save it. Demonstrate a cached lookup during an upstream failure and the static deployment's snapshot behavior.

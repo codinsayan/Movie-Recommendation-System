@@ -161,8 +161,22 @@
       </div>`;
   }
 
+  function searchTileHTML(m) {
+    const image = m.backdrop || m.poster;
+    return `<div class="tile search-tile ${state.disliked.has(m.id) ? "noped" : ""}" data-id="${m.id}" tabindex="0" role="button" aria-label="${esc(m.title)}${m.year ? ` (${esc(m.year)})` : ""}">
+      <div class="search-artwork${m.backdrop ? "" : " poster-artwork"}">${image ? `<img src="${esc(image)}" alt="" loading="lazy" decoding="async" data-fallback="${m.id}">` : fallbackHTML(m)}
+        ${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">${icon("heart")}</span>` : ""}
+      </div><div class="search-caption"><span class="search-title">${esc(m.title)}</span><span class="search-year">${esc(m.year || "Year unknown")}</span></div>
+    </div>`;
+  }
+
   function rowHTML(row, r, isStatic) {
     if (!row.items.length && !row.empty) return "";
+    if (row.key === "search") return `<section class="row search-results static" id="row-search" data-row="search" aria-labelledby="searchHeading" aria-busy="${!!catalogue?.state.loading}">
+      <div class="row-head"><h1 id="searchHeading">Movies</h1><p class="row-sub">${row.title}</p></div>
+      <div class="search-grid">${row.items.map(searchTileHTML).join("") || `<p class="empty">${esc(row.empty)}</p>`}</div>
+      ${searchControlsHTML()}<p class="search-hint">Looking for a feeling? Describe a mood and press Enter.</p>
+    </section>`;
     const tiles = row.items.length
       ? row.items.map((m, i) => row.kind === "top10" ? top10TileHTML(m, i + 1) : tileHTML(m, {
           i, showMatch: row.showMatch, fresh: row.freshIds?.has(m.id), isNew: row.freshIds?.has(m.id),
@@ -179,7 +193,6 @@
           <div class="scroller">${tiles}</div>
           <button class="arrow right" data-scroll="1" aria-label="Scroll right">${icon("chevronRight")}</button>
         </div>
-        ${row.key === "search" ? searchControlsHTML() : ""}
       </section>`;
   }
 
@@ -202,11 +215,10 @@
         [m.title, m.original_title, ...(m.alternative_titles || []), ...m.tags, ...m.genres].some((text) => String(text || "").toLowerCase().includes(q)));
       const remote = catalogue?.state;
       const hits = catalogue?.live && remote?.query.toLowerCase() === q && !remote.error ? remote.items : [...new Map([...(remote?.items || []), ...local].map((movie) => [movie.id, movie])).values()];
-      rows.push({
-        key: "search", title: `Results for “${esc(state.query)}”`, items: catalogue?.live ? hits : hits.slice(0, ROW_LIMIT),
-        sub: "Press Enter to conjure films that <i>feel</i> like this",
+      return [{
+        key: "search", title: `Results for “${esc(state.query)}”`, items: hits,
         empty: remote?.loading ? "Searching movies…" : "No titles match. Press Enter to search by mood instead.",
-      });
+      }];
     }
 
     const pickTitle = {
@@ -266,14 +278,16 @@
   }
 
   function renderRows(freshIds = null) {
+    document.body.classList.toggle("searching", !!state.query);
+    $("#searchClear").hidden = !state.query;
     const restoreLanguageFocus = document.activeElement?.id === "catalogueLanguage";
     const list = $("#rowList");
     const prevKeys = new Set($$(".row", list).map((r) => r.dataset.row));
-    const scroll = new Map($$(".row", list).map((r) => [r.dataset.row, $(".scroller", r).scrollLeft]));
+    const scroll = new Map($$(".row", list).map((r) => [r.dataset.row, $(".scroller", r)?.scrollLeft || 0]));
     list.innerHTML = buildRows(freshIds).map((row, r) => rowHTML(row, r, prevKeys.has(row.key))).join("");
     $$(".row", list).forEach((r) => {
       const left = scroll.get(r.dataset.row);
-      if (left) $(".scroller", r).scrollLeft = left;
+      if (left && $(".scroller", r)) $(".scroller", r).scrollLeft = left;
     });
     if (restoreLanguageFocus) $("#catalogueLanguage")?.focus();
   }
@@ -619,6 +633,7 @@
     state.mood = mood.trim();
     save();
     state.query = "";
+    $("#searchInput").value = "";
     catalogue?.setQuery("");
     hidePreview();
     if (state.mood) {
@@ -844,17 +859,21 @@
   function bindSearch() {
     const form = $("#searchForm"), input = $("#searchInput");
     const open = () => { form.classList.add("open"); input.focus(); };
-    $("#searchToggle").addEventListener("click", () => (form.classList.contains("open") && !input.value ? form.classList.remove("open") : open()));
-    input.addEventListener("input", () => {
+    const update = () => {
       const had = !!state.query;
       state.query = input.value.trim();
       hidePreview();
       catalogue?.setQuery(state.query);
       renderRows();
-      if (state.query && !had) scrollTo({ top: $("#rows").offsetTop - 80, behavior: reducedMotion ? "auto" : "smooth" });
-    });
+      if (state.query && !had) scrollTo({ top: 0, behavior: "auto" });
+    };
+    $("#searchClear").addEventListener("click", () => { input.value = ""; update(); open(); });
+    $("#searchToggle").addEventListener("click", () => (form.classList.contains("open") && !input.value ? form.classList.remove("open") : open()));
+    input.addEventListener("input", () => { if (!input.composing) update(); });
+    input.addEventListener("compositionstart", () => { input.composing = true; });
+    input.addEventListener("compositionend", () => { input.composing = false; update(); });
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { input.value = ""; state.query = ""; catalogue?.setQuery(""); renderRows(); input.blur(); form.classList.remove("open"); }
+      if (e.key === "Escape") { input.value = ""; update(); input.blur(); form.classList.remove("open"); }
     });
     input.addEventListener("blur", () => { if (!input.value) form.classList.remove("open"); });
     form.addEventListener("submit", (e) => {
@@ -889,6 +908,11 @@
 
     document.addEventListener("click", (e) => {
       const t = e.target;
+      if (t.closest(".logo, .nav-links a") && state.query) {
+        $("#searchClear").click();
+        $("#searchInput").blur();
+        $("#searchForm").classList.remove("open");
+      }
       if (t.closest("[data-show-all-picks]")) return showAllPicks();
       if (t.closest("[data-search-more]")) return catalogue?.more();
       if (t.closest("[data-search-retry]")) return catalogue?.setQuery(state.query);

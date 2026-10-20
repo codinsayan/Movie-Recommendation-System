@@ -26,7 +26,10 @@
         <button type="button" class="icon-btn" id="searchToggle" aria-label="Search">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         </button>
-        <input id="searchInput" type="text" maxlength="200" placeholder="Titles, or describe a mood and press Enter" aria-label="Search titles or describe a mood" />
+        <input id="searchInput" type="text" maxlength="200" placeholder="Search movies" aria-label="Search titles or describe a mood" aria-controls="rowList" />
+        <button type="button" class="icon-btn search-clear" id="searchClear" aria-label="Clear search" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
       </form>
       <button class="icon-btn" id="howBtn" aria-label="How it works" title="How it works"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
       <button class="avatar" id="tasteBtn" aria-label="Open my taste profile" title="My Taste">
