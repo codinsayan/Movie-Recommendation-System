@@ -20,7 +20,7 @@ def test_blueprint_preserves_full_project_and_private_runtime_contract():
     assert len(config["services"]) == 1 and "databases" not in config
     service = config["services"][0]
     assert (service["type"], service["runtime"], service["plan"]) == ("web", "python", "free")
-    assert service["branch"] == "feature/streaming-platform" and service.get("rootDir", ".") == "."
+    assert service["branch"] == "main" and service.get("rootDir", ".") == "."
     assert service["autoDeployTrigger"] == "off"  # Quote YAML 1.1's boolean-like word.
     assert service["healthCheckPath"] == "/api/health" and "disk" not in service
     assert "requirements-runtime.txt" in service["buildCommand"] and "export_static.py" in service["buildCommand"]

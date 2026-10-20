@@ -11,7 +11,7 @@ Start with Render Free for the college demo. Render documents idle spin-down aft
 ## S7.1: Prepare and validate the deployment package
 
 - [x] `render.yaml` defines one Free Python Web Service at repository root, Singapore, with manual redeployment and no disk/database.
-- [x] Explicit branch `feature/streaming-platform`; publish the prepared commit before importing the Blueprint. `/api/deployment` exposes the public full Render commit SHA for exact hosted verification. GitHub was checked read-only: its branch is older than the prepared local work.
+- [x] Blueprint now targets `main` following the owner's explicit authorization to publish and merge the streaming branch on 21 October. `/api/deployment` exposes the public full Render commit SHA for exact hosted verification; confirm the published revision before importing the Blueprint. Original S7.1 validation used the feature branch.
 - [x] `.python-version` pins tested Python 3.13.5. `requirements-runtime.txt` pins the full runtime dependency closure; development tools stay in `requirements.txt`. Patched FastAPI/Starlette are validated in a clean environment. Secrets/caches/local validation outputs remain ignored and outside frontend assets.
 - [x] Build exports the committed 447-film snapshot and public playback policy without live catalogue fetching. Runtime retrieval/feature hydration remains S5A-S5D.
 - [x] Local Uvicorn startup with the same host, one-worker and port configuration passes the real HTTP smoke check, including assets, model parity, recommendations, capabilities, missing-credential fallback and private-path isolation. Linux CI is configured to exercise the literal Blueprint-style CLI after push; an actual Render build is not inferred.

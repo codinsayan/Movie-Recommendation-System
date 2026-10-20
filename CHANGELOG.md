@@ -37,6 +37,8 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 
 ### S7.1 - Render deployment package and local validation (2026-10-21)
 
+Follow-up: the owner explicitly authorized pushing, merging to `main` and deploying. The Blueprint/runbook now target `main`, the deployment regression asserts that branch, and release CI runs on main pushes as well as feature branches. No hosted service is inferred from this configuration update.
+
 - Added root `render.yaml` for one Free Python Web Service in Singapore, explicitly using `feature/streaming-platform`, repository-root builds, `/api/health`, one Uvicorn worker on `0.0.0.0:$PORT`, and manual redeployment. No database, paid disk or separate frontend service is provisioned by the file.
 - Added a private Blueprint prompt (`sync: false`) for the TMDB Read Access Token; configured the TMDB catalogue, dynamic ranking, three manually selected providers, disposable `/tmp/cinemagic/catalogue.sqlite3`, unbuffered logs and bounded scientific-library threads. No credential values were copied into code, YAML, frontend assets or evidence.
 - Pinned Python 3.13.5 in `.python-version` and the full runtime dependency closure in `requirements-runtime.txt`. `requirements.txt` now adds development/test tools separately. Kept NumPy/SciPy/scikit-learn model versions stable; updated and tested the web runtime/certificate bundle in an isolated environment, including patched Starlette after its published static-file Range advisory. No global Python packages were changed.

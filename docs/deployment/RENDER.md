@@ -5,20 +5,20 @@ S7 package prepared on 21 October 2026. Cloud service creation and hosted accept
 ## What the owner needs
 
 1. Sign in to [Render](https://dashboard.render.com/) and connect GitHub with access to `codinsayan/Movie-Recommendation-System`.
-2. Make the prepared `feature/streaming-platform` commit available on GitHub. S5B-S7 local commits must be published before importing the Blueprint; the older remote branch is insufficient. This task does not push without authorization.
+2. Use the updated `main` branch containing the streaming/S7 work. On 21 October the owner explicitly authorized publishing the feature branch, merging to `main`, and deploying. The deployment configuration now targets `main`; verify the GitHub revision before importing the Blueprint.
 3. Have the existing **TMDB API Read Access Token** ready. Enter it privately into Render's `TMDB_READ_ACCESS_TOKEN` secret prompt. Do not put it in chat, GitHub, `render.yaml` or the frontend. This is the long Read Access Token, not an account password. An API-key alternative can be set manually as `TMDB_API_KEY` instead.
 
 No domain, paid disk, account system or separate frontend/backend hosting is required for the planned demo.
 
 ## Import the prepared Blueprint
 
-In Render, create a **Blueprint**, connect the repository above, and select **feature/streaming-platform** as the Blueprint branch. Use the root `render.yaml`. Review the concrete configuration before creating resources:
+In Render, create a **Blueprint**, connect the repository above, and select **main** as the Blueprint branch. Use the root `render.yaml`. Review the concrete configuration before creating resources:
 
 | Setting | Prepared value |
 |---|---|
 | Service | One Python Web Service named `cinemagic` |
 | Plan / region | Free / Singapore (change before creation if desired) |
-| Branch | `feature/streaming-platform` |
+| Branch | `main` |
 | Root directory | Repository root; leave blank in the dashboard |
 | Python | `3.13.5`, selected by `.python-version` |
 | Build | `pip install --no-cache-dir -r requirements-runtime.txt && python scripts/export_static.py` |
@@ -32,7 +32,7 @@ In Render, create a **Blueprint**, connect the repository above, and select **fe
 
 The initial Blueprint creation provisions/deploys the service. Disabling automatic redeployment does not turn that initial creation into a dry run. Leave the plan Free; this package creates no database or persistent disk. The service name is a requested name, not a claim that any particular `onrender.com` URL is available.
 
-Wait for the build and health check. Record the resulting HTTPS URL and the deployed **full Git SHA** shown by Render. Do not deploy an old `main` or assume a page loading proves it is the full backend.
+Wait for the build and health check. Record the resulting HTTPS URL and the deployed **full Git SHA** shown by Render. Confirm that `main` includes the streaming/S7 merge; a page loading alone does not prove it is the full backend.
 
 References checked 21 October 2026: [Blueprint fields/secrets](https://render.com/docs/blueprint-spec), [Python selection](https://render.com/docs/python-version), [FastAPI hosting](https://render.com/docs/deploy-fastapi).
 
