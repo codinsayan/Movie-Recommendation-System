@@ -36,12 +36,22 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S3: Personal viewing state](03-progress-and-watchlist.md) | Resume, Continue watching, independent watchlist, position transfer | S2 | Code implemented; browser acceptance pending |
 | [S4: Search and catalogue growth](04-search-and-catalogue.md) | Paginated TMDB-backed discovery, metadata cache, broader language coverage | S2; reuse S3 identity conventions | Implemented; API/client checks passed |
 | [S5: Viewing-aware recommendations](05-recommendations.md) | Measured viewing, device-local playback eligibility and explanations | S3 and S4 | Implemented as opt-in; evaluation/parity passed |
-| [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 | Planned |
+| [S5A: Dynamic preferences](05a-dynamic-preferences.md) | Apply external likes/dislikes using resolved metadata and honest pending states | S4 and S5 | Planned |
+| [S5B: Dynamic discovery](05b-dynamic-discovery.md) | Retrieve new recommendation candidates beyond the starter snapshot | S5A | Planned |
+| [S5C: Scalable ranking](05c-scalable-ranking.md) | Sparse feature/profile scoring and bounded reranking instead of growing global matrices | S5A and S5B | Planned |
+| [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Planned |
+| [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Planned |
 | [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Planned |
 
-**First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S6 grow and validate the release candidate; S7 deploys it to Render.
+**First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S5 establish discovery and viewing signals. S5A-S5D implement and validate dynamic recommendations before S6 release readiness and S7 Render deployment.
 
-The older recommender evaluation/model experiments remain recorded in [ITERATIONS.md](../ITERATIONS.md). Streaming work uses S1-S7 labels to avoid assigning conflicting version numbers. Decide release versions at implementation time.
+The older recommender evaluation/model experiments remain recorded in [ITERATIONS.md](../ITERATIONS.md). Streaming work keeps S1-S7 labels and inserts S5A-S5D between S5 and S6, preserving the existing release/deployment numbering. Decide release versions at implementation time.
+
+## Dynamic recommendation upgrade (planned)
+
+Implementation order: **S5 -> S5A -> S5B -> S5C -> S5D -> S6 -> S7**. The current 447-film snapshot remains the starter/offline fallback. The new phases make external likes/dislikes usable, retrieve fresh candidates and score bounded pools as the catalogue evolves. Candidate budgets are per-request limits, not a permanent 447/500-film discovery limit. The existing snapshot builder cap remains until deliberately revisited.
+
+Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. No dynamic-preference, candidate-retrieval or scalable-ranking implementation is included in this planning update.
 
 ## Implementation boundaries
 
@@ -58,6 +68,7 @@ Module locations:
 - `backend/catalog.py`: S4 metadata lookup/cache and canonical identity mapping.
 - `frontend/catalogue.js`: remote search, capability detection and saved title metadata.
 - `backend/recommender.py` and `frontend/engine.js`: coordinated S5 ranking changes where both modes support them.
+- Planned S5A-S5C feature/profile/retrieval modules: resolve external preferences and rank dynamic pools; finalize module boundaries during implementation, preserving canonical IDs and static-mode limits.
 
 Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated IDs are internal IDs and must never be sent to a provider as though they were TMDB IDs. Resolve an explicit TMDB mapping or show that full-movie playback is unavailable for that record.
 
@@ -69,4 +80,4 @@ The full suite passes 98 tests. S5 adds ranking/eligibility and Python/JavaScrip
 
 ## Deferred work
 
-Automatic provider failover, stream extraction/proxying, TV episode navigation, accounts and cross-device sync, subscription billing, and enabling the entire provider directory are outside S1-S7. The source selector and adapter boundary allow additional evaluated providers later.
+Automatic provider failover, stream extraction/proxying, TV episode navigation, accounts and cross-device sync, subscription billing, and enabling the entire provider directory are outside this roadmap. The source selector and adapter boundary allow additional evaluated providers later.

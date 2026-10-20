@@ -2,7 +2,7 @@
 
 Research date: 20 October 2026. Branch: `feature/streaming-platform`, created from `main` at `0b6576d`.
 
-**Implementation plan:** [S1-S6 streaming roadmap](streaming/README.md). The latest user decision is manual source selection, with CineSrc as the default and VidLink/VidSrc as alternatives. CineSrc playback is user-confirmed. Movie iframes are now unsandboxed at the user's request after the other two sources rejected sandboxed playback; revalidation is pending. Earlier automatic-switching proposals are not part of the current scope.
+**Implementation plan:** [streaming implementation roadmap](streaming/README.md). The latest user decision is manual source selection, with CineSrc as the default and VidLink/VidSrc as alternatives. CineSrc playback is user-confirmed. Movie iframes are now unsandboxed at the user's request after the other two sources rejected sandboxed playback; revalidation is pending. Earlier automatic-switching proposals are not part of the current scope.
 
 ## Recommendation
 

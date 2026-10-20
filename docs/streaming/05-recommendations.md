@@ -1,6 +1,6 @@
 # S5: Recommendations informed by viewing
 
-Status: implemented as an opt-in experiment; automated contracts/parity and reproducible proxy evaluation pass. One informal user relevance review is recorded; broader relevance review and rendered-browser acceptance remain pending. Depends on [S3](03-progress-and-watchlist.md) and [S4](04-search-and-catalogue.md). Next: [S6](06-release.md). Evidence: [evaluation](../EVALUATION.md).
+Status: implemented as an opt-in experiment; automated contracts/parity and reproducible proxy evaluation pass. One informal user relevance review is recorded; broader relevance review and rendered-browser acceptance remain pending. Depends on [S3](03-progress-and-watchlist.md) and [S4](04-search-and-catalogue.md). Next: [S5A dynamic preferences](05a-dynamic-preferences.md), followed by S5B-S5D before S6/S7. Evidence: [evaluation](../EVALUATION.md).
 
 ## Outcome
 

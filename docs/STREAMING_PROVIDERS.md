@@ -2,7 +2,7 @@
 
 Researched: 20 October 2026. This supplements [the project feasibility assessment](STREAMING_FEASIBILITY.md).
 
-**Current product decision:** the viewer switches sources manually. Follow [the S1-S6 implementation roadmap](streaming/README.md). The automatic failover section below is retained as earlier research and is outside the chosen implementation scope.
+**Current product decision:** the viewer switches sources manually. Follow [the streaming implementation roadmap](streaming/README.md). The automatic failover section below is retained as earlier research and is outside the chosen implementation scope.
 
 ## What this list establishes
 

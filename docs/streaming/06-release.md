@@ -1,6 +1,6 @@
 # S6: Release readiness and operational checks
 
-Status: planned. Depends on [S1-S5](README.md#delivery-sequence). Next: [S7 Render deployment](07-render-deployment.md). Hosting setup and final public-URL verification are tracked in S7.
+Status: planned. Depends on [S1-S5 and the inserted S5A-S5D upgrade](README.md#delivery-sequence). Complete [S5D acceptance](05d-dynamic-evaluation.md) before implementing this phase. Next: [S7 Render deployment](07-render-deployment.md). Hosting setup and final public-URL verification are tracked in S7.
 
 ## Outcome
 
@@ -14,7 +14,7 @@ Prepare a tested movie discovery/player release candidate with manual source sel
 - [ ] Add provider enable/disable configuration. A removed provider disappears from future choices; an active failure shows a message and waits for viewer selection.
 - [ ] Check desktop/mobile layout, fullscreen, captions where offered, keyboard/focus behavior, browser autoplay restrictions and player disposal.
 - [ ] Add targeted automated tests for lifecycle, source selection and state isolation. Mock external responses/events in CI and keep real-network playback exercises separate.
-- [ ] Run the existing recommender/API/parity suite, the new focused checks and static export validation.
+- [ ] Run the recommender/API/parity suite, S5A-S5D dynamic-preference/retrieval/scaling checks, focused player checks and static export validation.
 - [ ] Record a permitted-film playback matrix for both selected sources, devices, target region, progress transfer and observed failures. Confirm the permission basis and current provider terms for the content offered publicly.
 - [ ] Update README, architecture and changelog around the actual shipped capabilities, including static versus backend differences.
 - [ ] Document rollback: disable an affected source or revert the player release while retaining the working recommendation site and viewing-state schema compatibility.
@@ -28,7 +28,7 @@ Provider configuration, `.github/workflows/pages.yml` if required, `README.md`, 
 - [ ] Movie search -> details -> Watch movie -> manual source selection -> close works in the release-candidate environment; repeat against the public Render URL in S7.
 - [ ] Errors and silent frames leave the selector usable. No error, timeout or hidden retry changes the source automatically.
 - [ ] One movie iframe is active; previous movies cannot update the current player's state.
-- [ ] Resume/history/watchlist and recommendations behave according to S3/S5 acceptance criteria.
+- [ ] Resume/history/watchlist and recommendations behave according to S3/S5 and S5A-S5D acceptance criteria, including external likes/dislikes and dynamic candidates.
 - [ ] Missing sources, unavailable movies and unavailable backend capabilities have clear user-facing states.
 - [ ] Existing checks pass and recorded live evidence supports the published feature claims.
 
