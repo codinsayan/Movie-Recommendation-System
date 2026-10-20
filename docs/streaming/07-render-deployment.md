@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: **S7.1 implemented and locally validated on 21 October 2026; S7.2/S7.3 await account setup and a real deployment**. The Blueprint, pinned runtime and deployment smoke checks are prepared. No Render service, public URL or hosted acceptance is claimed. S6 and the owner's 2/2 relevance/general playback sign-off remain recorded. See [setup runbook](../deployment/RENDER.md) and [local evidence](../deployment/S7_VALIDATION.md).
+Status: **S7.1 validated; streaming branch published and fast-forward merged into main on 21 October 2026. GitHub release checks and Pages deployment passed.** The owner reports Render/GitHub repository access connected; the Render integration in this session is not installed yet. Service creation, private TMDB secret entry and hosted acceptance remain pending. See [publication evidence](../deployment/GITHUB_VALIDATION.md), [setup runbook](../deployment/RENDER.md) and [package evidence](../deployment/S7_VALIDATION.md).
 
 ## Outcome
 
@@ -35,7 +35,7 @@ Prepared settings; hosted behavior remains to verify:
 
 ## S7.2: Configure and deploy the service
 
-- [ ] Connect the GitHub repository to the user's Render account and select the tested deployment branch/commit.
+- [x] Owner reports GitHub connected to Render with access to this repository. Streaming and main were both published at `0755f8f364c7780accc55058e17863a167186ef2`; Blueprint now selects main. The session's separate Render integration remains uninstalled, so service creation is not yet performed.
 - [ ] Configure the existing `TMDB_READ_ACCESS_TOKEN` as a Render secret, or use `TMDB_API_KEY` instead. Never place credential values in the Blueprint, commit, build output or frontend export.
 - [ ] Configure dataset, cache path and the provider settings established in S6. Keep the chosen provider order and manual switching behavior.
 - [ ] Deploy and record the service URL, deployed commit, plan, Python version, region and deployment date. Verify that the deployed commit includes S1-S5, accepted S5A-S5D work, S6 and the empty-filter banner fix.

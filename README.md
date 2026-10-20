@@ -103,7 +103,7 @@ python run.py                              # serves the TMDB catalogue automatic
 
 ## Deployment (GitHub Pages)
 
-For the full frontend/API/live-discovery application, S7.1 now provides a [Render Blueprint and setup runbook](docs/deployment/RENDER.md). The package pins Python/runtime dependencies, exports the snapshot fallback, and includes a hosted smoke checker with exact Git-revision verification. Local preparation is tested; a Render account, repository connection, published branch and private TMDB secret are still needed. **No Render service URL is claimed yet.** [Local validation](docs/deployment/S7_VALIDATION.md).
+For the full frontend/API/live-discovery application, use the [Render Blueprint and setup runbook](docs/deployment/RENDER.md). The streaming work is published on **main**; GitHub's Linux release checks and Pages deployment passed. The package pins Python/runtime dependencies, exports the snapshot fallback, and verifies hosted Git revisions. Render service creation and private TMDB secret entry remain pending; **no Render URL is claimed yet**. [Package validation](docs/deployment/S7_VALIDATION.md), [GitHub publication evidence](docs/deployment/GITHUB_VALIDATION.md).
 
 GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
 

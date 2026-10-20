@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Status as of 2026-10-21
 
-This section records implemented streaming work on `feature/streaming-platform` through S7.1 deployment preparation. The candidate remains **0.4.0-rc.1**; it is not a final release, tag or hosted deployment. Local work has not been pushed by this task. Earlier Iterations 1-3 and static-hosting release history are retained below.
+This section records streaming work through S7.1 and the authorized publication/merge to **main**. The candidate remains **0.4.0-rc.1**. GitHub release checks and static Pages deployment passed; the Render service is not created yet. Earlier Iterations 1-3 and static-hosting release history are retained below.
 
 | Iteration | Implementation and validation status |
 |---|---|
@@ -25,7 +25,7 @@ This section records implemented streaming work on `feature/streaming-platform` 
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Evaluation recorded; calibration adopted, embeddings deferred; owner relevance acceptance 2/2 overall on 21 October |
 | S6 | Candidate implemented; 143 tests and six browser scenarios passed; owner general playback sign-off received 21 October; detailed public-release evidence remains open |
-| S7 | S7.1 Blueprint/runtime/smoke/CI package implemented and locally tested; no service created or deployed |
+| S7 | Package implemented; streaming branch pushed/merged to main; Linux CI and static Pages deployment passed; Render service/hosted acceptance pending |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
@@ -34,6 +34,13 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - General playback sign-off received (**"everything works well"**). Detailed film/source/device/region records, explicit autoplay results and public-offering terms remain unrecorded.
 - Final candidate acceptance, any separately authorized push/release, then Render deployment (S7).
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S7.2 - Publish streaming work and merge main (2026-10-21)
+
+- Acted on the owner's explicit authorization to push, merge to main and deploy. Published the streaming branch and fast-forward merged/pushed main to `0755f8f364c7780accc55058e17863a167186ef2`; verified both remote refs. No force push or history rewrite.
+- Changed the Render Blueprint, runbook, architecture and deployment contract test to main. Enabled release CI on main pushes. All 154 pinned-runtime tests passed again before publication.
+- Verified successful remote release workflows on main and feature, including Linux full-service startup, exact-revision smoke, static export and JavaScript checks. Existing Pages build/deployment also passed on main. [Evidence and workflow links](docs/deployment/GITHUB_VALIDATION.md).
+- Recorded the owner's completed Render/GitHub repository connection. No browser session is attached; the separate Render integration here remains uninstalled at the last check, despite the owner's intent to install/connect it. Service creation, private secret entry and hosted acceptance remain pending; GitHub Pages success is not labelled a Render deployment.
 
 ### S7.1 - Render deployment package and local validation (2026-10-21)
 
