@@ -64,7 +64,7 @@ Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated I
 
 Each phase has checkboxes, affected files, a demo and acceptance criteria in its linked document. Mark a phase done only when its acceptance evidence exists. Deterministic tests use simulated provider messages; live checks verify a small permitted-film set without making third-party network availability a CI dependency.
 
-The full suite passes 97 tests. S5 adds ranking/eligibility and Python/JavaScript parity checks for both catalogues, plus 26 JavaScript playback/preferences cases and seven catalogue cases. See [S5 evaluation](../EVALUATION.md) for evidence and limits. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
+The full suite passes 98 tests. S5 adds ranking/eligibility and Python/JavaScript parity checks for both catalogues, plus 26 JavaScript playback/preferences cases and seven catalogue cases. See [S5 evaluation](../EVALUATION.md) for evidence and limits. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
 
 ## Deferred work
 

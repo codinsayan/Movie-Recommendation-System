@@ -12,7 +12,7 @@ CineSrc is the default and has user-confirmed movie playback. The user reported 
 
 | Check | Result |
 |---|---|
-| Existing and new pytest suite | 97 passed; includes S5 ranking/eligibility, curated/TMDB parity, catalogue/cache/API checks and preference-restoration integration |
+| Existing and new pytest suite | 98 passed; includes S5 ranking/eligibility, curated/TMDB parity, catalogue/cache/API checks and preference-restoration integration |
 | JavaScript playback contracts | 26 passed using Node's test runner without external network requests, including autoplay, source-menu keyboard behavior, preference migration and persistent local state |
 | JavaScript catalogue contracts | Seven passed: pagination, response ordering, language changes, static fallback and remote metadata restoration |
 | Live S4 discovery | Batman pages 1/2 returned 20 results each; Sintel (TMDB 45745) details loaded in English/Hindi outside the model; saved metadata restored; model stayed at 447 movies |

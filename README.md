@@ -57,6 +57,8 @@ Explicit taste retains 90% of the score when this option has qualified signals; 
 
 The new blend is opt-in: a small reproducible proxy evaluation found unchanged hit rate and slight NDCG differences, which do not establish real-user improvement. One informal review was broadly positive; broader relevance and rendered-browser acceptance remain pending. See [S5 implementation](docs/streaming/05-recommendations.md) and [evaluation](docs/EVALUATION.md).
 
+The recent-playback option is a strict filter, so it can have no eligible picks. In that case the front banner shows clearly labelled **More to discover** suggestions from outside that filter. The filtered row keeps its empty-state explanation. **Show all picks** turns off only the recent-playback filter while preserving your viewing-history preference. If broader suggestions are also unavailable, the banner shows recovery actions instead of going blank or retaining an old movie.
+
 ## Real-world catalogue (TMDB)
 
 ### Live movie search (S4)

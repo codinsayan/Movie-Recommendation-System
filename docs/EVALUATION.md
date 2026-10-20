@@ -58,7 +58,7 @@ Implicit contribution is bounded to 10%. Dislikes exclude candidates and remove 
 
 **Top picks: played recently on this device** requires ten measured playing seconds from a source within seven days. A later error invalidates that source's preceding success. Another source's fresh success may still qualify a film. Future-dated, expired, absent and unknown-provider evidence does not qualify. A URL, iframe load or Play click is insufficient.
 
-This is client-reported evidence, not independent server verification or a guarantee of future playback. The filter affects Top Picks/billboard and viewing-based rows; search, Watchlist, Continue Watching, explicit “Because you loved” rows and general catalogue browsing stay available. History is sent to FastAPI only for enabled options; static mode evaluates it in the browser. The API remains stateless. Removing history clears associated viewing/playback evidence, preserving likes, mood and Watchlist.
+This is client-reported evidence, not independent server verification or a guarantee of future playback. The filter affects Top Picks and viewing-based rows; when it has no matches the billboard shows separately labelled broader suggestions, with a Show all picks action; search, Watchlist, Continue Watching, explicit “Because you loved” rows and general catalogue browsing stay available. History is sent to FastAPI only for enabled options; static mode evaluates it in the browser. The API remains stateless. Removing history clears associated viewing/playback evidence, preserving likes, mood and Watchlist.
 
 ## Model size and runtime
 
@@ -76,4 +76,8 @@ Before default activation, collect judgments from multiple profiles, compare the
 
 ## Implementation verification
 
-The full regression suite passes **97 tests**. It invokes 26 JavaScript playback/preferences cases and seven catalogue cases, alongside Python ranking, request-validation and curated/TMDB parity checks. Live local API smoke checks passed for viewing-aware results, watched rows, twelve eligible filtered results, empty evidence, invalid contract versions and unindexed history. The active model stayed at 447 films. Static export succeeded. These checks do not verify rendered controls or third-party playback in a browser.
+The full regression suite passes **98 tests**. It invokes 26 JavaScript playback/preferences cases and seven catalogue cases, alongside Python ranking, request-validation and curated/TMDB parity checks. Live local API smoke checks passed for viewing-aware results, watched rows, twelve eligible filtered results, empty evidence, invalid contract versions and unindexed history. The active model stayed at 447 films. Static export succeeded. These checks do not verify rendered controls or third-party playback in a browser.
+
+## Empty-filter banner recovery
+
+The follow-up fix keeps strict filtered results separate from broader banner discovery. A second request removes only the recent-playback constraint when filtered results are empty, retaining mood, explicit taste and the viewing-history preference. No unverified film is labelled as recently played. Recovery can disable the filter explicitly; empty/unavailable broader results clear stale movies, backgrounds, dots and rotation timers. Seven JavaScript regression cases exercise the real app closures, including the exported static engine and late-response handling. The full suite now passes 98 tests. These DOM-contract checks do not replace rendered-browser acceptance.

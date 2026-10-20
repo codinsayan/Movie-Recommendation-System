@@ -25,7 +25,7 @@ My Taste offers **Use viewing history** and **Top picks: played recently on this
 
 ## Acceptance evidence
 
-The full suite passes **97 tests**, including 26 JavaScript playback/preferences cases. Live API smoke checks and static export pass; no rendered browser is attached.
+The full suite passes **98 tests**, including 26 JavaScript playback/preferences cases. Live API smoke checks and static export pass; no rendered browser is attached.
 
 - [x] Signals, scores, explanations, taste and watched rows agree between Python and JavaScript for both datasets.
 - [x] Dislikes, errors, completion, unknown IDs, duplicate signals and stale callbacks are handled independently in focused tests.

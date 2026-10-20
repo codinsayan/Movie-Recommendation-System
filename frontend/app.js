@@ -71,7 +71,7 @@
     becauseRows: [],
     watchedRows: [],
   };
-  const bb = { key: "", items: [], i: 0, timer: null };
+  const bb = { key: "", items: [], i: 0, timer: null, mode: "popular", broader: false };
   let viewingStorage;
   try { viewingStorage = window.localStorage; } catch { /* session-only viewing */ }
   const viewing = new CinemagicViewingStore(viewingStorage);
@@ -167,7 +167,7 @@
       ? row.items.map((m, i) => row.kind === "top10" ? top10TileHTML(m, i + 1) : tileHTML(m, {
           i, showMatch: row.showMatch, fresh: row.freshIds?.has(m.id), isNew: row.freshIds?.has(m.id),
         })).join("")
-      : `<p class="empty" style="padding:20px 0">${esc(row.empty)}</p>`;
+      : `<div class="row-empty"><p class="empty">${esc(row.empty)}</p>${row.showAllPicks ? `<button class="btn btn-grey btn-sm" data-show-all-picks>Show all picks</button>` : ""}</div>`;
     return `
       <section class="row ${row.kind === "top10" ? "top10" : ""} ${isStatic ? "static" : ""}" id="row-${row.key}" data-row="${row.key}" style="--r:${r}">
         <div class="row-head">
@@ -218,7 +218,8 @@
     rows.push({
       key: "picks", title: pickTitle, items: state.scored.slice(0, 14), showMatch: true, freshIds,
       sub: viewing.options().recent_playback_only ? "Only titles with playback recorded on this device in the last 7 days; availability may change" : state.mode === "viewing" ? "A small influence from substantial viewing; likes and dislikes remain explicit" : state.mode === "personal" ? "Re-ranked live from every like and pass" : state.mode === "popular" ? "Like a few titles to make this yours" : "",
-      empty: viewing.options().recent_playback_only ? "No matching titles have recent playback evidence on this device. Turn off the filter in My Taste to see more picks." : "Nothing matched that mood. Try different words.",
+      empty: viewing.options().recent_playback_only ? "No matching titles have recent playback evidence on this device. Show all picks to discover more movies." : "Nothing matched that mood. Try different words.",
+      showAllPicks: viewing.options().recent_playback_only,
     });
 
     const myList = [...state.liked].reverse().map(byId).filter(Boolean);
@@ -295,12 +296,26 @@
   }
 
   // ---------- billboard ----------
-  function setBillboardItems(items) {
-    if (!items.length) return;
-    const key = items.map((m) => m.id).join(",") + state.mode;
+  function setBillboardItems(items, { mode = state.mode, broader = false } = {}) {
+    if (!items.length) {
+      clearTimeout(bb.timer);
+      bb.key = ""; bb.items = []; bb.i = 0; bb.timer = null; bb.broader = false;
+      $("#bbBg").replaceChildren();
+      $(".billboard").classList.remove("has-backdrop");
+      $("#bbPoster").hidden = true;
+      $("#bbPoster").removeAttribute("src");
+      $("#bbDots").replaceChildren();
+      $("#bbContent").innerHTML = `<div class="bb-kicker">Keep exploring</div><h1 class="bb-title">No matching picks yet</h1>
+        <p class="bb-overview" role="status">${viewing.options().recent_playback_only ? "Your recent-playback filter has no matching titles. Show all picks to discover more movies." : "Try a different mood or browse the catalogue to find your next movie."}</p>
+        <div class="bb-actions">${viewing.options().recent_playback_only ? `<button class="btn btn-white" data-show-all-picks>Show all picks</button>` : ""}<a class="btn btn-grey" href="#rows">Browse movies</a></div>`;
+      return;
+    }
+    const key = JSON.stringify([mode, broader, state.mood, items.map((m) => [m.id, m.score, m.reason])]);
     if (key === bb.key) return;
     bb.key = key;
     bb.items = items;
+    bb.mode = mode;
+    bb.broader = broader;
     showBillboard(0);
   }
 
@@ -309,7 +324,7 @@
     bb.i = i;
     const m = bb.items[i];
     if (!m) return;
-    const rec = state.recMap.get(m.id);
+    const rec = bb.broader ? null : state.recMap.get(m.id);
 
     const bg = $("#bbBg");
     const bgSrc = m.backdrop || m.poster;
@@ -322,7 +337,7 @@
       bg.appendChild(img);
       (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).finally(() => nextFrame(() => img.classList.add("show")));
       setTimeout(() => { while (bg.children.length > 1) bg.firstElementChild.remove(); }, 1300);
-    }
+    } else bg.replaceChildren();
     const poster = $("#bbPoster");
     poster.hidden = !m.poster || !!m.backdrop; // a real backdrop says it all
     if (!poster.hidden) {
@@ -333,13 +348,13 @@
       poster.style.animation = "";
     }
 
-    const kicker = {
+    const kicker = bb.broader ? "More to discover" : {
       popular: `<b>#${i + 1}</b> Trending tonight`,
       mood: `<b>For</b> “${esc(state.mood)}”`,
       personal: `<b>#${i + 1}</b> Top pick for you`,
       viewing: `<b>For you</b> Inspired by your viewing`,
-    }[state.mode];
-    const reason = rec?.because ? `Because you ${rec.because.type === "watched" ? "watched" : "loved"} <b>&nbsp;${esc(rec.because.title)}</b>` : state.mode === "mood" && rec ? esc(rec.reason) : "";
+    }[bb.mode];
+    const reason = bb.broader ? "No recent-playback matches. Showing broader suggestions." : rec?.because ? `Because you ${rec.because.type === "watched" ? "watched" : "loved"} <b>&nbsp;${esc(rec.because.title)}</b>` : bb.mode === "mood" && rec ? esc(rec.reason) : "";
     const content = $("#bbContent");
     content.innerHTML = `
       <div class="bb-kicker">${kicker}</div>
@@ -350,6 +365,7 @@
         ${reason ? `<p class="bb-reason">${reason}</p>` : ""}
       </div>
       <div class="bb-actions">
+        ${bb.broader ? `<button class="btn btn-grey" data-show-all-picks>Show all picks</button>` : ""}
         ${canWatch(m) ? `<button class="btn btn-white" data-watch="${m.id}">${icon("play")}Watch movie</button>` : ""}
         ${m.trailer ? `<button class="btn ${canWatch(m) ? "btn-grey" : "btn-white"}" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
         <button class="btn ${m.trailer ? "btn-grey" : "btn-white"}" data-open="${m.id}">${icon("info")}More Info</button>
@@ -452,8 +468,8 @@
       <div class="viewing-options">
         <label><input type="checkbox" id="useViewing" ${options.use_viewing ? "checked" : ""}> Use viewing history <span>Experimental</span></label>
         <p class="hint">Starts after at least 30% and 2 minutes measured playing. Earlier resume positions aren't treated as watched time. Likes and dislikes stay primary; playback problems aren't ratings.</p>
-        <label><input type="checkbox" id="recentPlaybackOnly" ${options.recent_playback_only ? "checked" : ""}> Top picks: played recently on this device</label>
-        <p class="hint">At least 10 seconds measured playing in the last 7 days. A later source error invalidates that source's record. This is no guarantee it still plays.</p>
+        <label><input type="checkbox" id="recentPlaybackOnly" ${options.recent_playback_only ? "checked" : ""}> Top picks: only recently played on this device</label>
+        <p class="hint">Only films with at least 10 seconds measured playing in the last 7 days. A later source error invalidates that source's record. If there are no matches, the banner offers broader suggestions.</p>
         <button class="btn btn-grey btn-sm" id="clearViewing">Clear viewing history</button>
       </div>
       <div class="meter-row"><span>Taste confidence</span><span>${pct}%</span></div>
@@ -493,15 +509,22 @@
   let refreshSeq = 0;
   function refresh({ announce = false, immediate = false } = {}) {
     clearTimeout(refreshTimer);
+    const seq = ++refreshSeq;
     refreshTimer = setTimeout(async () => {
-      const seq = ++refreshSeq;
       const recent = [...state.liked].filter((id) => state.byId.has(id)).slice(-2).reverse();
+      const request = { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100, ...viewing.request() };
       try {
         const [out, ...sims] = await Promise.all([
-          api("/api/recommend", { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100, ...viewing.request() }),
+          api("/api/recommend", request),
           ...recent.map((id) => api(`/api/movies/${id}/similar?k=14`)),
         ]);
         if (seq !== refreshSeq) return; // superseded by a newer request
+        let broader = null;
+        if (request.recent_playback_only && !out.items.length) {
+          try { broader = await api("/api/recommend", { ...request, recent_playback_only: false }); }
+          catch { /* Keep the empty-state recovery usable if broader discovery fails. */ }
+          if (seq !== refreshSeq) return;
+        }
         const prevPicks = new Set(state.scored.slice(0, 14).map((m) => m.id));
         state.scored = out.items;
         state.recMap = new Map(out.items.map((r) => [r.id, r]));
@@ -514,7 +537,8 @@
         renderOnboard();
         renderMoods();
         renderRows(fresh);
-        setBillboardItems(state.scored.slice(0, 5));
+        setBillboardItems((broader?.items.length ? broader.items : state.scored).slice(0, 5),
+          { mode: broader?.items.length ? broader.mode : state.mode, broader: !!broader?.items.length });
         renderDrawer();
         if (announce && fresh) toast(fresh.size ? `Taste updated: ${fresh.size} new pick${fresh.size > 1 ? "s" : ""} for you` : "Taste updated: picks re-ranked");
       } catch (err) {
@@ -525,6 +549,12 @@
   }
 
   // ---------- interactions ----------
+  function showAllPicks() {
+    viewing.setOptions({ recent_playback_only: false });
+    renderDrawer();
+    refresh({ immediate: true });
+  }
+
   function setTaste(id, kind, origin) {
     if (!byId(id)) return;
     const [set, other] = kind === "love" ? [state.liked, state.disliked] : [state.disliked, state.liked];
@@ -859,6 +889,7 @@
 
     document.addEventListener("click", (e) => {
       const t = e.target;
+      if (t.closest("[data-show-all-picks]")) return showAllPicks();
       if (t.closest("[data-search-more]")) return catalogue?.more();
       if (t.closest("[data-search-retry]")) return catalogue?.setQuery(state.query);
       const act = t.closest("[data-act]");
