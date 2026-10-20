@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Path as ApiPath
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 
 from recommender import load_default
@@ -14,10 +15,35 @@ from catalog import Catalog, CatalogError
 from discovery import Discovery
 from preferences import ExternalProfile, PreferenceFeatures
 from ranking import RANKING_BUDGET, RANKING_CONTRACT, FeatureStore, ranking_mode
+from release import VERSION, frame_policy, playback_config, playback_script
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-app = FastAPI(title="Cinemagic Recommender", version="0.3.0")
+app = FastAPI(title="Cinemagic Recommender", version=VERSION)
+playback = playback_config()  # Fail clearly at startup for misspelled provider IDs.
+
+
+@app.middleware("http")
+async def playback_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = frame_policy(playback)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    # Reload must receive current HTML, policy and scripts after a provider rollback.
+    if not request.url.path.startswith("/api/") and request.url.path != "/playback-config.js":
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.get("/api/playback")
+def playback_settings():
+    return playback
+
+
+@app.get("/playback-config.js", include_in_schema=False)
+def playback_bootstrap():
+    return Response(playback_script(playback), media_type="text/javascript", headers={"Cache-Control": "no-store"})
+
+
 engine = load_default()
 catalog = Catalog.from_environment()
 preference_features = PreferenceFeatures(engine, catalog)

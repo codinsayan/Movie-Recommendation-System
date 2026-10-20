@@ -1,0 +1,5 @@
+[
+  {"key":"cinesrc","label":"CineSrc","origin":"https://cinesrc.st","moviePath":"/embed/movie/","resumeParam":"t","documentation":"https://cinesrc.st/docs","permissions":["autoplay","fullscreen","picture-in-picture","encrypted-media"]},
+  {"key":"vidlink","label":"VidLink","origin":"https://vidlink.pro","moviePath":"/movie/","resumeParam":"startAt","documentation":"https://vidlink.pro/","permissions":["autoplay","fullscreen","picture-in-picture","encrypted-media"]},
+  {"key":"vidsrc","label":"VidSrc","origin":"https://vidsrc.sh","moviePath":"/embed/movie/","resumeParam":"startAt","documentation":"https://vidsrc.sh/vidsrc/docs/","permissions":["autoplay","fullscreen","picture-in-picture","encrypted-media"]}
+]

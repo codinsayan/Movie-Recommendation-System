@@ -1,5 +1,15 @@
 # Architecture
 
+## S6 release candidate and playback policy
+
+FastAPI reports `0.4.0-rc.1`. `backend/release.py` reads the fixed `frontend/provider-registry.json` and the process environment `CINEMAGIC_PROVIDERS`. Unset enables all entries, an empty value disables all, and an ordered subset selects known adapters only. Unknown or duplicate entries fail startup; configuration cannot introduce arbitrary frame URLs. `frontend/providers.js` binds each registry entry to its event adapter, exposes only enabled choices and supplies iframe permissions to `player.js`.
+
+`/playback-config.js` is registered before the static mount. It serves the synchronous, public-only policy before `providers.js` and `app.js`; `/api/playback` exposes the same configuration. The backend sends `frame-src` for self, YouTube privacy-enhanced trailers and enabled registry origins, plus `object-src 'none'` and `base-uri 'self'`. The bootstrap sets the equivalent CSP meta policy for static hosts. `export_static.py` generates a default static bootstrap alongside the model, preserving backend/static provider behavior without copying private metadata keys into assets. If the bootstrap fails to load, provider choices are empty and recommendations still run.
+
+Configuration changes apply after process restart and browser reload (or static re-export). An enabled saved source wins over the configured default; a removed preference falls back at the next open, retaining progress. Existing failures/timeouts never change providers automatically. This is not a live configuration push to an active movie. Standard unsandboxed embeds remain the user's chosen compatibility behavior; message validation remains exact-origin, active-window and generation scoped.
+
+S6 adds no user account, storage migration, metadata-cache schema change or global recommendation-matrix growth. Private TMDB settings stay in the backend; the SQLite cache is disposable and its writable path is configurable. `CINEMAGIC_RANKING=snapshot` retains the earlier ranking rollback. Branch/PR CI runs deterministic tests/export/syntax validation and produces a static artifact without deployment. [S6 acceptance](streaming/06-release.md) and [browser evidence](evaluation/s6/README.md) distinguish automated DOM contracts from pending actual media playback and human relevance acceptance. Render setup remains S7.
+
 ## S5 device-reported viewing evidence
 
 `frontend/player.js` measures short visible playing intervals against an injected wall clock. The viewing store merges unique intervals, separates completion/resume position, and credits only substantial repeat sessions. Its internal schema migrates from version 1 to 2 without inferring preference from old resume data. The existing storage key stays stable. Opt-in controls and evidence remain browser-local; only enabled evidence is included in recommendation requests.
@@ -90,7 +100,7 @@ Browser: app.js ─► api(path) ─► engine.js (same /api/* routes, no server
 |---|---|
 | **Single origin**: FastAPI serves both API and static frontend | One command to run, no CORS, easy to demo on any laptop. |
 | **Vanilla JS, no build step** | Zero tooling to install; the code is readable in a viva. |
-| **Precompute similarity matrices at start-up** | 60×60 matrices are tiny; every request is a few vector ops (< 5 ms). |
+| **Fixed snapshot matrices, bounded sparse dynamic ranking** | Startup builds the fixed 60/447-film snapshot; discovered titles use sparse rows and bounded MMR without growing a global matrix. |
 | **Stateless API** | The client sends its full taste (liked/disliked/mood) every call. No sessions or DB needed, and it's trivially testable. |
 | **Client-side persistence** in `localStorage` | Taste survives a refresh without user accounts. |
 | **Debounce + sequence number** on the client | Rapid taps send few requests, and a slow older response can never overwrite a newer one. |

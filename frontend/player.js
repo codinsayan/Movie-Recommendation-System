@@ -108,7 +108,7 @@
       if (remember) this.viewing.prefer(key);
       const frame = s.host.ownerDocument.createElement("iframe");
       frame.title = `${s.movie.title} — ${provider.label}`;
-      frame.allow = "autoplay; fullscreen; picture-in-picture; encrypted-media";
+      frame.allow = provider.permissions.join("; ");
       frame.allowFullscreen = true;
       // These providers reject sandboxed embeds. Use a standard cross-origin
       // iframe as requested; continue validating every incoming player message.

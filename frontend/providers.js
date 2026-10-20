@@ -51,8 +51,9 @@
     return types[event.player_status] ? { type: types[event.player_status] } : null;
   }
 
-  function makeProvider(key, label, origin, moviePath, resumeParam, parseMessage, documentation, options = {}) {
-    return Object.freeze({ key, label, origin, documentation, enabled: true, resume: true, ...options,
+  function makeProvider({ key, label, origin, moviePath, resumeParam, documentation, permissions }, parseMessage) {
+    return Object.freeze({ key, label, origin, documentation, resume: true,
+      permissions: Object.freeze([...permissions]),
       capabilities: Object.freeze({ progress: true, explicitError: key === "cinesrc" }),
       buildMovieUrl(tmdbId, position = 0, autoplay = false) {
         if (!positiveId(tmdbId)) throw new TypeError("A mapped TMDB movie ID is required");
@@ -73,14 +74,22 @@
     });
   }
 
-  const registry = Object.freeze([
-    makeProvider("cinesrc", "CineSrc", "https://cinesrc.st", "/embed/movie/", "t", cineEvent, "https://cinesrc.st/docs"),
-    makeProvider("vidlink", "VidLink", "https://vidlink.pro", "/movie/", "startAt", linkEvent, "https://vidlink.pro/"),
-    makeProvider("vidsrc", "VidSrc", "https://vidsrc.sh", "/embed/movie/", "startAt", srcEvent, "https://vidsrc.sh/vidsrc/docs/"),
-  ]);
-  const api = Object.freeze({ version: 1, reference, seconds, list: () => registry.filter((p) => p.enabled),
+  const config = root.CinemagicPlaybackConfig || (typeof module !== "undefined" && module.exports ? require("./playback-config.js") : null);
+  const adapters = { cinesrc: cineEvent, vidlink: linkEvent, vidsrc: srcEvent };
+  // A missing bootstrap disables playback without blocking recommendations.
+  const registry = Object.freeze((config?.registry || []).map((p) => makeProvider(p, adapters[p.key])));
+  let enabled = [];
+  function configure(keys) {
+    if (!Array.isArray(keys) || new Set(keys).size !== keys.length || keys.some((key) => !registry.some((p) => p.key === key))) {
+      throw new TypeError("Unknown or duplicate movie source");
+    }
+    enabled = [...keys];
+  }
+  configure(config?.enabled || []);
+  const api = Object.freeze({ version: 1, reference, seconds, configure,
+    list: () => enabled.map((key) => registry.find((p) => p.key === key)),
     all: () => [...registry],
-    get: (key) => registry.find((p) => p.key === key && p.enabled) || null });
+    get: (key) => enabled.includes(key) ? registry.find((p) => p.key === key) || null : null });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.CinemagicProviders = api;
 })(typeof globalThis !== "undefined" ? globalThis : window);

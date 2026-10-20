@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend"))
 
 import recommender as rec  # noqa: E402
+from release import playback_config, playback_script  # noqa: E402
 
 DEFAULT_OUT = ROOT / "frontend" / "data" / "model.json"
 
@@ -55,6 +56,13 @@ def export(out: Path = DEFAULT_OUT) -> Path:
     return out
 
 
+def export_playback(out: Path = ROOT / "frontend" / "playback-config.js") -> Path:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(playback_script(playback_config()), encoding="utf-8")
+    return out
+
+
 if __name__ == "__main__":
+    export_playback()
     path = export(Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT)
     print(f"Wrote {path} ({path.stat().st_size / 1024:.0f} KB)")

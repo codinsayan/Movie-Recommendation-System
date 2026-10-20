@@ -7,8 +7,57 @@ const MoviePlayer = require("../../frontend/player.js");
 const SourcePicker = require("../../frontend/source-picker.js");
 const PreferenceStore = require("../../frontend/preferences.js");
 
-const movie = { id: 47533, tmdb_id: 47533, source: "tmdb", title: "Sintel" };
+const movie = { id: 45745, tmdb_id: 45745, source: "tmdb", title: "Sintel" };
 const memory = () => { const data = new Map(); return { getItem: (k) => data.get(k), setItem: (k, v) => data.set(k, v) }; };
+
+test("a missing browser bootstrap disables frames while identity helpers keep working", () => {
+  const fs = require("node:fs"), vm = require("node:vm"), browser = { URL };
+  vm.runInNewContext(fs.readFileSync(require.resolve("../../frontend/providers.js"), "utf8"), browser);
+  assert.equal(browser.CinemagicProviders.list().length, 0);
+  assert.equal(browser.CinemagicProviders.get("cinesrc"), null);
+  assert.equal(browser.CinemagicProviders.reference(movie).tmdbId, movie.tmdb_id);
+});
+
+test("provider disable rollback preserves local state and only changes future sessions", () => {
+  const defaults = Providers.list().map(p => p.key);
+  const f = fixture();
+  try {
+    f.viewing.prefer("vidlink"); f.viewing.toggle("tmdb:45745");
+    f.viewing.saveProgress("tmdb:45745", 120, 900);
+    f.player.open(movie, f.ui);
+    const active = f.player.session.frame;
+    Providers.configure(["cinesrc", "vidsrc"]);
+    assert.equal(Providers.get("vidlink"), null);
+    assert.equal(f.player.session.frame, active, "Configuration never silently replaces an active movie");
+    f.player.close(); f.player.open(movie, f.ui);
+    assert.equal(f.ui.select.value, "cinesrc");
+    assert.deepEqual(f.ui.select.children.map(p => p.value), ["cinesrc", "vidsrc"]);
+    assert.equal(f.player.session.position, 120);
+    assert.equal(f.viewing.has("tmdb:45745"), true);
+    Providers.configure([]);
+    f.player.close();
+    assert.throws(() => f.player.open(movie, f.ui), /No movie sources/);
+    assert.equal(f.ui.host.children.length, 0);
+    assert.equal(f.viewing.progress("tmdb:45745").position, 120);
+    assert.throws(() => Providers.configure(["untrusted"]), /Unknown/);
+    assert.throws(() => Providers.configure(["cinesrc", "cinesrc"]), /duplicate/);
+    assert.deepEqual(Providers.list(), []);
+  } finally { f.player.close(); Providers.configure(defaults); }
+});
+
+test("iframe permissions come from the registry without a sandbox", () => {
+  const f = fixture();
+  try {
+    for (const provider of Providers.list()) {
+      f.player.open(movie, f.ui); f.player.selectSource(provider.key, true);
+      const frame = f.player.session.frame;
+      assert.equal(frame.allow, provider.permissions.join("; "));
+      assert.equal(frame.allowFullscreen, true);
+      assert.equal(frame.sandbox, undefined);
+      assert.equal(new URL(frame.src).origin, provider.origin);
+    }
+  } finally { f.player.close(); }
+});
 
 class Element {
   constructor(tag, document) {
@@ -50,30 +99,30 @@ test("movie identity never interprets a curated integer as a TMDB ID", () => {
   assert.equal(Providers.reference({ id: 1, source: "curated" }).tmdbId, null);
   assert.equal(Providers.reference({ id: 1 }), null);
   assert.equal(Providers.reference({ id: 1, source: "tmdb" }), null);
-  assert.equal(Providers.reference(movie).key, "tmdb:47533");
-  assert.equal(Providers.reference({ id: 1, source: "curated", tmdb_id: 47533 }).tmdbId, 47533);
+  assert.equal(Providers.reference(movie).key, "tmdb:45745");
+  assert.equal(Providers.reference({ id: 1, source: "curated", tmdb_id: 45745 }).tmdbId, 45745);
 });
 
 test("URL builders validate identity and resume times and keep fixed origins", () => {
   for (const provider of Providers.list()) {
-    const url = new URL(provider.buildMovieUrl(47533, 123.9));
+    const url = new URL(provider.buildMovieUrl(45745, 123.9));
     assert.equal(url.origin, provider.origin);
     assert.equal([...url.searchParams.values()].includes("123"), true);
-    for (const id of [0, -1, "47533", Infinity, 1.2]) assert.throws(() => provider.buildMovieUrl(id));
-    for (const position of [-1, NaN, Infinity, "2", 90000]) assert.throws(() => provider.buildMovieUrl(47533, position));
+    for (const id of [0, -1, "45745", Infinity, 1.2]) assert.throws(() => provider.buildMovieUrl(id));
+    for (const position of [-1, NaN, Infinity, "2", 90000]) assert.throws(() => provider.buildMovieUrl(45745, position));
   }
 });
 
 test("provider adapters ignore malformed, unrelated and wrong-movie events", () => {
   const cine = Providers.get("cinesrc"), link = Providers.all().find((p) => p.key === "vidlink");
-  for (const data of [null, "message", [], { type: "something-else" }]) assert.equal(cine.parseMessage(data, 47533), null);
+  for (const data of [null, "message", [], { type: "something-else" }]) assert.equal(cine.parseMessage(data, 45745), null);
   assert.equal(cine.parseMessage({ type: "cinesrc:timeupdate", currentTime: NaN, duration: 10 }), null);
   assert.equal(cine.parseMessage({ type: "cinesrc:timeupdate", currentTime: 100, duration: 10 }), null);
   assert.deepEqual(cine.parseMessage({ type: "cinesrc:error", error: "untrusted text" }), { type: "error" });
-  assert.equal(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "play", mtmdbId: 2 } }, 47533), null);
-  assert.equal(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "play", mediaType: "tv" } }, 47533), null);
-  assert.deepEqual(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "timeupdate", mtmdbId: 47533,
-    currentTime: 42, duration: 900 } }, 47533), { type: "progress", position: 42, duration: 900 });
+  assert.equal(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "play", mtmdbId: 2 } }, 45745), null);
+  assert.equal(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "play", mediaType: "tv" } }, 45745), null);
+  assert.deepEqual(link.parseMessage({ type: "PLAYER_EVENT", data: { event: "timeupdate", mtmdbId: 45745,
+    currentTime: 42, duration: 900 } }, 45745), { type: "progress", position: 42, duration: 900 });
 });
 
 test("errors, silent-player timeout and unrelated messages never switch sources", () => {
@@ -118,15 +167,15 @@ test("closing then opening another movie isolates progress and callbacks", () =>
   const f = fixture(); f.player.open(movie, f.ui);
   f.send({ type: "cinesrc:timeupdate", currentTime: 100, duration: 900 });
   f.player.open({ ...movie, id: 2, tmdb_id: 2, title: "Other" }, f.ui);
-  assert.equal(f.viewing.progress("tmdb:47533").position, 100);
+  assert.equal(f.viewing.progress("tmdb:45745").position, 100);
   assert.equal(f.player.session.position, 0);
   f.player.close();
   assert.deepEqual(f.viewing.progress("tmdb:2"), {});
 });
 
 test("start over, resume, completion and removing history preserve independent watchlists", () => {
-  const f = fixture(); f.viewing.toggle("tmdb:47533");
-  f.viewing.saveProgress("tmdb:47533", 120, 900);
+  const f = fixture(); f.viewing.toggle("tmdb:45745");
+  f.viewing.saveProgress("tmdb:45745", 120, 900);
   f.player.open(movie, f.ui);
   assert.equal(f.player.session.position, 120);
   f.ui.restart.dispatch("click");
@@ -135,8 +184,8 @@ test("start over, resume, completion and removing history preserve independent w
   f.send({ type: "cinesrc:timeupdate", currentTime: 30, duration: 900 });
   f.ui.removeHistory.dispatch("click");
   f.player.close();
-  assert.deepEqual(f.viewing.progress("tmdb:47533"), {});
-  assert.equal(f.viewing.has("tmdb:47533"), true);
+  assert.deepEqual(f.viewing.progress("tmdb:45745"), {});
+  assert.equal(f.viewing.has("tmdb:45745"), true);
   f.player.open(movie, f.ui, true);
   f.send({ type: "cinesrc:timeupdate", currentTime: 899, duration: 900 });
   f.send({ type: "cinesrc:ended" });
@@ -148,19 +197,19 @@ test("start over, resume, completion and removing history preserve independent w
 
 test("viewing state survives refresh, validates stored data and fails gracefully without storage", () => {
   const storage = memory(); const first = new ViewingStore(storage, () => 10);
-  first.toggle("tmdb:47533"); first.saveProgress("tmdb:47533", 60, 900); first.prefer("vidlink");
+  first.toggle("tmdb:45745"); first.saveProgress("tmdb:45745", 60, 900); first.prefer("vidlink");
   const second = new ViewingStore(storage);
-  assert.equal(second.has("tmdb:47533"), true);
+  assert.equal(second.has("tmdb:45745"), true);
   assert.equal(second.preferredSource, "vidlink");
-  assert.deepEqual(second.continueKeys(), ["tmdb:47533"]);
-  assert.equal(second.saveProgress("tmdb:47533", Infinity, 900), false);
+  assert.deepEqual(second.continueKeys(), ["tmdb:45745"]);
+  assert.equal(second.saveProgress("tmdb:45745", Infinity, 900), false);
   assert.equal(second.saveProgress("curated:1", 999, 1), false);
   second.clearHistory();
-  assert.equal(second.has("tmdb:47533"), true);
+  assert.equal(second.has("tmdb:45745"), true);
   assert.deepEqual(second.continueKeys(), []);
   const denied = new ViewingStore({ getItem: () => { throw Error("denied"); }, setItem: () => { throw Error("denied"); } });
-  assert.equal(denied.saveProgress("tmdb:47533", 60, 900), true);
-  assert.equal(denied.progress("tmdb:47533").position, 60);
+  assert.equal(denied.saveProgress("tmdb:45745", 60, 900), true);
+  assert.equal(denied.progress("tmdb:45745").position, 60);
 });
 
 test("all three sources use standard unsandboxed frames and honor the saved selection", () => {
@@ -179,7 +228,7 @@ test("all three sources use standard unsandboxed frames and honor the saved sele
 test("VidSrc validates movie identity and forwards its playing heartbeat as progress", () => {
   const f = fixture(); f.player.open(movie, f.ui);
   f.ui.select.value = "vidsrc"; f.ui.select.dispatch("change");
-  const data = { type: "PLAYER_EVENT", data: { player_info: { tmdb: 47533, mediaType: "movie" },
+  const data = { type: "PLAYER_EVENT", data: { player_info: { tmdb: 45745, mediaType: "movie" },
     player_status: "playing", player_progress: 42, player_duration: 900 } };
   f.send(data);
   assert.equal(f.player.session.position, 42);
@@ -313,11 +362,11 @@ function watch(f, seconds = 180, duration = 600) {
 test("S5 measures unique watched intervals and migrates old resume positions without inferring taste", () => {
   const storage = memory();
   storage.setItem("cinemagic:viewing:v1", JSON.stringify({ version: 1, progress: {
-    "tmdb:47533": { position: 599, duration: 600, updatedAt: 10, completed: true }
-  }, watchlist: { "tmdb:47533": 10 }, preferredSource: "vidsrc" }));
+    "tmdb:45745": { position: 599, duration: 600, updatedAt: 10, completed: true }
+  }, watchlist: { "tmdb:45745": 10 }, preferredSource: "vidsrc" }));
   const migrated = new ViewingStore(storage);
-  assert.equal(migrated.progress("tmdb:47533").position, 599);
-  assert.equal(migrated.has("tmdb:47533"), true);
+  assert.equal(migrated.progress("tmdb:45745").position, 599);
+  assert.equal(migrated.has("tmdb:45745"), true);
   assert.deepEqual(migrated.signals(), []);
   assert.equal(migrated.request().viewing, null);
   const f = fixture(); f.player.open(movie, f.ui); watch(f);
@@ -388,7 +437,7 @@ test("S5 source errors invalidate playback evidence without becoming dislikes or
   watch(f, 10);
   evidence = f.viewing.request().viewing.playback[0];
   assert.ok(evidence.verified_at > evidence.failed_at);
-  assert.equal(f.viewing.has("tmdb:47533"), false);
+  assert.equal(f.viewing.has("tmdb:45745"), false);
   f.player.close();
 });
 
@@ -397,32 +446,32 @@ test("S5 a playing heartbeat supports measured viewing without a separate play m
   f.ui.select.value = "vidsrc"; f.ui.select.dispatch("change");
   for (let t = 0; t <= 180; t += 5) {
     f.tick(5000);
-    f.send({ type: "PLAYER_EVENT", data: { player_info: { tmdb: 47533, mediaType: "movie" },
+    f.send({ type: "PLAYER_EVENT", data: { player_info: { tmdb: 45745, mediaType: "movie" },
       player_status: "playing", player_progress: t, player_duration: 600 } });
   }
   assert.equal(f.viewing.signals()[0].watched_seconds, 180);
-  assert.ok(f.viewing.state.playback["tmdb:47533"].vidsrc.verified_at);
+  assert.ok(f.viewing.state.playback["tmdb:45745"].vidsrc.verified_at);
   f.player.close();
 });
 
 test("S5 clearing history during playback cannot resurrect signals, and preserves watchlist and explicit taste", () => {
   const f = fixture(); f.player.open(movie, f.ui); watch(f);
   const prefs = new PreferenceStore(f.storage);
-  prefs.save("tmdb", { liked: [47533], disliked: [2], mood: "cozy" });
-  f.viewing.toggle("tmdb:47533");
+  prefs.save("tmdb", { liked: [45745], disliked: [2], mood: "cozy" });
+  f.viewing.toggle("tmdb:45745");
   f.player.forget(true);
   watch(f); f.player.close();
   const restored = new ViewingStore(f.storage);
   assert.deepEqual(restored.signals(), []);
   assert.deepEqual(restored.state.playback, {});
-  assert.deepEqual(restored.progress("tmdb:47533"), {});
-  assert.equal(restored.has("tmdb:47533"), true);
-  assert.deepEqual(new PreferenceStore(f.storage).load("tmdb"), { liked: [47533], disliked: [2], mood: "cozy" });
+  assert.deepEqual(restored.progress("tmdb:45745"), {});
+  assert.equal(restored.has("tmdb:45745"), true);
+  assert.deepEqual(new PreferenceStore(f.storage).load("tmdb"), { liked: [45745], disliked: [2], mood: "cozy" });
 });
 
 test("S5 denied storage keeps measured evidence in session and does not send history while opted out", () => {
   const store = new ViewingStore({ getItem() { throw Error(); }, setItem() { throw Error(); } });
-  store.recordInterval("tmdb:47533", 0, 180, 600, {});
+  store.recordInterval("tmdb:45745", 0, 180, 600, {});
   store.persist();
   assert.equal(store.signals()[0].watched_seconds, 180);
   assert.equal(store.request().viewing, null);

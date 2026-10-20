@@ -31,7 +31,9 @@ Playback positions and your preferred source are saved in this browser when the 
 
 The curated catalogue needs explicit TMDB mappings before full-film playback can be offered; its local numeric IDs are not sent to streaming providers. The same playback modules are included in the static export.
 
-This is a local implementation preview. The offline player tests pass, and the user has confirmed the sources work with standard cross-origin iframes without the sandbox attribute. Autoplay and the updated source menu still need live browser verification. See [playback validation](docs/streaming/PLAYBACK_VALIDATION.md) for evidence and remaining checks. S4 adds broader live metadata search; S5 adds optional viewing-aware recommendations.
+The local release candidate is **0.4.0-rc.1**. S6 adds configurable sources, shared frame policy and branch/PR release checks. The full suite passes 143 tests; desktop/mobile Edge checks pass in backend and static modes. The user previously confirmed playback with unsandboxed embeds. Actual per-source autoplay, resume, fullscreen/captions and S5D human relevance ratings still need acceptance. See [S6 evidence](docs/evaluation/s6/README.md) and [live playback validation](docs/streaming/PLAYBACK_VALIDATION.md). Render deployment is S7 and has not been performed.
+
+Set the process environment variable `CINEMAGIC_PROVIDERS=cinesrc,vidsrc` to remove VidLink, then restart the server and reload the page. Order sets the default when no enabled browser preference exists; an explicitly empty value disables movie sources while keeping the recommender/trailers. Unset restores all three. IDs must come from the fixed registry. For static hosting, export with the same environment and publish the new assets. Operational flags use the shell/hosting environment; the TMDB `.env` is separate. [Configuration and rollback examples](docs/streaming/06-release.md#configuration-and-rollback).
 
 Run the tests:
 
@@ -51,7 +53,7 @@ Use the same browser profile and site address when returning: `localhost:8000` a
 
 Open **My Taste** and enable **Use viewing history** to try the experimental blend. After both two minutes and 30% of a film are measured playing, it can inform a **Because you watched** row. Unique watched intervals are measured separately from resume position: seeking, source changes, errors and pressing Play alone are not preference signals. Older saved positions do not acquire viewing evidence automatically.
 
-Explicit taste retains 90% of the score when this option has qualified signals; viewing contributes at most 10%. Substantial repeat sessions have a capped influence. Likes/dislikes and Taste DNA remain explicit. Viewing outside the trained snapshot stays history-only; S5A resolves explicit external likes/dislikes separately.
+Explicit taste retains 90% of the score when this option has qualified signals; viewing contributes at most 10%. Substantial repeat sessions have a capped influence. Likes/dislikes and Taste DNA remain explicit. In dynamic backend mode, S5C can use external watched titles once compatible metadata is cached. Static and snapshot rollback modes keep external viewing history without applying it to ranking. S5A resolves explicit external likes/dislikes separately.
 
 **Top picks: played recently on this device** optionally filters picks using ten measured playing seconds within seven days. Later source errors invalidate that source's record. This is local evidence, not guaranteed availability; ordinary search and browsing remain available when the filter is empty. **Clear viewing history** removes progress and viewing/playback evidence while keeping likes, mood and Watchlist. Both options persist in this browser and work in FastAPI and static mode.
 
@@ -103,7 +105,7 @@ python run.py                              # serves the TMDB catalogue automatic
 
 GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
 
-1. `scripts/export_static.py` exports the trained model (TF-IDF vectors, similarity matrices, vocabulary, config) to `frontend/data/model.json` (about 180 KB).
+1. `scripts/export_static.py` exports the trained model (sparse TF-IDF/content and collaborative vectors, vocabulary and config) to `frontend/data/model.json` (about 1.3 MiB for the TMDB snapshot), plus the public `frontend/playback-config.js`. No credentials are exported.
 2. `frontend/engine.js` is a JavaScript port of `backend/recommender.py` that answers the same `/api/*` paths. `tests/test_static_engine.py` checks it gives the same results as Python.
 3. `.github/workflows/pages.yml` runs the tests, exports the model and publishes `frontend/` on every push to `main`.
 
@@ -131,12 +133,15 @@ backend/
   recommender.py      the hybrid engine (content + collaborative + MMR)
   discovery.py        S5B bounded retrieval of fresh candidates beyond the snapshot
   ranking.py          S5C ranking contract, budgets, rollback switch, sparse feature cache
+  release.py          S6 candidate version, public provider config and frame policy
   data/movies.json    60-film catalogue (genres, tags, overview, palette, poster)
 frontend/
   index.html          page shell (nav, billboard, rows, drawer, modal)
   styles.css          Netflix-style design system + animations
   app.js              state, API calls, rows, billboard, previews, modal
   engine.js           in-browser port of the recommender (GitHub Pages)
+  provider-registry.json  fixed movie providers, origins and iframe permissions
+  playback-config.js  generated static policy; FastAPI serves runtime policy at this path
   posters/            cached poster images (<id>.jpg)
 scripts/
   fetch_posters.py    downloads posters from Wikipedia (re-run to refresh)
@@ -146,8 +151,10 @@ scripts/
   record_dynamic_fixture.py  S5D: records real TMDB discovery pools (needs keys)
   evaluate_dynamic.py   S5D offline evaluation: world proxy, live replay, review sheet
   browser_walkthrough.py  S5D headless-Edge walkthrough of the real UI with timings
+  check_release_browser.cjs  S6 isolated desktop/mobile player and rollback checks
 .github/workflows/
   pages.yml           test + export + deploy to GitHub Pages
+  checks.yml          branch/PR tests, static export and candidate artifact (no deployment)
 tests/                engine + API tests (pytest)
 docs/                 architecture, algorithm, iteration plan
 run.py                one-command launcher
@@ -159,6 +166,7 @@ CHANGELOG.md
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | liveness check |
+| `GET` | `/api/playback` | public release/provider configuration; no keys |
 | `GET` | `/api/movies` | full catalogue |
 | `GET` | `/api/capabilities` | live-search configuration and snapshot origin; no credentials returned |
 | `GET` | `/api/search?q=...&page=1&language=en-US` | paginated TMDB discovery; pages 1–500 |

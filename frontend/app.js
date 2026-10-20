@@ -734,6 +734,7 @@
 
   function openWatch(id, startOver = false) {
     const m = byId(id);
+    if (!providers.list().length) return toast("Movie sources are currently unavailable. You can still explore recommendations and trailers.");
     if (!canWatch(m)) return toast("Full-movie playback is unavailable for this title.");
     catalogue?.remember(m);
     modalMovieId = id;
@@ -840,7 +841,7 @@
           <h2 id="modalTitle">${esc(m.title)}</h2>
           ${m.tagline ? `<p class="tagline">${esc(m.tagline)}</p>` : ""}
           <div class="bb-actions" style="margin-top:0">
-            ${canWatch(m) ? `<button class="btn btn-white btn-sm" data-watch="${m.id}">${icon("play")}${viewing.progress(movieKey(m)).position > 10 && !viewing.progress(movieKey(m)).completed ? "Resume movie" : "Watch movie"}</button>` : `<span class="playback-unavailable">Full-movie playback unavailable for this catalogue entry.</span>`}
+            ${canWatch(m) ? `<button class="btn btn-white btn-sm" data-watch="${m.id}">${icon("play")}${viewing.progress(movieKey(m)).position > 10 && !viewing.progress(movieKey(m)).completed ? "Resume movie" : "Watch movie"}</button>` : `<span class="playback-unavailable">${providers.list().length ? "Full-movie playback unavailable for this catalogue entry." : "Movie sources are currently unavailable. Recommendations and trailers are still available."}</span>`}
             ${m.trailer ? `<button class="btn btn-white btn-sm" data-trailer="${m.id}">${icon("play")}Play Trailer</button>` : ""}
             <button class="btn btn-grey btn-sm" data-watchlist="${m.id}" aria-pressed="${viewing.has(movieKey(m))}">${viewing.has(movieKey(m)) ? "Saved to watchlist" : "Save to watchlist"}</button>
             <button class="btn btn-grey btn-sm" data-act="love" data-id="${m.id}" aria-pressed="${state.liked.has(m.id)}">${icon("heart")}Love it <kbd>L</kbd></button>

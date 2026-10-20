@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Status as of 2026-10-20
 
-This section records the implemented streaming work on `feature/streaming-platform` through `ab1ee7b` (S5D documentation). The S5B-S5D commits are local and not yet pushed. These changes have not been assigned a new release version or deployed to Render. The versioned entries below retain the earlier Iterations 1-3 and static-hosting release history.
+This section records implemented streaming work on `feature/streaming-platform` through S6. S6 assigns candidate version **0.4.0-rc.1**; it is not a final release, tag or deployment. The earlier S5B-S5D work and this phase have not been pushed by this task. Earlier Iterations 1-3 and static-hosting release history are retained below.
 
 | Iteration | Implementation and validation status |
 |---|---|
@@ -24,15 +24,38 @@ This section records the implemented streaming work on `feature/streaming-platfo
 | S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic, live API and rendered-browser checks passed (browser walkthrough recorded in S5D) |
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Dynamic evaluation recorded: offline proxy, live replay, browser walkthrough; popularity calibration adopted; embeddings deferred; human relevance ratings pending |
-| S6, S7 | Planning documents added; these phases have not been implemented |
+| S6 | Candidate configuration/operations/CI implemented; 143 tests and six rendered-browser scenarios pass; final human/live-media acceptance pending |
+| S7 | Render planning only; no service created or deployed |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
 **Open items:**
-- **Human relevance ratings for S5D** are pending in [s5d-review.md](docs/evaluation/s5d-review.md). S6 starts after they are recorded.
+- **Human relevance ratings for S5D** remain pending in [s5d-review.md](docs/evaluation/s5d-review.md); they remain a final S6 acceptance gate despite the user's request to proceed with implementation.
 - Broader live playback acceptance remains open from S1-S3: per-film, per-provider and per-device checks, autoplay-on-switch and live resume.
-- Push `feature/streaming-platform` (S5B-S5D are local), then release versioning (S6) and Render deployment (S7).
+- Final candidate acceptance, any separately authorized push/release, then Render deployment (S7).
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S6 - Release candidate, provider configuration and operational checks (2026-10-20)
+
+Candidate: **0.4.0-rc.1**. Phase: [S6](docs/streaming/06-release.md). Implementation and automated checks complete; final relevance/live-playback acceptance remains open.
+
+- Added `backend/release.py` as the candidate version/public configuration/policy module; FastAPI now reports the candidate version.
+- Moved fixed provider labels, HTTPS origins, movie/resume paths, documentation and iframe permissions into `frontend/provider-registry.json`. Event parsing stays in the provider adapters.
+- Added ordered `CINEMAGIC_PROVIDERS` process configuration. Unset enables the three sources; an explicitly empty value disables all. Rejects unknown/duplicate IDs and arbitrary URL values at startup.
+- Added `/api/playback` and a synchronous `/playback-config.js` route before the static mount. Only public configuration is returned; private TMDB credentials remain server-side.
+- Added generated/committed static playback bootstrap and included it before `providers.js`. `export_static.py` now exports policy alongside the browser model. A missing bootstrap disables playback while retaining recommendations.
+- Added backend CSP frame origins from enabled entries, `object-src 'none'`, `base-uri 'self'`, `nosniff`, HTML/script revalidation and a `no-store` runtime bootstrap. Static bootstrap applies the same frame restriction through a CSP meta element.
+- Player iframe permissions now come from the registry. Unsandboxed playback, exact origin/window/generation validation, one-frame ownership, manual switching and autoplay-on-switch requests remain intact.
+- Added explicit all-sources-unavailable text in movie details and Watch handling, preserving recommendation/trailer access.
+- Added seven pytest release tests for configuration/defaults/empty/order/errors, allowed origins, API/bootstrap parity, secret/private-file isolation, generated policy consistency and a configured SQLite write/read. Added three Node player cases covering disabled saved sources, local-state retention, all-disabled behavior, registry permissions without a sandbox, and fail-closed behavior if the browser bootstrap is missing.
+- Added `.github/workflows/checks.yml`: read-only feature-branch/PR validation, Python/JS parity suite, static export, browser-script syntax checks and a static candidate artifact; no deployment. Existing Pages workflow includes policy through its existing exporter call.
+- Added `scripts/check_release_browser.cjs`, an isolated Chromium DOM exercise for backend/static desktop/mobile plus provider-disable restarts. Credentials are empty and third-party movie/trailer frames are blocked; messages are synthetic.
+- Browser checks cover debounced snapshot search, details, likes, Watch/watchlist, manual keyboard switching, error recovery without automatic failover, position/autoplay URL parameters, wrong-origin/stale events, focus/menu behavior, no horizontal overflow, refresh persistence, Start over, trailer cleanup, empty recent-playback state, disabled-source recovery and history/watchlist independence.
+- Recorded JSON results and inspected screenshots in [S6 evidence](docs/evaluation/s6/README.md). **143 pytest tests** and **six browser scenarios** pass. Model export is approximately 1,287 KiB for the committed TMDB snapshot.
+- Corrected the synthetic Sintel player fixture to TMDB ID 45745, matching the planned permitted-film live exercise.
+- Documented shell/hosting configuration, static re-export, restart/reload semantics, provider and snapshot-ranking rollback, and browser-state/cache compatibility. Updated README, architecture, roadmap, `.env.example` and playback validation; corrected stale phase statuses and static-model size.
+- Rechecked primary provider integration pages and recorded Sintel's attribution-based permission reference for the remaining live matrix. Integration pages do not establish catalogue-wide distribution permission; actual media, device/region, fullscreen/captions/autoplay/resume and provider-terms acceptance remain pending.
+- No Render configuration/service, stream extraction, automatic failover, additional providers, login, storage migration, release tag or push was added.
 
 ### S1 - Source adapters and movie identity (2026-10-20)
 

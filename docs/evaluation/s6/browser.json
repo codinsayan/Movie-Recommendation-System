@@ -1,0 +1,157 @@
+{
+  "recorded": "2026-10-20",
+  "browser": "msedge.exe",
+  "scope": "Local release candidate; real DOM with blocked external frames and synthetic progress/errors",
+  "scenarios": [
+    {
+      "label": "backend-desktop",
+      "viewport": [
+        1440,
+        900
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked",
+      "screenshots": [
+        "backend-desktop-player.png",
+        "backend-desktop-filters.png"
+      ]
+    },
+    {
+      "label": "backend-mobile",
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked",
+      "screenshots": [
+        "backend-mobile-player.png",
+        "backend-mobile-filters.png"
+      ]
+    },
+    {
+      "label": "static-desktop",
+      "viewport": [
+        1440,
+        900
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked",
+      "screenshots": [
+        "static-desktop-player.png",
+        "static-desktop-filters.png"
+      ]
+    },
+    {
+      "label": "static-mobile",
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked",
+      "screenshots": [
+        "static-mobile-player.png",
+        "static-mobile-filters.png"
+      ]
+    },
+    {
+      "label": "disabled-provider restart",
+      "passed": [
+        "no enabled providers",
+        "explicit unavailable state",
+        "recommendations remain",
+        "browser likes preserved"
+      ],
+      "screenshots": [
+        "backend-disabled-sources.png"
+      ]
+    },
+    {
+      "label": "disabled saved source",
+      "passed": [
+        "fallback to first enabled source at next open",
+        "resume retained",
+        "one source option",
+        "remove history preserves watchlist",
+        "close disposal"
+      ]
+    }
+  ]
+}
