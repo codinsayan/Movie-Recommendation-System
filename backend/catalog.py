@@ -88,6 +88,7 @@ class Catalog:
     def __init__(self, db_path: Path, token: str = "", api_key: str = "", transport=None, clock=time.time):
         self.db_path = Path(db_path)
         self.token, self.api_key, self.transport, self.clock = token, api_key, transport, clock
+        self._schema_ready = False
 
     @classmethod
     def from_environment(cls):
@@ -99,26 +100,56 @@ class Catalog:
     def configured(self):
         return bool(self.token or self.api_key)
 
-    def _read(self, key):
+    def _ensure_schema(self, db):
+        version = db.execute("PRAGMA user_version").fetchone()[0]
+        if version > 1:
+            raise CatalogError(503, "The metadata cache requires a newer application version.")
+        db.execute("CREATE TABLE IF NOT EXISTS metadata_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at REAL NOT NULL)")
+        db.execute("PRAGMA user_version = 1")
+
+    def _select(self, keys):
+        """Read cache rows. The schema is written once per process; a deleted (disposable)
+        cache file is recreated on the next access instead of failing the request."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        with closing(sqlite3.connect(self.db_path, timeout=5)) as db, db:
-            version = db.execute("PRAGMA user_version").fetchone()[0]
-            if version > 1:
-                raise CatalogError(503, "The metadata cache requires a newer application version.")
-            db.execute("CREATE TABLE IF NOT EXISTS metadata_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at REAL NOT NULL)")
-            db.execute("PRAGMA user_version = 1")
-            row = db.execute("SELECT payload, updated_at FROM metadata_cache WHERE key = ?", (key,)).fetchone()
-        if row:
+        marks = ",".join("?" * len(keys))
+        for attempt in range(2):
+            with closing(sqlite3.connect(self.db_path, timeout=5)) as db, db:
+                if not self._schema_ready or attempt:
+                    self._ensure_schema(db)
+                    self._schema_ready = True
+                try:
+                    return db.execute(f"SELECT key, payload, updated_at FROM metadata_cache WHERE key IN ({marks})",
+                                      list(keys)).fetchall()
+                except sqlite3.OperationalError:
+                    if attempt:
+                        raise
+        return []
+
+    def _read_many(self, keys):
+        rows = {}
+        for start in range(0, len(keys), 500):   # stay well under SQLite's bound-parameter limit
             try:
-                return json.loads(row[0]), row[1]
-            except (ValueError, TypeError):
-                pass
-        return None
+                found = self._select(keys[start:start + 500])
+            except sqlite3.Error:
+                found = []   # a locked or damaged derived cache behaves like a miss, never a failed request
+            for key, payload, updated_at in found:
+                try:
+                    rows[key] = (json.loads(payload), updated_at)
+                except (ValueError, TypeError):
+                    pass
+        return rows
+
+    def _read(self, key):
+        return self._read_many([key]).get(key)
 
     def _write(self, key, payload):
-        with closing(sqlite3.connect(self.db_path, timeout=5)) as db, db:
-            db.execute("INSERT OR REPLACE INTO metadata_cache VALUES (?, ?, ?)", (key, json.dumps(payload), self.clock()))
-            db.execute("DELETE FROM metadata_cache WHERE key IN (SELECT key FROM metadata_cache ORDER BY updated_at DESC LIMIT -1 OFFSET 5000)")
+        try:
+            with closing(sqlite3.connect(self.db_path, timeout=5)) as db, db:
+                self._ensure_schema(db)
+                db.execute("INSERT OR REPLACE INTO metadata_cache VALUES (?, ?, ?)", (key, json.dumps(payload), self.clock()))
+                db.execute("DELETE FROM metadata_cache WHERE key IN (SELECT key FROM metadata_cache ORDER BY updated_at DESC LIMIT -1 OFFSET 5000)")
+        except sqlite3.Error:
+            pass   # the response is still correct; the next request simply refetches
 
     def _fetch(self, key, path, params, ttl, kind="detail"):
         cached = self._read(key)
@@ -201,14 +232,19 @@ class Catalog:
 
     def cached_movie(self, movie_id: int, language: str = FEATURE_LANGUAGE):
         """Full details already in the cache (fresh or stale), without any upstream request."""
-        cached = self._read(f"movie:{movie_id}:{language}")
-        if not cached:
-            return None
-        try:
-            return {**normalize_movie(cached[0], language, full=True), "cached": True,
-                    "stale": self.clock() - cached[1] >= self.MOVIE_TTL, "updated_at": cached[1]}
-        except CatalogError:
-            return None
+        return self.cached_movies([movie_id], language).get(movie_id)
+
+    def cached_movies(self, movie_ids, language: str = FEATURE_LANGUAGE):
+        """Batch form of cached_movie: one cache query for a whole candidate pool."""
+        keys = {f"movie:{mid}:{language}": mid for mid in movie_ids}
+        found = {}
+        for key, (payload, updated_at) in self._read_many(list(keys)).items():
+            try:
+                found[keys[key]] = {**normalize_movie(payload, language, full=True), "cached": True,
+                                    "stale": self.clock() - updated_at >= self.MOVIE_TTL, "updated_at": updated_at}
+            except CatalogError:
+                pass
+        return found
 
     def movie(self, movie_id: int, language: str, model_ids: set[int]):
         data, cache = self._fetch(f"movie:{movie_id}:{language}", f"/movie/{movie_id}",

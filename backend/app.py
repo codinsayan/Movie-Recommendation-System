@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Path as ApiPath
@@ -12,6 +13,7 @@ from recommender import load_default
 from catalog import Catalog, CatalogError
 from discovery import Discovery
 from preferences import ExternalProfile, PreferenceFeatures
+from ranking import RANKING_BUDGET, RANKING_CONTRACT, FeatureStore, ranking_mode
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -19,7 +21,8 @@ app = FastAPI(title="Cinemagic Recommender", version="0.3.0")
 engine = load_default()
 catalog = Catalog.from_environment()
 preference_features = PreferenceFeatures(engine, catalog)
-discovery = Discovery(engine, catalog)
+features = FeatureStore(engine)   # derived, disposable: never a user database
+discovery = Discovery(engine, catalog, features=features)
 
 
 def model_ids():
@@ -33,8 +36,11 @@ def catalogue_error(error):
 
 @app.get("/api/capabilities")
 def capabilities():
-    return {"catalogue": {"live_search": catalog.configured, "dynamic_discovery": discovery.available,
+    dynamic = ranking_mode() == "dynamic"
+    return {"catalogue": {"live_search": catalog.configured, "dynamic_discovery": dynamic and discovery.available,
                           "snapshot_source": engine.movies[0].get("source") if engine.movies else None},
+            "ranking": {"contract": RANKING_CONTRACT, "mode": ranking_mode(),
+                        "external_viewing": dynamic and engine.movies[0].get("source") == "tmdb"},
             "preferences": engine.meta()["preferences"]}
 
 
@@ -131,21 +137,71 @@ def movies():
     return engine.movies
 
 
+def external_viewing(viewing, liked, disliked):
+    """Features for measured viewing outside the snapshot: cache-only, bounded, never blocking.
+
+    Missing metadata is reported as pending and fetched in the background, so a later
+    request can apply it. Explicit likes/dislikes are resolved through S5A instead.
+    """
+    status = {"considered": 0, "applied": 0, "pending": 0, "queued": 0}
+    if not viewing or engine.movies[0].get("source") != "tmdb" or ranking_mode() != "dynamic":
+        return None, status
+    chosen = set(liked) | set(disliked)
+    ids = []
+    for signal in sorted(viewing["signals"], key=lambda s: -s["updated_at"]):
+        source, mid = signal["key"].split(":")
+        mid = int(mid)
+        if source == "tmdb" and mid not in engine.by_id and mid not in chosen and mid not in ids:
+            ids.append(mid)
+        if len(ids) >= RANKING_BUDGET["external_viewing"]:
+            break
+    status["considered"] = len(ids)
+    movies, missing = [], []
+    known = catalog.cached_movies(ids)
+    for mid in ids:
+        cached = known.get(mid)
+        if cached:
+            movies.append({k: v for k, v in cached.items() if k not in ("cached", "updated_at", "stale")})
+        else:
+            missing.append(mid)
+    status["pending"] = len(missing)
+    if missing and discovery.available:
+        status["queued"] = discovery.queue_details(missing)
+    if not movies:
+        return None, status
+    matrix, _ = features.encode(movies)
+    dense = matrix.toarray()
+    status["applied"] = len(movies)
+    return {f"tmdb:{m['id']}": {"movie": m, "vector": dense[p]} for p, m in enumerate(movies)}, status
+
+
 @app.post("/api/recommend")
 def recommend(req: RecommendRequest):
     external = req.external_preferences.model_dump() if req.external_preferences else None
+    started = time.perf_counter()
     try:
-        extra, report = None, None
-        if req.discover:
+        extra, report, viewing_features, viewing_status = None, None, None, None
+        viewing = req.viewing.model_dump() if req.viewing else None
+        if req.discover and ranking_mode() == "dynamic":
             # Upstream failures never fail the request: the snapshot remains the fallback pool.
             extra, report = discovery.candidates(req.liked, req.disliked, external)
-        result = engine.recommend(req.liked, req.disliked, req.mood, req.k,
-                                  viewing=req.viewing.model_dump() if req.viewing else None,
+        if req.use_viewing and viewing:
+            viewing_features, viewing_status = external_viewing(viewing, req.liked, req.disliked)
+        scoring = time.perf_counter()
+        diagnostics = {}
+        result = engine.recommend(req.liked, req.disliked, req.mood, req.k, viewing=viewing,
                                   use_viewing=req.use_viewing, recent_playback_only=req.recent_playback_only,
-                                  eligible_keys=req.eligible_keys, external_preferences=external, extra=extra)
+                                  eligible_keys=req.eligible_keys, external_preferences=external, extra=extra,
+                                  viewing_features=viewing_features, diagnostics=diagnostics)
+        done = time.perf_counter()
         if report is not None:
             report["recommended"] = sum(1 for item in result["items"] if item.get("dynamic"))
             result["discovery"] = report
+        if viewing_status is not None:
+            result["viewing_status"] = viewing_status
+        result["ranking"] = {**diagnostics, "mode": ranking_mode(), "feature_cache": features.snapshot(),
+                             "timing_ms": {"total": round((done - started) * 1000, 1),
+                                           "rank": round((done - scoring) * 1000, 1)}}
         return result
     except ValueError:
         raise HTTPException(status_code=422, detail="External preferences are invalid or use an incompatible feature version.") from None

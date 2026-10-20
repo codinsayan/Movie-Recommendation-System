@@ -117,3 +117,24 @@ test("bounded derived-cache eviction retains all explicit choices and rehydrates
   assert.ok(reloaded.summary().pending > 0); await settle(reloaded);
   assert.equal(reloaded.payload().positive_count, 250);
 });
+
+test("S5C: losing or invalidating derived features never touches taste, Watchlist or viewing; new choices resolve incrementally", async () => {
+  const Viewing = require("../../frontend/viewing.js");
+  const storage = memory(), prefs = new Preferences(storage), viewing = new Viewing(storage, () => 5000);
+  prefs.save("tmdb", { liked: [10, 11], disliked: [], mood: "" });
+  viewing.toggle("tmdb:10"); viewing.saveProgress("tmdb:11", 600, 6000);
+  const fetched = [];
+  const fetcher = async path => { const id = Number(path.split("/").pop()); fetched.push(id); return record(id); };
+  const r = make({ storage, fetcher }); r.sync([10, 11], []); await settle(r);
+  assert.deepEqual(fetched.sort(), [10, 11]);
+  r.sync([10, 11, 12], []); await settle(r);                       // one more like: only its features are fetched
+  assert.deepEqual(fetched.sort(), [10, 11, 12]);
+  storage.setItem("cinemagic:preference-features:v1", "{corrupt");    // derived cache evicted/corrupted
+  const reload = make({ storage, fetcher }); reload.sync([10, 11, 12], []); await settle(reload);
+  assert.equal(reload.payload().positive_count, 3);                   // rehydrated, not lost
+  reload.configure({ ...config, feature_version: "test-v2" }, { backend: true }); await settle(reload);
+  assert.equal(reload.payload(), null);                               // never mixes feature spaces
+  assert.deepEqual(new Preferences(storage).load("tmdb").liked, [10, 11]);   // saved choices untouched
+  const after = new Viewing(storage, () => 5000);
+  assert.equal(after.has("tmdb:10"), true); assert.equal(after.progress("tmdb:11").position, 600);
+});

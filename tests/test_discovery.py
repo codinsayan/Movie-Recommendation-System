@@ -224,7 +224,8 @@ def test_new_release_becomes_eligible_after_refresh(engine, inception, tmp_path)
     fresh, _ = disc.candidates([inception], [])
     later = next(m for m in fresh["movies"] if m["id"] == LATER)
     assert "new_release" in later["discovery"]["sources"]
-    assert LATER in ids(engine.recommend([inception], k=1000, extra=fresh))   # ranked, not filtered out
+    assert LATER in ids(engine.recommend([inception], k=10, extra=fresh,               # ranked, not filtered out
+                                         eligible_keys=[f"tmdb:{LATER}", f"tmdb:{NEW}"]))
 
 
 def test_cold_start_and_dislike_only_profiles(engine, inception, tmp_path):
@@ -237,7 +238,8 @@ def test_cold_start_and_dislike_only_profiles(engine, inception, tmp_path):
 
     extra, report = disc.candidates([], [HORROR])
     assert report["profile"] == "dislike-only"
-    result = engine.recommend([], [HORROR], k=1000, extra=extra)            # whole eligible pool
+    # Restricting eligibility shows the exclusion directly; the rerank pool itself is bounded (S5C).
+    result = engine.recommend([], [HORROR], k=10, extra=extra, eligible_keys=[f"tmdb:{i}" for i in (HORROR, STARTER)])
     assert HORROR not in ids(result) and STARTER in ids(result)
 
 

@@ -296,10 +296,11 @@
       for (let i = 0; i < n; i++) score[i] = Object.keys(parts).reduce((sum, name) => sum + weights[name] * parts[name][i], 0);
       if (mood) for (let i = 0; i < n; i++) candidates[i] = candidates[i] && content[i] > 0.05;
 
-      const ranked = [...score.keys()].sort((a, b) => score[b] - score[a]).filter((i) => candidates[i]).slice(0, k * 3);
+      const ranked = [...score.keys()].sort((a, b) => score[b] - score[a]).filter((i) => candidates[i]).slice(0, Math.min(k * 3, cfg.rerankPool ?? 300));
       const chosen = mode !== "popular" ? this.mmr(ranked, score, k) : ranked.slice(0, k);
 
       const moodTerms = mood ? this.moodTerms(mood) : new Set();
+      const explainFloor = cfg.explainFloor ?? 0.03;
       const top = chosen.length ? Math.max(...chosen.map((i) => score[i])) : 1;
       const externalLinks = (external?.seeds || []).map(seed => {
         const vector = new Float64Array(this.idf.length);
@@ -313,11 +314,14 @@
         let linkStrength = 0;
         if (L.length) {
           const j = L[argmaxFirst(L.map((l) => this.contentSim[idx][l] + this.collabSim[idx][l]))];
-          linkStrength = this.contentSim[idx][j] + this.collabSim[idx][j];
-          because = { id: this.movies[j].id, title: this.movies[j].title };
-          shared = sortedStrings([...this.tokenSets[idx]].filter((t) => this.tokenSets[j].has(t)));
+          // Below the floor the pick is there for quality/diversity; naming a liked film would be fabricated.
+          if (this.contentSim[idx][j] + this.collabSim[idx][j] >= explainFloor) {
+            linkStrength = this.contentSim[idx][j] + this.collabSim[idx][j];
+            because = { id: this.movies[j].id, title: this.movies[j].title };
+            shared = sortedStrings([...this.tokenSets[idx]].filter((t) => this.tokenSets[j].has(t)));
+          }
         }
-        for (const { seed, similarity } of externalLinks) if (weights.content > 0 && similarity[idx] > Math.max(.01, linkStrength)) {
+        for (const { seed, similarity } of externalLinks) if (weights.content > 0 && similarity[idx] > Math.max(explainFloor, linkStrength)) {
           linkStrength = similarity[idx];
           because = { id: Number(seed.key.split(":")[1]), title: seed.title, key: seed.key };
           const terms = new Set([...seed.genres.map(g => g.toLowerCase()), ...seed.tags]);
@@ -330,7 +334,7 @@
           shared = sortedStrings([...this.tokenSets[idx]].filter((t) => this.tokenSets[j].has(t)));
         }
         if (moodTerms.size) shared = sortedStrings(new Set([...shared, ...[...this.tokenSets[idx]].filter((t) => moodTerms.has(t))]));
-        const reason = because ? `Because you ${because.type === "watched" ? "watched" : "loved"} ${because.title}` : mood ? `Matches “${mood}”` : external && externalLikes + externalDislikes ? "Based on your movie preferences" : "A crowd favourite to get you started";
+        const reason = because ? `Because you ${because.type === "watched" ? "watched" : "loved"} ${because.title}` : mood ? `Matches “${mood}”` : external && externalLikes + externalDislikes ? "Based on your movie preferences" : L.length ? "A well-rated pick to widen your taste" : "A crowd favourite to get you started";
         return {
           ...this.movies[idx],
           score: round(score[idx], 4),

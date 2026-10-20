@@ -209,12 +209,16 @@
   }
 
   function discoveryNote() {
-    const d = state.discovery;
-    if (!d) return "";
-    if (d.status === "unavailable") return "Live discovery is unavailable right now · showing the downloaded catalogue";
-    const parts = [d.recommended ? `includes ${d.recommended} newly discovered film${d.recommended > 1 ? "s" : ""}` : "no new discoveries made the cut"];
-    if (d.status === "partial") parts.push("some discovery sources were unavailable");
-    if (d.stale) parts.push("using cached results");
+    const d = state.discovery, v = state.viewingStatus;
+    const parts = [];
+    if (d?.status === "unavailable") parts.push("Live discovery is unavailable right now · showing the downloaded catalogue");
+    else if (d) {
+      parts.push(d.recommended ? `includes ${d.recommended} newly discovered film${d.recommended > 1 ? "s" : ""}` : "no new discoveries made the cut");
+      if (d.status === "partial") parts.push("some discovery sources were unavailable");
+      if (d.stale) parts.push("using cached results");
+    }
+    // Watched films outside the catalogue apply once their metadata is cached (S5C).
+    if (v?.pending) parts.push(`${v.pending} watched film${v.pending > 1 ? "s" : ""} waiting for metadata`);
     return parts.join(" · ");
   }
 
@@ -441,7 +445,7 @@
         </div>
         <div class="meta" style="font-size:.85rem">${metaHTML(m)}</div>
         <div class="pv-genres">${m.genres.map((g) => `<span>${esc(g)}</span>`).join("")}</div>
-        ${rec?.because ? `<p class="pv-reason">Because you loved <b>${esc(rec.because.title)}</b></p>`
+        ${rec?.because ? `<p class="pv-reason">Because you ${rec.because.type === "watched" ? "watched" : "loved"} <b>${esc(rec.because.title)}</b></p>`
           : rec?.shared?.length && personalised() ? `<p class="pv-reason">${rec.shared.map((t) => esc(prettyTag(t))).join(" · ")}</p>` : ""}
       </div>`;
     pv.setAttribute("aria-hidden", "false");
@@ -572,6 +576,7 @@
         // Discovered titles are ordinary TMDB movies from here on: details, likes, watchlist, playback.
         out.items.filter((m) => m.dynamic).forEach((m) => catalogue?.register(m));
         state.discovery = out.discovery || null;
+        state.viewingStatus = out.viewing_status || null;
         let broader = null;
         if (request.recent_playback_only && !out.items.length) {
           try { broader = await api("/api/recommend", { ...request, recent_playback_only: false }); }
@@ -823,8 +828,9 @@
           ${[["content", "Story & vibe match"], ["collab", rec.dynamic ? "Related to your likes (TMDB)" : "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown && rec.component_availability?.[k] !== false).map(([k, label]) => `
             <div class="dna-row"><span>${label}</span><div class="dna-bar"><i data-w="${share(k) * 100}"></i></div><em>${Math.round(share(k) * 100)}%</em></div>`).join("")}
         </div>
+        ${!rec.because ? `<p class="pv-reason" style="margin-top:12px">${esc(rec.reason)}</p>` : ""}
         ${rec.shared.length ? `<p class="pv-reason" style="margin-top:12px">Shares: <b>${rec.shared.map((t) => esc(prettyTag(t))).join(", ")}</b></p>` : ""}
-        ${rec.dynamic ? `<p class="pv-reason" style="margin-top:8px">Discovered outside the downloaded catalogue via ${esc(discoverySources(rec.discovery))}${rec.discovery.features === "summary" ? " · ranked from summary metadata (no keywords or cast yet)" : ""}</p>` : ""}
+        ${rec.dynamic ? `<p class="pv-reason" style="margin-top:8px">Discovered outside the downloaded catalogue via ${esc(discoverySources(rec.discovery))}${rec.discovery.features === "summary" ? " · ranked from summary metadata (no keywords or cast yet)" : ""}${rec.component_availability?.collab === false ? " · no related-title evidence, so it is ranked on story match and quality only" : ""}</p>` : ""}
       </div>` : "";
     openModal(`
       <div class="m-head ${m.backdrop ? "has-backdrop" : ""}">
@@ -857,7 +863,7 @@
           ${m.cast?.length ? `<div><b>Cast:</b> ${m.cast.map(esc).join(", ")}</div>` : ""}
           <div><b>Genres:</b> ${m.genres.map(esc).join(", ")}</div>
           ${m.tags.length ? `<div><b>This film is:</b> ${m.tags.slice(0, 8).map((t) => esc(prettyTag(t))).join(", ")}</div>` : ""}
-          ${rec?.because ? `<div><b>Because you loved:</b> ${esc(rec.because.title)}</div>` : ""}
+          ${rec?.because ? `<div><b>Because you ${rec.because.type === "watched" ? "watched" : "loved"}:</b> ${esc(rec.because.title)}</div>` : ""}
         </div>
       </div>
       <div class="m-section">

@@ -14,10 +14,10 @@ from threading import BoundedSemaphore, Lock
 import time
 
 import numpy as np
-from sklearn.preprocessing import normalize
 
 from catalog import CatalogError
-from features import FEATURE_LANGUAGE, feature_text
+from features import FEATURE_LANGUAGE
+from ranking import FeatureStore
 
 # Retrieval budgets per recommendation request (S5D verifies these; they do not cap
 # the discoverable catalogue, only the work done for one request).
@@ -58,8 +58,9 @@ def taste_genres(engine, positives, external, limit=2) -> list[str]:
 
 
 class Discovery:
-    def __init__(self, engine, catalog, budget=None, clock=time.time):
+    def __init__(self, engine, catalog, budget=None, clock=time.time, features=None):
         self.engine, self.catalog = engine, catalog
+        self.features = features or FeatureStore(engine)
         self.budget = {**BUDGET, **(budget or {})}
         self.clock = clock
         self._background = ThreadPoolExecutor(max_workers=2, thread_name_prefix="discovery-enrich")
@@ -110,6 +111,7 @@ class Discovery:
             report["status"] = "unavailable"
             return None, report
 
+        started = time.perf_counter()
         seeds, genres, tasks = self._plan(positives, disliked_set, external)
         report.update(seeds=len(seeds), genres=genres, requested_sources=len(tasks))
         excluded = set(liked) | disliked_set | set(self.engine.by_id)
@@ -147,15 +149,21 @@ class Discovery:
         report["pool"] = len(pool)
         report["status"] = ("unavailable" if report["failed_sources"] == len(tasks)
                             else "partial" if report["failed_sources"] else "ok")
+        report["timing_ms"] = {"retrieve": round((time.perf_counter() - started) * 1000, 1)}
         if not pool:
             return None, report
-        return self._encode(list(pool.values()), seeds), report
+        started = time.perf_counter()
+        extra = self._encode(list(pool.values()), seeds)
+        report["timing_ms"]["encode"] = round((time.perf_counter() - started) * 1000, 1)
+        report["features"] = extra.pop("encoding")
+        return extra, report
 
     def _enrich(self, pool, report):
         """Prefer full cached details; fetch at most `enrich` more for the best-supported candidates."""
         missing = []
+        known = self.catalog.cached_movies(list(pool))   # one cache query for the whole pool
         for mid, entry in pool.items():
-            cached = self.catalog.cached_movie(mid)
+            cached = known.get(mid)
             if cached:
                 entry["movie"] = cached
                 report["cache_hits"] += 1
@@ -167,6 +175,10 @@ class Discovery:
         report["enrich_queued"] = self._queue_enrichment(missing[: self.budget["enrich"]])
         report["enriched"] = sum(bool(e["movie"].get("full_details")) for e in pool.values())
         report["summary_only"] = len(pool) - report["enriched"]
+
+    def queue_details(self, targets):
+        """Warm the metadata cache for titles (e.g. watched films) without blocking a request."""
+        return self._queue_enrichment(targets)
 
     def _queue_enrichment(self, targets):
         queued = 0
@@ -206,8 +218,8 @@ class Discovery:
                                     "features": "full" if movie.get("full_details") else "summary",
                                     "stale": bool(entry["movie"].get("stale"))})
             movies.append(movie)
-        # Fitted vocabulary only: unseen words are ignored, nothing is refit or appended.
-        E = normalize(self.engine.vectorizer.transform([feature_text(m) for m in movies])).toarray()
+        # Sparse rows from the shared feature cache: only new or changed metadata is encoded.
+        E, encoding = self.features.encode(movies)
         related = np.array([len(m["discovery"]["related_to"]) / len(seeds) if seeds else 0.0 for m in movies])
         seed_titles = {}
         for sid in seeds:
@@ -218,4 +230,4 @@ class Discovery:
                 if known:
                     seed_titles[sid] = known["title"]
         return {"movies": movies, "E": E, "related": related, "quality": self.engine.quality_of(movies),
-                "seed_titles": seed_titles}
+                "seed_titles": seed_titles, "encoding": encoding}

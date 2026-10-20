@@ -43,6 +43,8 @@ def build_model(engine: rec.Recommender) -> dict:
             "mmrLambda": rec.MMR_LAMBDA,
             "moodSynonyms": rec.MOOD_SYNONYMS,
             "viewing": rec.VIEWING_CONFIG,
+            "explainFloor": rec.EXPLAIN_FLOOR,
+            "rerankPool": rec.RANKING_BUDGET["rerank_pool"],
         },
     }
 
