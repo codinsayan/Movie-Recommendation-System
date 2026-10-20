@@ -1,5 +1,7 @@
 # S5 viewing-signal evaluation
 
+S5A external-preference implementation and its separate deterministic/live API/client evidence are recorded in [S5A](streaming/05a-dynamic-preferences.md#implementation-evidence-20-october-2026). The S5 metrics below remain the original snapshot/viewing experiment; they do not establish dynamic recommendation quality. S5B-S5D evaluation remains planned.
+
 Recorded 20 October 2026. Raw results, runtime versions and snapshot/profile hashes: [s5-results.json](evaluation/s5-results.json).
 
 ## Decision

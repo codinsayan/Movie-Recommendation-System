@@ -79,6 +79,7 @@
   let preferenceSource = null;
   let preferenceWarningShown = false;
   let catalogue = null;
+  let preferenceResolver = null;
   const providers = CinemagicProviders;
   const movieKey = (m) => providers.reference(m)?.key;
   const canWatch = (m) => !!providers.reference(m)?.tmdbId && providers.list().length > 0;
@@ -110,16 +111,16 @@
     engine = await CinemagicEngine.load("data/model.json");
   }
 
-  async function api(path, body) {
+  async function api(path, body, options = {}) {
     if (engine) return engine.handle(path, body);
     const res = await fetch(path, body
-      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-      : undefined);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      ? { ...options, method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      : options);
+    if (!res.ok) throw Object.assign(new Error(`${res.status} ${res.statusText}`), { status: res.status });
     return res.json();
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const byId = (id) => catalogue?.get(id) || state.byId.get(id);
+  const byId = (id) => catalogue?.get(id) || state.byId.get(id) || preferenceResolver?.get(id);
   const isSeen = (id) => state.liked.has(id) || state.disliked.has(id);
   const nextFrame = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
   const personalised = () => state.mode !== "popular";
@@ -293,7 +294,7 @@
   }
 
   function renderOnboard() {
-    const n = state.liked.size;
+    const n = Math.round((state.taste?.confidence || 0) * 5);
     $("#onboard").innerHTML = n >= 3 ? "" : `
       <div class="onboard">
         <b>${["Love 3 titles to unlock your Taste DNA", "Great start! Love 2 more…", "One more like and your profile unlocks…"][n]}</b>
@@ -462,23 +463,34 @@
   }
 
   // ---------- drawer ----------
+  function preferenceMessage(id) {
+    if (state.movies[0]?.source !== "tmdb" || state.byId.has(id) || !state.liked.has(id) && !state.disliked.has(id)) return "";
+    const info = preferenceResolver?.status(`tmdb:${id}`);
+    if (info?.status === "applied") return "Preference applied to your taste using resolved movie metadata.";
+    return info?.reason || "Preference saved. Waiting for movie metadata before it can affect your taste.";
+  }
+
   function renderDrawer() {
     const focusedControl = ["useViewing", "recentPlaybackOnly", "clearViewing"].includes(document.activeElement?.id) ? document.activeElement.id : null;
     const options = viewing.options();
     const n = state.liked.size;
+    const resolution = preferenceResolver?.summary();
+    const appliedLikes = state.movies.filter(m => state.liked.has(m.id) && !state.disliked.has(m.id)).length + (preferenceResolver?.payload()?.positive_count || 0);
     const taste = state.taste || { genres: [], tags: [], confidence: 0 };
     const pct = Math.round(taste.confidence * 100);
     const top = taste.genres.slice(0, 2).map((g) => g.name.toLowerCase());
-    const hint = n === 0 ? "Love a few titles and I'll map your taste." : n < 3 ? `${3 - n} more likes to unlock your full profile.` : `You're drawn to ${top.join(" & ")}.`;
+    const hint = appliedLikes === 0 ? "Love a few titles and I'll map your taste." : appliedLikes < 3 ? `${3 - appliedLikes} more applied likes to unlock your full profile.` : top.length ? `You're drawn to ${top.join(" & ")}.` : "Your resolved movie choices shape your picks.";
     const pick = (id, cls) => {
       const m = byId(id);
-      return m ? `<div class="pick ${cls}" title="${esc(m.title)}">${imgHTML(m)}<button data-remove="${id}" aria-label="Remove ${esc(m.title)}">${icon("x")}</button></div>` : "";
+      const info = state.movies[0]?.source === "tmdb" && !state.byId.has(id) ? preferenceResolver?.status(`tmdb:${id}`) : null;
+      return `<div class="pick ${cls}" title="${esc(m?.title || `Movie ${id}`)}${info ? ` · ${esc(info.status)}: ${esc(info.reason || "Included in taste")}` : ""}">${m ? imgHTML(m) : `<span class="pending-title">Movie ${id}</span>`}${info && info.status !== "applied" ? `<span class="preference-badge">${esc(info.status)}</span>` : ""}<button data-remove="${id}" aria-label="Remove ${esc(m?.title || `Movie ${id}`)}">${icon("x")}</button></div>`;
     };
     $("#drawer").innerHTML = `
       <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">${icon("x")}</button>
       <h2>Your Taste DNA</h2>
       <p class="hint">${preferenceWarningShown ? "Session only: browser storage is unavailable." : "Saved in this browser. No account needed."}</p>
       <p class="hint">${hint}</p>
+      ${resolution && resolution.applied + resolution.pending + resolution.unavailable ? `<div class="preference-resolution"><p class="hint" role="status">External choices: ${resolution.applied} applied · ${resolution.pending} pending · ${resolution.unavailable} unavailable.</p><p class="hint">Only resolved metadata affects taste. ${resolution.stale ? "Some cached features may be out of date. " : ""}Feature language is English; display language stays independent.</p>${resolution.pending || resolution.unavailable || resolution.stale ? `<button class="btn btn-grey btn-sm" data-retry-preferences>Retry metadata</button>` : ""}${preferenceResolver.storageFailed ? `<p class="hint">Feature caching is unavailable in this browser; saved choices will resolve again next visit.</p>` : ""}</div>` : ""}
       <div class="viewing-options">
         <label><input type="checkbox" id="useViewing" ${options.use_viewing ? "checked" : ""}> Use viewing history <span>Experimental</span></label>
         <p class="hint">Starts after at least 30% and 2 minutes measured playing. Earlier resume positions aren't treated as watched time. Likes and dislikes stay primary; playback problems aren't ratings.</p>
@@ -503,6 +515,10 @@
       </div>`;
     if ($("#drawer").classList.contains("open")) animateBars($("#drawer"));
     $("#avatarRing").style.strokeDashoffset = RING * (1 - taste.confidence);
+    $$("[data-preference-status]").forEach(el => {
+      const message = preferenceMessage(Number(el.dataset.preferenceStatus));
+      el.textContent = message; el.hidden = !message;
+    });
     if (focusedControl) $(`#${focusedControl}`)?.focus();
   }
 
@@ -522,11 +538,14 @@
   let refreshTimer = null;
   let refreshSeq = 0;
   function refresh({ announce = false, immediate = false } = {}) {
+    preferenceResolver?.sync(state.liked, state.disliked);
     clearTimeout(refreshTimer);
     const seq = ++refreshSeq;
     refreshTimer = setTimeout(async () => {
       const recent = [...state.liked].filter((id) => state.byId.has(id)).slice(-2).reverse();
       const request = { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100, ...viewing.request() };
+      const external = preferenceResolver?.payload();
+      if (external) request.external_preferences = external;
       try {
         const [out, ...sims] = await Promise.all([
           api("/api/recommend", request),
@@ -544,7 +563,8 @@
         state.recMap = new Map(out.items.map((r) => [r.id, r]));
         state.taste = out.taste;
         state.mode = out.mode;
-        state.becauseRows = recent.map((id, k) => ({ source: byId(id), items: sims[k] }));
+        const becauseRows = new Map([...recent.map((id, k) => ({ source: byId(id), items: sims[k] })), ...(out.because_rows || [])].map(row => [row.source.id, row]));
+        state.becauseRows = [...state.liked].filter(id => becauseRows.has(id)).slice(-2).reverse().map(id => becauseRows.get(id));
         state.watchedRows = out.watched_rows || [];
 
         const fresh = announce && prevPicks.size ? new Set(state.scored.slice(0, 14).map((m) => m.id).filter((id) => !prevPicks.has(id))) : null;
@@ -557,7 +577,7 @@
         if (announce && fresh) toast(fresh.size ? `Taste updated: ${fresh.size} new pick${fresh.size > 1 ? "s" : ""} for you` : "Taste updated: picks re-ranked");
       } catch (err) {
         console.error(err);
-        toast("Couldn't reach the recommender. Is the server running?");
+        toast(err.status === 422 && request.external_preferences ? "Saved movie features are incompatible or invalid. Reload to refresh metadata; your choices are kept." : "Couldn't reach the recommender. Is the server running?");
       }
     }, immediate ? 0 : 150);
   }
@@ -573,15 +593,18 @@
     if (!byId(id)) return;
     const [set, other] = kind === "love" ? [state.liked, state.disliked] : [state.disliked, state.liked];
     const adding = !set.has(id);
+    if (adding && set.size >= 10000) return toast("This browser has reached its saved preference limit. Remove a few choices before adding more.");
     other.delete(id);
     adding ? set.add(id) : set.delete(id);
     save();
     catalogue?.remember(byId(id));
     syncStates();
     if (adding && origin) burst(origin, kind === "love" ? "love" : "nope");
-    if (adding && kind === "love" && state.liked.size === 3) toast("Taste DNA unlocked. Open your profile to see it.");
+    if (adding && kind === "love" && state.liked.size === 3 && [...state.liked].every(key => state.byId.has(key))) toast("Taste DNA unlocked. Open your profile to see it.");
     if (adding && kind === "nope") toast(`Got it. Fewer films like ${byId(id).title}.`);
     refresh({ announce: true });
+    renderDrawer();
+    if (adding && !state.byId.has(id)) toast(preferenceMessage(id));
   }
 
   // Update pressed states and badges in place (rows re-render shortly after).
@@ -753,7 +776,7 @@
       <div class="why">
         <h4>Why we picked this · ${rec.match}% match</h4>
         <div class="dna">
-          ${[["content", "Story & vibe match"], ["collab", "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown).map(([k, label]) => `
+          ${[["content", "Story & vibe match"], ["collab", "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown && rec.component_availability?.[k] !== false).map(([k, label]) => `
             <div class="dna-row"><span>${label}</span><div class="dna-bar"><i data-w="${share(k) * 100}"></i></div><em>${Math.round(share(k) * 100)}%</em></div>`).join("")}
         </div>
         ${rec.shared.length ? `<p class="pv-reason" style="margin-top:12px">Shares: <b>${rec.shared.map((t) => esc(prettyTag(t))).join(", ")}</b></p>` : ""}
@@ -781,6 +804,7 @@
           ${m.original_title && m.original_title !== m.title ? `<p class="catalogue-note">Original title: ${esc(m.original_title)}</p>` : ""}
           ${m.original_language ? `<p class="catalogue-note">Original language: ${esc(m.original_language)}</p>` : ""}
           ${detailsUnavailable ? `<p class="catalogue-note">Full details are temporarily unavailable. Showing saved information.</p>` : ""}
+          <p class="catalogue-note" data-preference-status="${id}" role="status" ${preferenceMessage(id) ? "" : "hidden"}>${esc(preferenceMessage(id))}</p>
           ${why}
         </div>
         <div class="m-side">
@@ -798,7 +822,7 @@
       </div>`);
     animateBars($("#modalBody"));
     if (!state.byId.has(id)) {
-      $("#similarGrid").innerHTML = `<p class="empty">Similar recommendations aren't available for this title yet. You can still watch it or save it for later.</p>`;
+      $("#similarGrid").innerHTML = `<p class="empty">Direct similar-title lookup is unavailable for this unindexed movie. Likes and dislikes can still shape your picks after its metadata resolves.</p>`;
       return;
     }
     const detailEpoch = modalEpoch;
@@ -916,6 +940,7 @@
       if (t.closest("[data-show-all-picks]")) return showAllPicks();
       if (t.closest("[data-search-more]")) return catalogue?.more();
       if (t.closest("[data-search-retry]")) return catalogue?.setQuery(state.query);
+      if (t.closest("[data-retry-preferences]")) return preferenceResolver?.retry();
       const act = t.closest("[data-act]");
       if (act) { e.stopPropagation(); setTaste(Number(act.dataset.id), act.dataset.act, act); return; }
       if (t.closest("[data-close]") || t.id === "modal") return closeModal();
@@ -1035,6 +1060,14 @@
     state.byId = new Map(state.movies.map((m) => [m.id, m]));
     catalogue = new CinemagicCatalogueBrowser(state.movies, { storage: viewingStorage, onChange: () => renderRows() });
     load(); // Restore taste before the first recommendation request.
+    preferenceResolver = new CinemagicPreferenceResolver(state.movies, { storage: viewingStorage,
+      fetcher: (path, options) => api(path, null, options), lookup: id => catalogue.get(id),
+      onChange: () => { refresh({ immediate: true }); renderDrawer(); } });
+    preferenceResolver.sync(state.liked, state.disliked);
+    api("/api/meta").then(meta => {
+      preferenceResolver.configure(meta.preferences, { backend: !engine, localResolve: engine ? movie => engine.resolvePreference(movie) : null });
+      refresh({ immediate: true }); renderDrawer();
+    }).catch(() => { /* Choices remain saved and pending until features are available. */ });
     renderMoods();
     renderOnboard();
     renderDrawer();

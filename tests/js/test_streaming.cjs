@@ -294,7 +294,7 @@ test("invalid preferences and denied storage do not crash or corrupt session tas
   const prefs = new PreferenceStore(storage);
   assert.deepEqual(prefs.load("tmdb"), { liked: [], disliked: [], mood: "" });
   prefs.save("tmdb", { liked: [1, 1, "2", -1, NaN], disliked: [1, 3], mood: "  scary  " });
-  assert.deepEqual(new PreferenceStore(storage).load("tmdb"), { liked: [1], disliked: [3], mood: "scary" });
+  assert.deepEqual(new PreferenceStore(storage).load("tmdb"), { liked: [], disliked: [1, 3], mood: "scary" });
   const denied = new PreferenceStore({ getItem() { throw Error("denied"); }, setItem() { throw Error("denied"); } });
   assert.equal(denied.save("tmdb", { liked: [1], mood: "space" }), false);
   assert.deepEqual(denied.load("tmdb"), { liked: [1], disliked: [], mood: "space" });

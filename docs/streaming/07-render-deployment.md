@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: planned. Added 20 October 2026. Depends on [S6 release readiness](06-release.md), which follows [S5A-S5D dynamic recommendations](README.md#dynamic-recommendation-upgrade-planned). S1-S5 remain implemented; the new upgrade, S6 and this deployment are planned. This iteration plans deployment; no Render service has been created or verified yet.
+Status: planned. Added 20 October 2026. Depends on [S6 release readiness](06-release.md), which follows [S5A-S5D dynamic recommendations](README.md#dynamic-recommendation-upgrade). S1-S5 and S5A code are implemented; S5B-S5D, S6 and this deployment remain planned. This iteration plans deployment; no Render service has been created or verified yet.
 
 ## Outcome
 

@@ -6,7 +6,7 @@
 (function (root) {
   "use strict";
 
-  const TOKEN = /\b[a-z0-9][a-z0-9-]+\b/g;
+  const TOKEN = /(?<![\p{L}\p{N}_])[a-z0-9][a-z0-9-]+(?:(?<=[a-z0-9])(?![\p{L}\p{N}_])|(?<=-)(?=[\p{L}\p{N}_]))/gu;
   const VIEWING = { version: 1, minSeconds: 120, minFraction: .30, baseStrength: .15,
     repeatStrength: .05, maxStrength: .25, blend: .10, freshnessMs: 7 * 24 * 60 * 60 * 1000 };
   const canonicalKey = (movie) => `${movie.source}:${movie.id}`;
@@ -67,6 +67,13 @@
   const round = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
   const argmaxFirst = (arr) => arr.reduce((best, v, i) => (v > arr[best] ? i : best), 0);
   const sortedStrings = (set) => [...set].sort();
+  const slug = text => String(text).normalize("NFKD").replace(/[^\x00-\x7F]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, "-");
+  const movieFeatures = movie => ({
+    genres: (movie.genres || []).filter(g => g !== "TV Movie").map(g => g === "Science Fiction" ? "Sci-Fi" : g),
+    tags: (movie.tags || []).map(slug).filter(Boolean),
+    people: (movie.people ?? [...(movie.director ? [movie.director] : []), ...(movie.cast || []).slice(0, 3)]).map(slug).filter(Boolean),
+    overview: (Object.hasOwn(movie, "feature_overview") ? movie.feature_overview : movie.overview) || "",
+  });
 
   class Engine {
     constructor(model) {
@@ -116,7 +123,7 @@
       const counts = new Map();
       for (const tok of text.toLowerCase().match(TOKEN) || []) {
         const j = this.vocab[tok];
-        if (j !== undefined) counts.set(j, (counts.get(j) || 0) + 1);
+        if (Object.hasOwn(this.vocab, tok)) counts.set(j, (counts.get(j) || 0) + 1);
       }
       const v = new Float64Array(this.idf.length);
       let norm = 0;
@@ -124,6 +131,61 @@
       norm = Math.sqrt(norm);
       if (norm > 0) for (const j of counts.keys()) v[j] /= norm;
       return v;
+    }
+
+    resolvePreference(movie) {
+      const config = this.metaInfo.preferences;
+      if (!config || this.movies[0]?.source !== "tmdb" || movie.source !== "tmdb" || !movie.full_details || movie.metadata_language !== "en-US") throw Error("Compatible English metadata is required");
+      const f = movieFeatures(movie);
+      const text = [...f.genres, ...f.genres, ...f.tags, ...f.tags, ...f.people].join(" ").toLowerCase() + " " + f.overview.toLowerCase();
+      const vector = [...this.transform(text)].map((v, i) => [i, v]).filter(([, v]) => v !== 0);
+      return { version: 1, feature_version: config.feature_version, feature_language: "en-US", key: `tmdb:${movie.id}`,
+        status: vector.length ? "applied" : "unavailable", vector, movie: { ...movie, ...f },
+        taste: { genres: f.genres.filter(g => config.genres.includes(g)), tags: f.tags.filter(t => Object.hasOwn(this.vocab, t)) },
+        reason: vector.length ? "" : "This movie has no usable features in the current model vocabulary.", stale: movie.stale === true };
+    }
+
+    externalProfile(payload, liked, disliked) {
+      if (payload == null) return null;
+      const fail = () => { throw Object.assign(new Error("Invalid or incompatible external preferences"), { status: 422 }); };
+      const config = this.metaInfo.preferences;
+      payload = { genres: [], tags: [], seeds: [], ...payload };
+      const keys = ["version", "feature_version", "vector", "positive_count", "negative_count", "genres", "tags", "seeds"];
+      if (!config || this.movies[0]?.source !== "tmdb" || payload.version !== 1 || payload.feature_version !== config.feature_version ||
+          Object.keys(payload).some(k => !keys.includes(k))) fail();
+      const negative = new Set(disliked.filter(id => !this.byId.has(id)));
+      const positive = new Set(liked.filter(id => !this.byId.has(id) && !negative.has(id)));
+      for (const [key, count] of [["positive_count", positive.size], ["negative_count", negative.size]])
+        if (!Number.isInteger(payload[key]) || payload[key] < 0 || payload[key] > Math.min(10000, count)) fail();
+      const validVector = vector => {
+        const indices = new Set();
+        return Array.isArray(vector) && vector.length <= this.idf.length && vector.every(pair => {
+          if (!Array.isArray(pair) || pair.length !== 2) return false;
+          const [i, v] = pair;
+          if (!Number.isInteger(i) || i < 0 || i >= this.idf.length || !number(v) || Math.abs(v) > 10000 || indices.has(i)) return false;
+          indices.add(i); return true;
+        });
+      };
+      if (!validVector(payload.vector)) fail();
+      for (const [key, limit] of [["genres", 64], ["tags", 10000]]) {
+        const names = new Set();
+        if (!Array.isArray(payload[key]) || payload[key].length > limit) fail();
+        for (const term of payload[key]) {
+          if (!term || Object.keys(term).some(k => !["name", "weight"].includes(k)) || typeof term.name !== "string" || !term.name.length || term.name.length > 200 ||
+              !number(term.weight) || Math.abs(term.weight) > 10000 || names.has(term.name)) fail();
+          names.add(term.name);
+        }
+      }
+      if (!Array.isArray(payload.seeds) || payload.seeds.length > 2) fail();
+      const seeds = new Set();
+      for (const seed of payload.seeds) {
+        if (!seed || Object.keys(seed).some(k => !["key", "title", "genres", "tags", "vector"].includes(k)) ||
+            !/^tmdb:[1-9]\d*$/.test(seed.key) || seed.key.length > 40 || !positive.has(Number(seed.key.split(":")[1])) || seeds.has(seed.key) ||
+            typeof seed.title !== "string" || !seed.title.length || seed.title.length > 500 || !validVector(seed.vector)) fail();
+        for (const [key, limit] of [["genres", 64], ["tags", 24]]) if (!Array.isArray(seed[key]) || seed[key].length > limit || !seed[key].every(t => typeof t === "string" && t.length > 0 && t.length <= 200)) fail();
+        seeds.add(seed.key);
+      }
+      return payload;
     }
 
     mmr(candidates, relevance, k) {
@@ -171,6 +233,8 @@
     }
 
     recommend(liked = [], disliked = [], mood = null, k = 12, options = {}) {
+      const external = this.externalProfile(options.external_preferences, liked, disliked);
+      const externalLikes = external?.positive_count || 0, externalDislikes = external?.negative_count || 0;
       const D = this.indices(disliked), L = this.indices(liked).filter((i) => !D.includes(i));
       let [signals, recent] = this.viewingEvidence(options.viewing, new Set([...L, ...D]), options.now ?? Date.now());
       if (!options.use_viewing) signals = [];
@@ -190,9 +254,10 @@
       };
       if (L.length) { addRows(L, 1); addCollab(L, 1); }
       if (D.length) { addRows(D, -cfg.dislikePenalty); addCollab(D, -cfg.dislikePenalty); }
+      if (external) for (const [j, value] of external.vector) profile[j] += value;
       if (mood) {
         const q = this.transform(this.expandMood(mood));
-        const boost = cfg.moodBoost * Math.max(1, L.length);
+        const boost = cfg.moodBoost * Math.max(1, L.length + externalLikes);
         q.forEach((v, j) => (profile[j] += boost * v));
       }
       const norm = Math.sqrt(profile.reduce((s, v) => s + v * v, 0));
@@ -207,9 +272,15 @@
       });
 
       let weights, mode;
-      if (!L.length && !D.length && !mood) { weights = { content: 0, collab: 0, quality: 1 }; mode = "popular"; }
-      else if (mood && !L.length) { weights = cfg.moodWeights; mode = "mood"; }
+      if (!L.length && !D.length && !externalLikes && !externalDislikes && !mood) { weights = { content: 0, collab: 0, quality: 1 }; mode = "popular"; }
+      else if (mood && !L.length && !externalLikes) { weights = cfg.moodWeights; mode = "mood"; }
       else { weights = cfg.weights; mode = "personal"; }
+      if (external && externalLikes + externalDislikes) {
+        weights = { ...weights, collab: weights.collab * (L.length + D.length) / (L.length + D.length + externalLikes + externalDislikes) };
+        if (!norm) weights.content = 0;
+        const total = Object.values(weights).reduce((s, v) => s + v, 0);
+        weights = Object.fromEntries(Object.entries(weights).map(([name, value]) => [name, value / total]));
+      }
 
       const parts = { content: minmax(content, candidates), collab: minmax(collab, candidates), quality: minmax(this.quality, candidates) };
       if (signals.length) {
@@ -230,20 +301,36 @@
 
       const moodTerms = mood ? this.moodTerms(mood) : new Set();
       const top = chosen.length ? Math.max(...chosen.map((i) => score[i])) : 1;
+      const externalLinks = (external?.seeds || []).map(seed => {
+        const vector = new Float64Array(this.idf.length);
+        seed.vector.forEach(([j, v]) => vector[j] = v);
+        const length = Math.sqrt(vector.reduce((s, v) => s + v * v, 0));
+        const similarity = Float64Array.from(this.X, row => length ? row.reduce((s, [j, v]) => s + v * vector[j], 0) / length : 0);
+        return { seed, similarity };
+      });
       const items = chosen.map((idx) => {
         let because = null, shared = [];
+        let linkStrength = 0;
         if (L.length) {
           const j = L[argmaxFirst(L.map((l) => this.contentSim[idx][l] + this.collabSim[idx][l]))];
+          linkStrength = this.contentSim[idx][j] + this.collabSim[idx][j];
           because = { id: this.movies[j].id, title: this.movies[j].title };
           shared = sortedStrings([...this.tokenSets[idx]].filter((t) => this.tokenSets[j].has(t)));
-        } else if (signals.length && parts.viewing[idx] > 0) {
+        }
+        for (const { seed, similarity } of externalLinks) if (weights.content > 0 && similarity[idx] > Math.max(.01, linkStrength)) {
+          linkStrength = similarity[idx];
+          because = { id: Number(seed.key.split(":")[1]), title: seed.title, key: seed.key };
+          const terms = new Set([...seed.genres.map(g => g.toLowerCase()), ...seed.tags]);
+          shared = sortedStrings([...this.tokenSets[idx]].filter(t => terms.has(t)));
+        }
+        if (!because && signals.length && parts.viewing[idx] > 0) {
           const s = signals[argmaxFirst(signals.map((s) => s.strength * (.6 * this.contentSim[idx][s.index] + .4 * this.collabSim[idx][s.index])))];
           const j = s.index;
           because = { id: this.movies[j].id, title: this.movies[j].title, type: "watched" };
           shared = sortedStrings([...this.tokenSets[idx]].filter((t) => this.tokenSets[j].has(t)));
         }
         if (moodTerms.size) shared = sortedStrings(new Set([...shared, ...[...this.tokenSets[idx]].filter((t) => moodTerms.has(t))]));
-        const reason = because ? `Because you ${because.type === "watched" ? "watched" : "loved"} ${because.title}` : mood ? `Matches “${mood}”` : "A crowd favourite to get you started";
+        const reason = because ? `Because you ${because.type === "watched" ? "watched" : "loved"} ${because.title}` : mood ? `Matches “${mood}”` : external && externalLikes + externalDislikes ? "Based on your movie preferences" : "A crowd favourite to get you started";
         return {
           ...this.movies[idx],
           score: round(score[idx], 4),
@@ -252,6 +339,7 @@
           because,
           shared: shared.slice(0, 4),
           breakdown: Object.fromEntries(Object.keys(parts).map((name) => [name, round(weights[name] * parts[name][idx], 4)])),
+          ...(external ? { component_availability: { content: norm > 0, collab: !!(L.length || D.length), quality: true, viewing: !!signals.length } } : {}),
         };
       });
       const watched_rows = signals.slice(0, 2).map((s) => {
@@ -260,11 +348,17 @@
         return { source: this.movies[s.index], watched_seconds: s.watched_seconds, duration: s.duration,
           items: this.mmr(pool, relevance, 14).map((i) => ({ ...this.movies[i] })) };
       });
-      return { mode, items, taste: this.tasteProfile(L, D), watched_rows };
+      const result = { mode, items, taste: this.tasteProfile(L, D, external), watched_rows };
+      if (external) result.because_rows = externalLinks.map(({ seed, similarity }) => {
+        const pool = [...similarity.keys()].sort((a, b) => similarity[b] - similarity[a]).filter(i => candidates[i] && similarity[i] > .01).slice(0, 42);
+        const { vector, ...source } = seed;
+        return { source: { id: Number(seed.key.split(":")[1]), ...source }, items: this.mmr(pool, similarity, 14).map(i => ({ ...this.movies[i] })) };
+      });
+      return result;
     }
 
-    tasteProfile(L, D) {
-      const genreW = new Map(), tagW = new Map();
+    tasteProfile(L, D, external = null) {
+      const genreW = new Map((external?.genres || []).map(t => [t.name, t.weight])), tagW = new Map((external?.tags || []).map(t => [t.name, t.weight]));
       const add = (map, key, w) => map.set(key, (map.get(key) || 0) + w);
       [...L.map((i) => [i, 1]), ...D.map((i) => [i, -this.cfg.dislikePenalty])].forEach(([idx, w]) => {
         this.movies[idx].genres.forEach((g) => add(genreW, g, w));
@@ -276,7 +370,7 @@
       return {
         genres: genres.slice(0, 6).map(([name, v]) => ({ name, weight: round(v / top, 3) })),
         tags: positives(tagW).slice(0, 8).map(([t]) => t),
-        confidence: round(Math.min(1, L.length / 5), 2),
+        confidence: round(Math.min(1, (L.length + (external?.positive_count || 0)) / 5), 2),
       };
     }
 
@@ -301,10 +395,12 @@
       if (p === "/api/recommend") {
         const k = body?.k ?? 12;
         if (!(k >= 1 && k <= 100)) throw Object.assign(new Error("k must be 1-100"), { status: 422 });
+        for (const key of ["liked", "disliked"]) if (body?.[key] && (!Array.isArray(body[key]) || body[key].length > 10000)) throw Object.assign(new Error("Too many explicit preferences"), { status: 422 });
         validateViewingRequest(body || {});
         return this.recommend(body?.liked, body?.disliked, body?.mood, k, {
           viewing: body?.viewing, use_viewing: body?.use_viewing,
-          recent_playback_only: body?.recent_playback_only, eligible_keys: body?.eligible_keys });
+          recent_playback_only: body?.recent_playback_only, eligible_keys: body?.eligible_keys,
+          external_preferences: body?.external_preferences });
       }
       const sim = p.match(/^\/api\/movies\/(\d+)\/similar$/);
       if (sim) return this.similar(Number(sim[1]), Number(url.searchParams.get("k") || 6));

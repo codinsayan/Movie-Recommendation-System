@@ -8,9 +8,9 @@
     ? [...new Set(value.filter((id) => Number.isSafeInteger(id) && id > 0))].slice(-10000) : [];
   function normalize(value = {}) {
     if (!value || typeof value !== "object") value = {};
-    const liked = ids(value.liked);
-    const loved = new Set(liked);
-    return { liked, disliked: ids(value.disliked).filter((id) => !loved.has(id)),
+    const disliked = ids(value.disliked);
+    const passed = new Set(disliked);
+    return { liked: ids(value.liked).filter((id) => !passed.has(id)), disliked,
       mood: typeof value.mood === "string" ? value.mood.trim().slice(0, 200) : "" };
   }
   function read(storage, key) {

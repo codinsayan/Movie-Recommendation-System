@@ -21,6 +21,8 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 from viewing import VIEWING_CONFIG, canonical_key, viewing_evidence
+from features import feature_text, feature_version
+from preferences import ExternalProfile, preference_record
 
 DATA_DIR = Path(__file__).parent / "data"
 DATASETS = {"curated": DATA_DIR / "movies.json", "tmdb": DATA_DIR / "tmdb_movies.json"}
@@ -166,10 +168,7 @@ class Recommender:
         n = len(movies)
 
         # Content model: genres and tags count double, they are the strongest signal.
-        docs = [
-            " ".join(m["genres"] * 2 + m["tags"] * 2 + m.get("people", [])).lower() + " " + m["overview"].lower()
-            for m in movies
-        ]
+        docs = [feature_text(m) for m in movies]
         self.vectorizer = TfidfVectorizer(
             token_pattern=TOKEN_PATTERN, stop_words="english", sublinear_tf=True
         )
@@ -197,6 +196,31 @@ class Recommender:
         r = weighted_rating(movies)
         self.quality = (r - r.min()) / (r.max() - r.min()) if r.max() > r.min() else np.ones(n)
         self.n = n
+        self.feature_version = feature_version(movies, self.vectorizer)
+        self.known_genres = {g for m in movies for g in m["genres"]}
+
+    feature_document = staticmethod(feature_text)
+
+    def resolve_preference(self, movie):
+        return preference_record(self, movie)
+
+    def external_profile(self, payload, liked, disliked):
+        if payload is None:
+            return None
+        data = ExternalProfile.model_validate(payload).model_dump()
+        if self.movies[0].get("source") != "tmdb" or data["feature_version"] != self.feature_version:
+            raise ValueError("External preferences require a compatible TMDB feature version")
+        positives = set(liked) - set(disliked) - set(self.by_id)
+        negatives = set(disliked) - set(self.by_id)
+        if data["positive_count"] > len(positives) or data["negative_count"] > len(negatives):
+            raise ValueError("External preference counts do not match the active choices")
+        for vector in [data["vector"], *(s["vector"] for s in data["seeds"])]:
+            if any(i >= self.X.shape[1] for i, _ in vector):
+                raise ValueError("External feature index is outside this vocabulary")
+        for seed in data["seeds"]:
+            if int(seed["key"].split(":")[1]) not in positives:
+                raise ValueError("Explanation seed is not an active external like")
+        return data
 
     # ---------- helpers ----------
     def _indices(self, ids) -> list[int]:
@@ -230,7 +254,11 @@ class Recommender:
 
     # ---------- public API ----------
     def recommend(self, liked=(), disliked=(), mood: str | None = None, k: int = 12,
-                  viewing=None, use_viewing=False, recent_playback_only=False, eligible_keys=None, now=None) -> dict:
+                  viewing=None, use_viewing=False, recent_playback_only=False, eligible_keys=None, now=None,
+                  external_preferences=None) -> dict:
+        external = self.external_profile(external_preferences, liked, disliked)
+        external_likes = external["positive_count"] if external else 0
+        external_dislikes = external["negative_count"] if external else 0
         liked_i, disliked_i = self._indices(liked), self._indices(disliked)
         # An explicit dislike always wins, including conflicting imported profiles.
         liked_i = [i for i in liked_i if i not in disliked_i]
@@ -249,9 +277,12 @@ class Recommender:
         if disliked_i:
             profile -= DISLIKE_PENALTY * self.X[disliked_i].sum(axis=0)
             collab -= DISLIKE_PENALTY * self.collab_sim[disliked_i].mean(axis=0)
+        if external:
+            for j, value in external["vector"]:
+                profile[j] += value
         if mood:
             q = normalize(self.vectorizer.transform([self.expand_mood(mood)])).toarray()[0]
-            profile += MOOD_BOOST * q * max(1, len(liked_i))
+            profile += MOOD_BOOST * q * max(1, len(liked_i) + external_likes)
         if profile.any():
             content = self.X @ (profile / np.linalg.norm(profile))
 
@@ -264,12 +295,22 @@ class Recommender:
         if recent_playback_only:
             candidates &= np.array([canonical_key(m) in recent for m in self.movies])
 
-        if not liked_i and not disliked_i and not mood:
+        if not liked_i and not disliked_i and not external_likes and not external_dislikes and not mood:
             weights, mode = {"content": 0, "collab": 0, "quality": 1}, "popular"
-        elif mood and not liked_i:
+        elif mood and not liked_i and not external_likes:
             weights, mode = MOOD_WEIGHTS, "mood"
         else:
             weights, mode = WEIGHTS, "personal"
+
+        if external and external_likes + external_dislikes:
+            # Only indexed choices have collaborative evidence; external metadata is content.
+            weights = dict(weights)
+            indexed = len(liked_i) + len(disliked_i)
+            weights["collab"] *= indexed / (indexed + external_likes + external_dislikes)
+            if not profile.any():
+                weights["content"] = 0
+            total = sum(weights.values())
+            weights = {name: value / total for name, value in weights.items()}
 
         parts = {
             "content": _minmax(content, candidates),
@@ -297,14 +338,28 @@ class Recommender:
         mood_terms = self._mood_terms(mood) if mood else set()
         top = score[chosen].max() if chosen else 1.0
         items = []
+        external_links = []
+        for seed in external["seeds"] if external else []:
+            vector = np.zeros(self.X.shape[1])
+            for j, value in seed["vector"]:
+                vector[j] = value
+            length = np.linalg.norm(vector)
+            external_links.append((seed, self.X @ (vector / length) if length else np.zeros(n)))
         for idx in chosen:
             because, shared = None, []
+            link_strength = 0
             if liked_i:
                 link = self.content_sim[idx, liked_i] + self.collab_sim[idx, liked_i]
                 j = liked_i[int(np.argmax(link))]
+                link_strength = float(max(link))
                 because = {"id": self.movies[j]["id"], "title": self.movies[j]["title"]}
                 shared = sorted(_tokens(self.movies[idx]) & _tokens(self.movies[j]))
-            elif signals and parts["viewing"][idx] > 0:
+            for seed, similarity in external_links:
+                if weights["content"] > 0 and similarity[idx] > max(.01, link_strength):
+                    link_strength = float(similarity[idx])
+                    because = {"id": int(seed["key"].split(":")[1]), "title": seed["title"], "key": seed["key"]}
+                    shared = sorted(_tokens(self.movies[idx]) & _tokens(seed))
+            if not because and signals and parts["viewing"][idx] > 0:
                 j = max(signals, key=lambda s: s["strength"] *
                         (0.6 * self.content_sim[idx, s["index"]] + 0.4 * self.collab_sim[idx, s["index"]]))["index"]
                 because = {"id": self.movies[j]["id"], "title": self.movies[j]["title"], "type": "watched"}
@@ -316,6 +371,8 @@ class Recommender:
                 reason = f"Because you {verb} {because['title']}"
             elif mood:
                 reason = f"Matches “{mood}”"
+            elif external and external_likes + external_dislikes:
+                reason = "Based on your movie preferences"
             else:
                 reason = "A crowd favourite to get you started"
             items.append(self._card(
@@ -326,6 +383,8 @@ class Recommender:
                 because=because,
                 shared=shared[:4],
                 breakdown={name: round(float(weights[name] * parts[name][idx]), 4) for name in parts},
+                **({"component_availability": {"content": bool(profile.any()), "collab": bool(liked_i or disliked_i),
+                                               "quality": True, "viewing": bool(signals)}} if external else {}),
             ))
 
         watched_rows = []
@@ -336,12 +395,20 @@ class Recommender:
             watched_rows.append({"source": self.movies[j], "watched_seconds": signal["watched_seconds"],
                                  "duration": signal["duration"],
                                  "items": [self._card(i) for i in self._mmr(pool, relevance, 14)]})
-        return {"mode": mode, "items": items, "taste": self.taste_profile(liked_i, disliked_i),
-                "watched_rows": watched_rows}
+        result = {"mode": mode, "items": items, "taste": self.taste_profile(liked_i, disliked_i, external),
+                  "watched_rows": watched_rows}
+        if external:
+            result["because_rows"] = []
+            for seed, relevance in external_links:
+                pool = [int(i) for i in np.argsort(-relevance, kind="stable") if candidates[i] and relevance[i] > .01][:42]
+                result["because_rows"].append({"source": {"id": int(seed["key"].split(":")[1]),
+                                                        **{k: v for k, v in seed.items() if k != "vector"}},
+                                                "items": [self._card(i) for i in self._mmr(pool, relevance, 14)]})
+        return result
 
-    def taste_profile(self, liked_i: list[int], disliked_i: list[int]) -> dict:
-        genre_w: dict[str, float] = {}
-        tag_w: dict[str, float] = {}
+    def taste_profile(self, liked_i: list[int], disliked_i: list[int], external=None) -> dict:
+        genre_w = {t["name"]: t["weight"] for t in external["genres"]} if external else {}
+        tag_w = {t["name"]: t["weight"] for t in external["tags"]} if external else {}
         for idx, w in [(i, 1.0) for i in liked_i] + [(i, -DISLIKE_PENALTY) for i in disliked_i]:
             for g in self.movies[idx]["genres"]:
                 genre_w[g] = genre_w.get(g, 0) + w
@@ -353,7 +420,7 @@ class Recommender:
         return {
             "genres": [{"name": g, "weight": round(v / top, 3)} for g, v in genres],
             "tags": [t for t, _ in tags],
-            "confidence": round(min(1.0, len(liked_i) / 5), 2),
+            "confidence": round(min(1.0, (len(liked_i) + (external["positive_count"] if external else 0)) / 5), 2),
         }
 
     def similar(self, movie_id: int, k: int = 6) -> list[dict]:
@@ -376,6 +443,9 @@ class Recommender:
             "weights": WEIGHTS,
             "mmr_lambda": MMR_LAMBDA,
             "viewing": VIEWING_CONFIG,
+            "preferences": {"version": 1, "feature_version": self.feature_version, "feature_language": "en-US",
+                            "vocabulary_size": self.X.shape[1], "genres": sorted(self.known_genres),
+                            "dislike_penalty": DISLIKE_PENALTY},
             "genres": sorted({g for m in self.movies for g in m["genres"]}),
         }
         if self.ratings is not None:

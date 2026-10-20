@@ -51,7 +51,7 @@ Use the same browser profile and site address when returning: `localhost:8000` a
 
 Open **My Taste** and enable **Use viewing history** to try the experimental blend. After both two minutes and 30% of a film are measured playing, it can inform a **Because you watched** row. Unique watched intervals are measured separately from resume position: seeking, source changes, errors and pressing Play alone are not preference signals. Older saved positions do not acquire viewing evidence automatically.
 
-Explicit taste retains 90% of the score when this option has qualified signals; viewing contributes at most 10%. Substantial repeat sessions have a capped influence. Likes/dislikes and Taste DNA remain explicit. Viewing outside the trained snapshot stays history-only until a deliberate bounded rebuild indexes that title.
+Explicit taste retains 90% of the score when this option has qualified signals; viewing contributes at most 10%. Substantial repeat sessions have a capped influence. Likes/dislikes and Taste DNA remain explicit. Viewing outside the trained snapshot stays history-only; S5A resolves explicit external likes/dislikes separately.
 
 **Top picks: played recently on this device** optionally filters picks using ten measured playing seconds within seven days. Later source errors invalidate that source's record. This is local evidence, not guaranteed availability; ordinary search and browsing remain available when the filter is empty. **Clear viewing history** removes progress and viewing/playback evidence while keeping likes, mood and Watchlist. Both options persist in this browser and work in FastAPI and static mode.
 
@@ -65,11 +65,19 @@ The recent-playback option is a strict filter, so it can have no eligible picks.
 
 The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Matching movies load automatically after a **300 ms typing pause**; no Enter is needed. Search replaces the home banner/rows with a responsive landscape grid, using backdrops where available and showing titles and years. Choose **Load more** for another page, or clear the search with **×** / **Esc** to return home. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
 
-Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. Titles outside the trained model have no personalized match score or local similar-film recommendations yet; discovery does not enlarge the model.
+Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. S5A lets their explicit likes/dislikes influence snapshot recommendations after English feature metadata resolves. Remote titles still have no fabricated personalized score or direct similar-title lookup; S5B will add dynamic recommendation candidates. Discovery does not enlarge the model.
 
 SQLite caches searches for one hour and details for one day, with stale fallback during upstream failures. The cache is bounded to 5,000 entries and git-ignored. Set `CINEMAGIC_CACHE_PATH` to change its location. Missing credentials or upstream failures leave snapshot browsing available.
 
 GitHub Pages and curated mode retain snapshot/saved-title search. Live search requires FastAPI with the TMDB dataset; curated IDs remain isolated from TMDB IDs.
+
+### External likes and dislikes (S5A)
+
+Like or pass a searched movie outside the snapshot and the choice is saved immediately. The backend resolves its full metadata in English and transforms it with the existing fitted TF-IDF model. Resolved likes add content affinity; dislikes apply a softer negative influence and keep exact exclusions. No catalogue rebuild is needed. Recommendations still come from the existing snapshot until S5B.
+
+**My Taste** shows external choices as **applied**, **pending** or **unavailable**, with **Retry metadata** when needed. Unresolved choices stay saved and do not count towards Taste DNA. A bounded cache keeps compatible feature records across refresh separately from preference IDs; evicted or uncached choices resolve again; unavailable feature storage keeps session influence and rehydrates on a later visit. Clearing taste cannot resurrect a removed choice from a late lookup. Metadata display language remains independent of the fixed feature language.
+
+The static app can reuse matching cached features or encode complete cached English details. A fresh movie without compatible metadata stays pending until the backend is available. External inputs have no invented collaborative evidence. See [S5A implementation and evidence](docs/streaming/05a-dynamic-preferences.md).
 
 ### Building the snapshot
 
@@ -155,7 +163,7 @@ Interactive API docs are at `http://127.0.0.1:8000/docs`.
 
 ## Documentation
 
-- [Dynamic recommendation iterations (S5A-S5D)](docs/streaming/README.md#dynamic-recommendation-upgrade-planned): planned external likes/dislikes, fresh candidates, scalable ranking and evaluation before S6/S7
+- [Dynamic recommendation iterations (S5A-S5D)](docs/streaming/README.md#dynamic-recommendation-upgrade): S5A external likes/dislikes implemented; fresh candidates, scalable ranking and evaluation planned before S6/S7
 - [Render deployment iteration (S7)](docs/streaming/07-render-deployment.md): planned full-project hosting, environment settings, public acceptance checks and rollback; deployment has not been performed yet
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system design and request flow
 - [docs/ALGORITHM.md](docs/ALGORITHM.md): the maths behind the recommendations

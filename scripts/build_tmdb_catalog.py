@@ -18,13 +18,14 @@ import os
 import ssl
 import sys
 import time
-import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "backend"))
+from features import slug  # noqa: E402
 OUT = ROOT / "backend" / "data" / "tmdb_movies.json"
 API = "https://api.themoviedb.org/3"
 IMG = "https://image.tmdb.org/t/p/"
@@ -75,11 +76,6 @@ class TMDB:
                     raise
                 time.sleep(int(e.headers.get("Retry-After") or 0) or 2 ** attempt)
         raise RuntimeError("unreachable")
-
-
-def slug(text: str) -> str:
-    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
-    return "-".join("".join(c if c.isalnum() else " " for c in ascii_text.lower()).split())
 
 
 def pick_trailer(videos: list[dict]) -> str | None:

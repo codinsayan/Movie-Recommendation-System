@@ -2,7 +2,7 @@
 
 Decision date: 20 October 2026. Branch: `feature/streaming-platform`.
 
-Status: S1-S5 code is implemented; S5 is opt-in while broader relevance and rendered-browser acceptance remain pending. This roadmap implements the user's latest choice: **the viewer switches sources manually**. It replaces the automatic-switching proposal in the earlier research notes. See [validation evidence](PLAYBACK_VALIDATION.md).
+Status: S1-S5 and S5A code is implemented; S5 is opt-in while broader relevance and rendered-browser acceptance remain pending. This roadmap implements the user's latest choice: **the viewer switches sources manually**. It replaces the automatic-switching proposal in the earlier research notes. See [validation evidence](PLAYBACK_VALIDATION.md).
 
 ## Provider decision
 
@@ -36,7 +36,7 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S3: Personal viewing state](03-progress-and-watchlist.md) | Resume, Continue watching, independent watchlist, position transfer | S2 | Code implemented; browser acceptance pending |
 | [S4: Search and catalogue growth](04-search-and-catalogue.md) | Paginated TMDB-backed discovery, metadata cache, broader language coverage | S2; reuse S3 identity conventions | Implemented; API/client checks passed |
 | [S5: Viewing-aware recommendations](05-recommendations.md) | Measured viewing, device-local playback eligibility and explanations | S3 and S4 | Implemented as opt-in; evaluation/parity passed |
-| [S5A: Dynamic preferences](05a-dynamic-preferences.md) | Apply external likes/dislikes using resolved metadata and honest pending states | S4 and S5 | Planned |
+| [S5A: Dynamic preferences](05a-dynamic-preferences.md) | Apply external likes/dislikes using resolved metadata and honest pending states | S4 and S5 | Implemented; API/client/parity checks passed; rendered-browser acceptance pending |
 | [S5B: Dynamic discovery](05b-dynamic-discovery.md) | Retrieve new recommendation candidates beyond the starter snapshot | S5A | Planned |
 | [S5C: Scalable ranking](05c-scalable-ranking.md) | Sparse feature/profile scoring and bounded reranking instead of growing global matrices | S5A and S5B | Planned |
 | [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Planned |
@@ -47,11 +47,11 @@ There is one active movie iframe. Closing the player or opening a different movi
 
 The older recommender evaluation/model experiments remain recorded in [ITERATIONS.md](../ITERATIONS.md). Streaming work keeps S1-S7 labels and inserts S5A-S5D between S5 and S6, preserving the existing release/deployment numbering. Decide release versions at implementation time.
 
-## Dynamic recommendation upgrade (planned)
+## Dynamic recommendation upgrade
 
 Implementation order: **S5 -> S5A -> S5B -> S5C -> S5D -> S6 -> S7**. The current 447-film snapshot remains the starter/offline fallback. The new phases make external likes/dislikes usable, retrieve fresh candidates and score bounded pools as the catalogue evolves. Candidate budgets are per-request limits, not a permanent 447/500-film discovery limit. The existing snapshot builder cap remains until deliberately revisited.
 
-Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. No dynamic-preference, candidate-retrieval or scalable-ranking implementation is included in this planning update.
+Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. S5A external preferences are implemented with API/client/parity evidence. S5B candidate retrieval, S5C scalable ranking and S5D evaluation remain planned; final rendered-browser S5A acceptance is still pending.
 
 ## Implementation boundaries
 
@@ -68,7 +68,7 @@ Module locations:
 - `backend/catalog.py`: S4 metadata lookup/cache and canonical identity mapping.
 - `frontend/catalogue.js`: remote search, capability detection and saved title metadata.
 - `backend/recommender.py` and `frontend/engine.js`: coordinated S5 ranking changes where both modes support them.
-- Planned S5A-S5C feature/profile/retrieval modules: resolve external preferences and rank dynamic pools; finalize module boundaries during implementation, preserving canonical IDs and static-mode limits.
+- `backend/features.py`, `backend/preferences.py` and `frontend/preference-resolver.js`: shared normalization, versioned external feature resolution and device-local feature aggregates. S5B-S5C retrieval/ranking modules remain planned.
 
 Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated IDs are internal IDs and must never be sent to a provider as though they were TMDB IDs. Resolve an explicit TMDB mapping or show that full-movie playback is unavailable for that record.
 
@@ -76,7 +76,7 @@ Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated I
 
 Each phase has checkboxes, affected files, a demo and acceptance criteria in its linked document. Mark a phase done only when its acceptance evidence exists. Deterministic tests use simulated provider messages; live checks verify a small permitted-film set without making third-party network availability a CI dependency.
 
-The full suite passes 98 tests. S5 adds ranking/eligibility and Python/JavaScript parity checks for both catalogues, plus 26 JavaScript playback/preferences cases and seven catalogue cases. See [S5 evaluation](../EVALUATION.md) for evidence and limits. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
+The full suite now passes 109 tests, including S5A external-feature/API/parity checks and ten JavaScript resolution lifecycle cases. S5 adds ranking/eligibility and Python/JavaScript parity checks for both catalogues, plus 26 JavaScript playback/preferences cases and seven catalogue cases. See [S5 evaluation](../EVALUATION.md) for evidence and limits. API/static asset smoke checks and model export also pass. The user confirms the sources play; final rendered-browser, autoplay and resume acceptance remains outstanding.
 
 ## Deferred work
 

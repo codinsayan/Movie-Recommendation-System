@@ -382,6 +382,9 @@ body.searching .rows { margin-top: 0; padding-top: 110px; min-height: 100vh; }
 .catalogue-controls span { flex: 1; min-width: 180px; }
 .catalogue-controls button:disabled { opacity: .6; cursor: wait; }
 .catalogue-note { color: var(--muted); font-size: .85rem; margin-top: 12px; }
+.preference-resolution { padding: 12px; margin: 14px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.preference-badge { position: absolute; left: 3px; bottom: 4px; padding: 2px 4px; border-radius: 3px; font-size: .55rem; background: rgba(0,0,0,.85); color: var(--muted); }
+.pending-title { display: block; padding: 10px 4px; font-size: .7rem; color: var(--muted); }
 .modal.has-player { width: min(1100px, 100%); }
 .player-heading { padding: 30px 28px 16px; }
 .player-kicker { color: #ff6b73; font-size: .7rem; letter-spacing: .18em; font-weight: 700; }

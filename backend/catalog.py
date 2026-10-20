@@ -11,6 +11,7 @@ import time
 
 import certifi
 import httpx
+from features import normalized_features
 
 ROOT = Path(__file__).resolve().parent.parent
 GENRES = {28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
@@ -54,7 +55,7 @@ def normalize_movie(data: dict, language: str, full: bool = False) -> dict:
               if v.get("site") == "YouTube" and v.get("type") in ("Trailer", "Teaser") and v.get("key")]
     videos.sort(key=lambda v: (v.get("type") != "Trailer", not v.get("official")))
     poster, backdrop = data.get("poster_path"), data.get("backdrop_path")
-    return {
+    movie = {
         "id": mid, "tmdb_id": mid, "source": "tmdb", "title": data.get("title") or data.get("original_title") or "Untitled",
         "original_title": data.get("original_title") or data.get("title") or "",
         "original_language": data.get("original_language") or "",
@@ -62,12 +63,16 @@ def normalize_movie(data: dict, language: str, full: bool = False) -> dict:
         "metadata_language": language, "full_details": full, "year": year, "genres": genres,
         "tags": [k["name"] for k in (data.get("keywords") or {}).get("keywords", [])[:12] if k.get("name")],
         "overview": data.get("overview") or "No overview available in this language.",
+        "feature_overview": data.get("overview") or "",
         "rating": round(float(data.get("vote_average") or 0), 1), "votes": int(data.get("vote_count") or 0),
         "poster": f"https://image.tmdb.org/t/p/w342{poster}" if poster else None,
         "backdrop": f"https://image.tmdb.org/t/p/w1280{backdrop}" if backdrop else None,
         "tagline": data.get("tagline") or "", "runtime": data.get("runtime"),
         "cast": cast, "director": director, "trailer": videos[0]["key"] if videos else None,
     }
+    features = normalized_features(movie)
+    movie.update({k: features[k] for k in ("genres", "tags", "people")})
+    return movie
 
 
 class Catalog:
