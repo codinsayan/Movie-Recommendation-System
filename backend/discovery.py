@@ -229,5 +229,5 @@ class Discovery:
                 known = self.catalog.cached_movie(sid)
                 if known:
                     seed_titles[sid] = known["title"]
-        return {"movies": movies, "E": E, "related": related, "quality": self.engine.quality_of(movies),
-                "seed_titles": seed_titles, "encoding": encoding}
+        # Quality is computed by the engine at ranking time under its discovery policy.
+        return {"movies": movies, "E": E, "related": related, "seed_titles": seed_titles, "encoding": encoding}

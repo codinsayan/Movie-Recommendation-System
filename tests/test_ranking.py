@@ -19,7 +19,7 @@ from discovery import Discovery
 from features import feature_text
 from preferences import PreferenceFeatures
 from ranking import RANKING_BUDGET, FeatureStore
-from recommender import EXPLAIN_FLOOR, load_dataset
+from recommender import DISCOVERY_POLICY, EXPLAIN_FLOOR, load_dataset
 from test_discovery import DREAM, SCIFI, FakeTMDB
 
 OFFSET = 900_000_000
@@ -251,3 +251,32 @@ def test_damaged_or_deleted_cache_file_degrades_to_misses(tmp_path):
     assert len(calls) == 2 and catalog.cached_movies([1, 2]) == {}
     (tmp_path / "cache.sqlite3").write_bytes(b"not a database" * 100)  # damaged file
     assert catalog.discover(sort="popularity.desc")["items"] == [] and len(calls) == 3
+
+
+def test_s5d_calibration_ranks_an_obscure_related_title_below_a_well_known_one(engine):
+    """Same metadata and TMDB link; only votes differ. The snapshot prior flattered the obscure copy."""
+    base = engine.movies[engine.by_id[next(m["id"] for m in engine.movies if m["title"] == "Toy Story 2")]]
+    liked = [next(m["id"] for m in engine.movies if m["title"] == "Toy Story")]
+    known = {**base, "id": OFFSET + 10, "tmdb_id": OFFSET + 10, "title": "Known", "votes": 6000, "rating": 7.0}
+    obscure = {**base, "id": OFFSET + 11, "tmdb_id": OFFSET + 11, "title": "Obscure", "votes": 40, "rating": 7.0}
+    others = synthetic(engine, 40, start=100)
+    for m in others:
+        m["votes"] = 800
+    pool = [known, obscure] + others
+    extra = extra_for(engine, pool, related={OFFSET + 10: liked, OFFSET + 11: liked})
+    keys = [f"tmdb:{OFFSET + 10}", f"tmdb:{OFFSET + 11}"]
+
+    def scores(policy):
+        engine.discovery_policy = dict(policy)
+        try:
+            items = engine.recommend(liked, k=2, extra=extra, eligible_keys=keys)["items"]
+        finally:
+            engine.discovery_policy = dict(DISCOVERY_POLICY)
+        return {m["title"]: m for m in items}
+    old = scores({"quality_prior": "snapshot", "related_confidence": False, "min_votes": 0})
+    new = scores(DISCOVERY_POLICY)
+    assert new["Known"]["score"] > new["Obscure"]["score"]
+    assert new["Obscure"]["breakdown"]["collab"] < old["Obscure"]["breakdown"]["collab"]
+    assert new["Obscure"]["because"]["evidence"] == "tmdb-related"     # still explained by the real link
+    floor = scores({**DISCOVERY_POLICY, "min_votes": 100})
+    assert "Obscure" not in floor

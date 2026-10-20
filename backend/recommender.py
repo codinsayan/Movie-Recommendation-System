@@ -43,6 +43,16 @@ RELATED_LINK = 0.3
 # Real links in the snapshot sit around 0.04 and above; below this the pick is there
 # for quality or diversity, and naming a liked film would be a fabricated reason.
 EXPLAIN_FLOOR = 0.03
+# How discovered (non-snapshot) films are calibrated against the snapshot. The snapshot is a
+# curated set of popular, acclaimed films, so its rating/vote prior flatters unknown titles.
+#   quality_prior: "snapshot" shrinks a discovered film towards the snapshot mean (S5B);
+#                  "pool" also shrinks it towards the retrieved pool's own mean and median votes
+#                  and keeps the lower of the two estimates (never a boost).
+#   related_confidence: scale TMDB related-title evidence by votes / (votes + pool median votes).
+#   min_votes: hard floor for discovered films (0 = none). Snapshot films are never affected.
+# S5D chose "pool" + related_confidence (docs/evaluation/s5d-results.json): on recorded live pools it
+# halved picks under 300 votes without a hard floor, and it did not lower held-out accuracy in the proxy.
+DISCOVERY_POLICY = {"quality_prior": "pool", "related_confidence": True, "min_votes": 0}
 
 # Everyday words -> vocabulary the catalogues actually use. Each key matches at the
 # start of a word ("inspir" -> inspiring, but "war" never fires inside "heartwarming").
@@ -215,6 +225,7 @@ class Recommender:
         self._quality_prior = ((float(np.median([m["votes"] for m in movies])), float(np.mean([m["rating"] for m in movies])))
                                if all("votes" in m for m in movies) else None)
         self.n = n
+        self.discovery_policy = dict(DISCOVERY_POLICY)
         self.feature_version = feature_version(movies, self.vectorizer)
         self.known_genres = {g for m in movies for g in m["genres"]}
 
@@ -241,13 +252,21 @@ class Recommender:
                 raise ValueError("Explanation seed is not an active external like")
         return data
 
-    def quality_of(self, movies: list[dict]) -> np.ndarray:
+    def pool_prior(self, movies: list[dict]) -> tuple[float, float]:
+        """(median votes, mean rating) of a retrieved pool: the population a discovered film comes from."""
+        rated = [m for m in movies if m.get("votes")]
+        if not rated:
+            return self._quality_prior or (1.0, 0.0)
+        return max(1.0, float(np.median([m["votes"] for m in rated]))), float(np.mean([m["rating"] for m in rated]))
+
+    def quality_of(self, movies: list[dict], prior: tuple[float, float] | None = None) -> np.ndarray:
         """Quality for titles outside the snapshot, on the snapshot's own scale (clipped to 0-1)."""
         r = np.array([float(m.get("rating") or 0) for m in movies])
-        if self._quality_prior:
-            prior, mean = self._quality_prior
+        prior = prior or self._quality_prior
+        if prior:
+            votes, mean = prior
             v = np.array([float(m.get("votes") or 0) for m in movies])
-            r = v / (v + prior) * r + prior / (v + prior) * mean
+            r = v / (v + votes) * r + votes / (v + votes) * mean
         lo, hi = self._quality_scale
         return np.clip((r - lo) / (hi - lo), 0, 1) if hi > lo else np.ones(len(movies))
 
@@ -433,9 +452,19 @@ class Recommender:
         if m_extra:
             E = extra["E"]
             content = np.concatenate([content, E @ (profile / np.linalg.norm(profile)) if profile.any() else np.zeros(m_extra)])
+            policy = self.discovery_policy
+            pool_prior = self.pool_prior(extra["movies"])
+            votes = np.array([float(m.get("votes") or 0) for m in extra["movies"]])
             hits = np.array([len(m["discovery"]["related_to"]) for m in extra["movies"]], dtype=float)
+            if policy["related_confidence"]:   # an obscure title's related-list membership is weaker evidence
+                hits = hits * votes / (votes + pool_prior[0])
             collab = np.concatenate([collab, RELATED_LINK * hits / max(1, len(liked_i) + external_likes)])
-            quality = np.concatenate([self.quality, extra["quality"]])
+            discovered_quality = self.quality_of(extra["movies"])
+            if policy["quality_prior"] == "pool":
+                # One-directional: the pool prior may only lower a discovered film's quality. Mixing a
+                # smaller prior with the snapshot's would otherwise boost thin-vote titles over classics.
+                discovered_quality = np.minimum(discovered_quality, self.quality_of(extra["movies"], pool_prior))
+            quality = np.concatenate([self.quality, discovered_quality])
             movies_all = self.movies + extra["movies"]
         N = n + m_extra
 
@@ -445,6 +474,8 @@ class Recommender:
         if m_extra:  # exact IDs stay excluded whichever source retrieved them
             seen = set(liked) | set(disliked) | {s["movie"]["id"] for s in ext_signals}
             candidates[n:] &= np.array([m["id"] not in seen for m in extra["movies"]])
+            if self.discovery_policy["min_votes"]:
+                candidates[n:] &= votes >= self.discovery_policy["min_votes"]
         if eligible_keys is not None:
             allowed = set(eligible_keys)
             candidates &= np.array([canonical_key(m) in allowed for m in movies_all])
