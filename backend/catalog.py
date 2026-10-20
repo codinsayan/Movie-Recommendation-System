@@ -6,18 +6,21 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 import time
 
 import certifi
 import httpx
-from features import normalized_features
+from features import FEATURE_LANGUAGE, normalized_features
 
 ROOT = Path(__file__).resolve().parent.parent
 GENRES = {28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
           99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
           27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
           53: "Thriller", 10752: "War", 37: "Western", 10770: "TV Movie"}
+GENRE_IDS = {name: gid for gid, name in GENRES.items() if name != "TV Movie"}
+DISCOVER_SORTS = {"vote_count.desc", "popularity.desc", "vote_average.desc", "primary_release_date.desc"}
 
 
 class CatalogError(Exception):
@@ -78,6 +81,9 @@ def normalize_movie(data: dict, language: str, full: bool = False) -> dict:
 class Catalog:
     SEARCH_TTL = 3600
     MOVIE_TTL = 86400
+    RELATED_TTL = 86400      # related titles change slowly
+    DISCOVER_TTL = 6 * 3600  # broad discovery pages
+    NEW_RELEASE_TTL = 3 * 3600  # new releases should appear without a snapshot rebuild
 
     def __init__(self, db_path: Path, token: str = "", api_key: str = "", transport=None, clock=time.time):
         self.db_path = Path(db_path)
@@ -114,7 +120,7 @@ class Catalog:
             db.execute("INSERT OR REPLACE INTO metadata_cache VALUES (?, ?, ?)", (key, json.dumps(payload), self.clock()))
             db.execute("DELETE FROM metadata_cache WHERE key IN (SELECT key FROM metadata_cache ORDER BY updated_at DESC LIMIT -1 OFFSET 5000)")
 
-    def _fetch(self, key, path, params, ttl):
+    def _fetch(self, key, path, params, ttl, kind="detail"):
         cached = self._read(key)
         if cached and self.clock() - cached[1] < ttl:
             return cached[0], {"cached": True, "stale": False, "updated_at": cached[1]}
@@ -141,7 +147,7 @@ class Catalog:
             if response.status_code != 200:
                 raise CatalogError(502, "Movie metadata is temporarily unavailable.")
             payload = response.json()
-            valid = isinstance(payload, dict) and (isinstance(payload.get("results"), list) if path == "/search/movie" else payload.get("id") == int(path.rsplit("/", 1)[1]))
+            valid = isinstance(payload, dict) and (isinstance(payload.get("results"), list) if kind == "list" else payload.get("id") == int(path.rsplit("/", 1)[1]))
             if not valid:
                 raise CatalogError(502, "Movie metadata is temporarily unavailable.")
             self._write(key, payload)
@@ -157,12 +163,52 @@ class Catalog:
     def search(self, query: str, page: int, language: str, model_ids: set[int]):
         query = " ".join(query.split())
         key = "search:" + hashlib.sha256(json.dumps([query.casefold(), page, language], ensure_ascii=False).encode()).hexdigest()
-        data, cache = self._fetch(key, "/search/movie", {"query": query, "page": page, "language": language, "include_adult": "false"}, self.SEARCH_TTL)
+        data, cache = self._fetch(key, "/search/movie", {"query": query, "page": page, "language": language, "include_adult": "false"}, self.SEARCH_TTL, "list")
         items = [normalize_movie(item, language) for item in data["results"] if isinstance(item, dict) and type(item.get("id")) is int and item["id"] > 0 and not item.get("adult")]
         for item in items:
             item["in_model"] = item["id"] in model_ids
         return {"items": items, "page": page, "total_pages": min(500, max(0, int(data.get("total_pages") or 0))),
                 "total_results": int(data.get("total_results") or 0), "language": language, **cache}
+
+    def _list(self, data):
+        return [normalize_movie(item, FEATURE_LANGUAGE) for item in data["results"]
+                if isinstance(item, dict) and type(item.get("id")) is int and item["id"] > 0 and not item.get("adult")]
+
+    def related(self, movie_id: int, page: int = 1):
+        """TMDB's audience-driven related titles for one movie (fixed endpoint, validated ID)."""
+        if type(movie_id) is not int or not 0 < movie_id <= 2147483647 or page not in (1, 2):
+            raise CatalogError(422, "Invalid related-title request.")
+        data, cache = self._fetch(f"related:{movie_id}:{page}", f"/movie/{movie_id}/recommendations",
+                                  {"language": FEATURE_LANGUAGE, "page": page}, self.RELATED_TTL, "list")
+        return {"items": self._list(data), **cache}
+
+    def discover(self, *, genres=(), sort="vote_count.desc", min_votes=200, released_after=None, page=1, ttl=None):
+        """TMDB discovery with an allow-listed parameter set; never forwards arbitrary query strings."""
+        if sort not in DISCOVER_SORTS or page not in (1, 2, 3) or type(min_votes) is not int or not 0 <= min_votes <= 100000:
+            raise CatalogError(422, "Invalid discovery request.")
+        genre_ids = sorted({GENRE_IDS[g] for g in genres if g in GENRE_IDS})
+        params = {"language": FEATURE_LANGUAGE, "sort_by": sort, "vote_count.gte": min_votes,
+                  "include_adult": "false", "include_video": "false", "page": page}
+        if genre_ids:
+            params["with_genres"] = "|".join(map(str, genre_ids))  # OR: any of the taste genres
+        if released_after is not None:
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", released_after):
+                raise CatalogError(422, "Invalid discovery request.")
+            params["primary_release_date.gte"] = released_after
+        key = "discover:" + hashlib.sha256(json.dumps(params, sort_keys=True).encode()).hexdigest()
+        data, cache = self._fetch(key, "/discover/movie", params, ttl or self.DISCOVER_TTL, "list")
+        return {"items": self._list(data), **cache}
+
+    def cached_movie(self, movie_id: int, language: str = FEATURE_LANGUAGE):
+        """Full details already in the cache (fresh or stale), without any upstream request."""
+        cached = self._read(f"movie:{movie_id}:{language}")
+        if not cached:
+            return None
+        try:
+            return {**normalize_movie(cached[0], language, full=True), "cached": True,
+                    "stale": self.clock() - cached[1] >= self.MOVIE_TTL, "updated_at": cached[1]}
+        except CatalogError:
+            return None
 
     def movie(self, movie_id: int, language: str, model_ids: set[int]):
         data, cache = self._fetch(f"movie:{movie_id}:{language}", f"/movie/{movie_id}",

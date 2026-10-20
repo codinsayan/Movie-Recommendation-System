@@ -244,6 +244,7 @@ body.searching .rows { margin-top: 0; padding-top: 110px; min-height: 100vh; }
 .tile .badge-love { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--red); display: grid; place-items: center; font-size: 0.7rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); animation: pop 0.4s var(--spring); }
 .tile .badge-match { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; background: rgba(0, 0, 0, 0.75); color: var(--green); backdrop-filter: blur(4px); }
 .tile .badge-new { position: absolute; top: 0; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 0 0 4px 4px; background: var(--red); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; }
+.tile .badge-discovered { position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
 @keyframes pop { from { transform: scale(0); } }
 
 /* gradient fallback poster */

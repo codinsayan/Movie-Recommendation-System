@@ -8,7 +8,7 @@
       this.source = snapshot[0]?.source;
       this.records = new Map(); this.saved = new Map(); this.storage = storage;
       this.fetcher = fetcher; this.onChange = onChange; this.timers = timers;
-      this.live = false; this.backend = false; this.language = "en-US"; this.seq = 0;
+      this.live = false; this.discovery = false; this.backend = false; this.language = "en-US"; this.seq = 0;
       this.state = { query: "", items: [], page: 0, totalPages: 0, loading: false, error: "", stale: false };
       try {
         const movies = JSON.parse(storage?.getItem(STORE) || "[]");
@@ -52,7 +52,8 @@
       try {
         const data = await this.json("/api/capabilities");
         this.live = data.catalogue?.live_search === true;
-      } catch { this.live = false; }
+        this.discovery = data.catalogue?.dynamic_discovery === true;
+      } catch { this.live = false; this.discovery = false; }
       this.onChange();
     }
     setQuery(query, language = this.language) {

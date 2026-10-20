@@ -151,6 +151,7 @@
         ${state.liked.has(m.id) ? `<span class="badge-love" aria-hidden="true">${icon("heart")}</span>` : ""}
         ${showMatch && rec && personalised() ? `<span class="badge-match">${rec.match}%</span>` : ""}
         ${isNew ? `<span class="badge-new">NEW PICK</span>` : ""}
+        ${rec?.dynamic && !isNew ? `<span class="badge-discovered">Discovered</span>` : ""}
       </div>`;
   }
 
@@ -188,6 +189,7 @@
         <div class="row-head">
           <h2 class="row-title">${row.title}</h2>
           ${row.sub ? `<span class="row-sub">${row.sub}</span>` : ""}
+          ${row.sub2 ? `<span class="row-sub">${esc(row.sub2)}</span>` : ""}
         </div>
         <div class="row-wrap">
           <button class="arrow left" data-scroll="-1" aria-label="Scroll left">${icon("chevronLeft")}</button>
@@ -204,6 +206,16 @@
     const languages = [["en-US", "English"], ["hi-IN", "Hindi"], ["ta-IN", "Tamil"], ["te-IN", "Telugu"], ["ja-JP", "Japanese"], ["ko-KR", "Korean"], ["fr-FR", "French"], ["es-ES", "Spanish"]];
     const status = remote?.error || (remote?.loading ? "Searching movies…" : remote?.stale ? "Showing cached results; live search is temporarily unavailable." : live ? `Page ${remote?.page || 1} · Movie details language does not change playback audio` : "Downloaded catalogue only · Live search is available in the configured backend app");
     return `<div class="catalogue-controls">${live ? `<label for="catalogueLanguage">Details language</label><select id="catalogueLanguage">${languages.map(([code, label]) => `<option value="${code}" ${code === language ? "selected" : ""}>${label}</option>`).join("")}</select>` : ""}<span role="status">${esc(status)}</span>${live && remote?.page < remote?.totalPages ? `<button class="btn btn-grey btn-sm" data-search-more ${remote.loading ? "disabled" : ""}>${remote.loading ? "Loading…" : "Load more"}</button>` : ""}${remote?.error ? `<button class="btn btn-grey btn-sm" data-search-retry>Retry search</button>` : ""}</div>`;
+  }
+
+  function discoveryNote() {
+    const d = state.discovery;
+    if (!d) return "";
+    if (d.status === "unavailable") return "Live discovery is unavailable right now · showing the downloaded catalogue";
+    const parts = [d.recommended ? `includes ${d.recommended} newly discovered film${d.recommended > 1 ? "s" : ""}` : "no new discoveries made the cut"];
+    if (d.status === "partial") parts.push("some discovery sources were unavailable");
+    if (d.stale) parts.push("using cached results");
+    return parts.join(" · ");
   }
 
   function buildRows(freshIds) {
@@ -231,6 +243,7 @@
     rows.push({
       key: "picks", title: pickTitle, items: state.scored.slice(0, 14), showMatch: true, freshIds,
       sub: viewing.options().recent_playback_only ? "Only titles with playback recorded on this device in the last 7 days; availability may change" : state.mode === "viewing" ? "A small influence from substantial viewing; likes and dislikes remain explicit" : state.mode === "personal" ? "Re-ranked live from every like and pass" : state.mode === "popular" ? "Like a few titles to make this yours" : "",
+      sub2: discoveryNote(),
       empty: viewing.options().recent_playback_only ? "No matching titles have recent playback evidence on this device. Show all picks to discover more movies." : "Nothing matched that mood. Try different words.",
       showAllPicks: viewing.options().recent_playback_only,
     });
@@ -537,21 +550,28 @@
   // ---------- data refresh ----------
   let refreshTimer = null;
   let refreshSeq = 0;
+  let refreshController = null;
   function refresh({ announce = false, immediate = false } = {}) {
     preferenceResolver?.sync(state.liked, state.disliked);
     clearTimeout(refreshTimer);
     const seq = ++refreshSeq;
     refreshTimer = setTimeout(async () => {
+      refreshController?.abort();   // an older pool must never overwrite the current rows
+      const controller = refreshController = new AbortController();
       const recent = [...state.liked].filter((id) => state.byId.has(id)).slice(-2).reverse();
       const request = { liked: [...state.liked], disliked: [...state.disliked], mood: state.mood || null, k: 100, ...viewing.request() };
       const external = preferenceResolver?.payload();
       if (external) request.external_preferences = external;
+      if (!engine && catalogue?.discovery) request.discover = true;   // backend-only live retrieval
       try {
         const [out, ...sims] = await Promise.all([
-          api("/api/recommend", request),
+          api("/api/recommend", request, { signal: controller.signal }),
           ...recent.map((id) => api(`/api/movies/${id}/similar?k=14`)),
         ]);
         if (seq !== refreshSeq) return; // superseded by a newer request
+        // Discovered titles are ordinary TMDB movies from here on: details, likes, watchlist, playback.
+        out.items.filter((m) => m.dynamic).forEach((m) => catalogue?.register(m));
+        state.discovery = out.discovery || null;
         let broader = null;
         if (request.recent_playback_only && !out.items.length) {
           try { broader = await api("/api/recommend", { ...request, recent_playback_only: false }); }
@@ -576,6 +596,7 @@
         renderDrawer();
         if (announce && fresh) toast(fresh.size ? `Taste updated: ${fresh.size} new pick${fresh.size > 1 ? "s" : ""} for you` : "Taste updated: picks re-ranked");
       } catch (err) {
+        if (err.name === "AbortError" || seq !== refreshSeq) return;
         console.error(err);
         toast(err.status === 422 && request.external_preferences ? "Saved movie features are incompatible or invalid. Reload to refresh metadata; your choices are kept." : "Couldn't reach the recommender. Is the server running?");
       }
@@ -775,6 +796,11 @@
     } finally { clearTimeout(timeout); }
   }
 
+  function discoverySources(info) {
+    const names = { related: "TMDB related titles", taste: "your taste genres", new_release: "new releases", starter: "popular starter picks" };
+    return (info?.sources || []).map((s) => names[s] || s).join(", ") || "TMDB discovery";
+  }
+
   async function openMovie(id) {
     let m = byId(id);
     if (!m) return;
@@ -788,16 +814,17 @@
       if (modalEpoch !== epoch || modalMovieId !== id) return;
     }
     catalogue?.remember(m);
-    const rec = state.byId.has(id) ? state.recMap.get(id) : null;
+    const rec = state.byId.has(id) || state.recMap.get(id)?.dynamic ? state.recMap.get(id) : null;
     const share = (k) => (rec ? (rec.breakdown[k] || 0) / Math.max(rec.score, 0.001) : 0);
     const why = rec && personalised() ? `
       <div class="why">
         <h4>Why we picked this · ${rec.match}% match</h4>
         <div class="dna">
-          ${[["content", "Story & vibe match"], ["collab", "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown && rec.component_availability?.[k] !== false).map(([k, label]) => `
+          ${[["content", "Story & vibe match"], ["collab", rec.dynamic ? "Related to your likes (TMDB)" : "Fans like you"], ["quality", "Critic quality"], ["viewing", "Viewing history"]].filter(([k]) => k in rec.breakdown && rec.component_availability?.[k] !== false).map(([k, label]) => `
             <div class="dna-row"><span>${label}</span><div class="dna-bar"><i data-w="${share(k) * 100}"></i></div><em>${Math.round(share(k) * 100)}%</em></div>`).join("")}
         </div>
         ${rec.shared.length ? `<p class="pv-reason" style="margin-top:12px">Shares: <b>${rec.shared.map((t) => esc(prettyTag(t))).join(", ")}</b></p>` : ""}
+        ${rec.dynamic ? `<p class="pv-reason" style="margin-top:8px">Discovered outside the downloaded catalogue via ${esc(discoverySources(rec.discovery))}${rec.discovery.features === "summary" ? " · ranked from summary metadata (no keywords or cast yet)" : ""}</p>` : ""}
       </div>` : "";
     openModal(`
       <div class="m-head ${m.backdrop ? "has-backdrop" : ""}">
@@ -1089,7 +1116,10 @@
     renderOnboard();
     renderDrawer();
     refresh({ immediate: true });
-    catalogue.configure(!engine).then(() => { if (state.query) catalogue.setQuery(state.query); });
+    catalogue.configure(!engine).then(() => {
+      if (state.query) catalogue.setQuery(state.query);
+      if (catalogue.discovery) refresh({ immediate: true });   // first pool with live discovery
+    });
   }
 
   boot();

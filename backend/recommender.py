@@ -33,6 +33,10 @@ MOOD_WEIGHTS = {"content": 0.80, "collab": 0.0, "quality": 0.20}
 DISLIKE_PENALTY = 0.5
 MOOD_BOOST = 1.5
 MMR_LAMBDA = 0.75
+# A newly discovered film that TMDB lists as related to one of your likes gets this much
+# collaborative evidence per related like: about the strength of a direct link between two
+# films in the snapshot's recommendation graph (2 / (degree + 1) with an average degree near 6).
+RELATED_LINK = 0.3
 
 # Everyday words -> vocabulary the catalogues actually use. Each key matches at the
 # start of a word ("inspir" -> inspiring, but "war" never fires inside "heartwarming").
@@ -195,6 +199,9 @@ class Recommender:
 
         r = weighted_rating(movies)
         self.quality = (r - r.min()) / (r.max() - r.min()) if r.max() > r.min() else np.ones(n)
+        self._quality_scale = (float(r.min()), float(r.max()))
+        self._quality_prior = ((float(np.median([m["votes"] for m in movies])), float(np.mean([m["rating"] for m in movies])))
+                               if all("votes" in m for m in movies) else None)
         self.n = n
         self.feature_version = feature_version(movies, self.vectorizer)
         self.known_genres = {g for m in movies for g in m["genres"]}
@@ -221,6 +228,16 @@ class Recommender:
             if int(seed["key"].split(":")[1]) not in positives:
                 raise ValueError("Explanation seed is not an active external like")
         return data
+
+    def quality_of(self, movies: list[dict]) -> np.ndarray:
+        """Quality for titles outside the snapshot, on the snapshot's own scale (clipped to 0-1)."""
+        r = np.array([float(m.get("rating") or 0) for m in movies])
+        if self._quality_prior:
+            prior, mean = self._quality_prior
+            v = np.array([float(m.get("votes") or 0) for m in movies])
+            r = v / (v + prior) * r + prior / (v + prior) * mean
+        lo, hi = self._quality_scale
+        return np.clip((r - lo) / (hi - lo), 0, 1) if hi > lo else np.ones(len(movies))
 
     # ---------- helpers ----------
     def _indices(self, ids) -> list[int]:
@@ -249,13 +266,78 @@ class Recommender:
             selected.append(best)
         return selected
 
+    def _mmr_union(self, candidates: list[int], relevance: np.ndarray, k: int, E: np.ndarray) -> list[int]:
+        """MMR over snapshot rows plus discovered rows (index >= n refers to E)."""
+        if not candidates:
+            return []
+        n = self.n
+        V = np.vstack([self.X[i] if i < n else E[i - n] for i in candidates])
+        S = V @ V.T
+        snap = [p for p, i in enumerate(candidates) if i < n]
+        if snap:  # identical numbers to the snapshot-only path for snapshot pairs
+            ids = [candidates[p] for p in snap]
+            S[np.ix_(snap, snap)] = self.content_sim[np.ix_(ids, ids)]
+        selected: list[int] = []
+        pool = list(range(len(candidates)))
+        while pool and len(selected) < k:
+            redundancy = S[np.ix_(pool, selected)].max(axis=1) if selected else np.zeros(len(pool))
+            mmr = MMR_LAMBDA * relevance[[candidates[p] for p in pool]] - (1 - MMR_LAMBDA) * redundancy
+            selected.append(pool.pop(int(np.argmax(mmr))))
+        return [candidates[p] for p in selected]
+
+    def _extra_explanation(self, j, extra, liked_i, external, external_links, weights, signals, parts, mood):
+        """Explain a discovered film with the evidence that actually retrieved/ranked it."""
+        n, movie, e = self.n, extra["movies"][j], extra["E"][j]
+        info = movie["discovery"]
+        because, shared, strength = None, [], 0.0
+        seed_tokens = None
+        for sid in info["related_to"]:  # most recent seed first
+            title = extra["seed_titles"].get(sid)
+            if title:
+                because = {"id": sid, "title": title, "evidence": "tmdb-related"}
+                seed = self.movies[self.by_id[sid]] if sid in self.by_id else next(
+                    (s for s in (external or {}).get("seeds", []) if s["key"] == f"tmdb:{sid}"), None)
+                seed_tokens = _tokens(seed) if seed else None
+                break
+        if not because and liked_i:
+            link = self.X[liked_i] @ e
+            if link.max() > .01:
+                src = liked_i[int(np.argmax(link))]
+                strength = float(link.max())
+                because = {"id": self.movies[src]["id"], "title": self.movies[src]["title"]}
+                seed_tokens = _tokens(self.movies[src])
+        for seed, similarity in external_links:
+            if not (because and because.get("evidence")) and weights["content"] > 0 and similarity[n + j] > max(.01, strength):
+                strength = float(similarity[n + j])
+                because = {"id": int(seed["key"].split(":")[1]), "title": seed["title"], "key": seed["key"]}
+                seed_tokens = _tokens(seed)
+        if not because and signals and parts["viewing"][n + j] > 0:
+            src = max(signals, key=lambda s: s["strength"] * float(self.X[s["index"]] @ e))["index"]
+            because = {"id": self.movies[src]["id"], "title": self.movies[src]["title"], "type": "watched"}
+            seed_tokens = _tokens(self.movies[src])
+        if seed_tokens:
+            shared = sorted(_tokens(movie) & seed_tokens)
+        if mood:
+            shared = sorted(set(shared) | (_tokens(movie) & self._mood_terms(mood)))
+        if because:
+            reason = f"Because you {'watched' if because.get('type') == 'watched' else 'loved'} {because['title']}"
+        elif mood:
+            reason = f"Matches “{mood}”"
+        elif "new_release" in info["sources"]:
+            reason = "New release that fits your taste" if liked_i or external else "New release"
+        elif liked_i or external:
+            reason = "Discovered for your taste"
+        else:
+            reason = "Popular right now"
+        return because, shared, reason
+
     def _card(self, idx: int, **extra) -> dict:
         return {**self.movies[idx], **extra}
 
     # ---------- public API ----------
     def recommend(self, liked=(), disliked=(), mood: str | None = None, k: int = 12,
                   viewing=None, use_viewing=False, recent_playback_only=False, eligible_keys=None, now=None,
-                  external_preferences=None) -> dict:
+                  external_preferences=None, extra=None) -> dict:
         external = self.external_profile(external_preferences, liked, disliked)
         external_likes = external["positive_count"] if external else 0
         external_dislikes = external["negative_count"] if external else 0
@@ -286,14 +368,29 @@ class Recommender:
         if profile.any():
             content = self.X @ (profile / np.linalg.norm(profile))
 
-        candidates = np.ones(n, dtype=bool)
+        # S5B: discovered titles join the candidate set (index >= n); snapshot rows are unchanged.
+        m_extra = len(extra["movies"]) if extra else 0
+        quality, movies_all, E = self.quality, self.movies, None
+        if m_extra:
+            E = extra["E"]
+            content = np.concatenate([content, E @ (profile / np.linalg.norm(profile)) if profile.any() else np.zeros(m_extra)])
+            hits = np.array([len(m["discovery"]["related_to"]) for m in extra["movies"]], dtype=float)
+            collab = np.concatenate([collab, RELATED_LINK * hits / max(1, len(liked_i) + external_likes)])
+            quality = np.concatenate([self.quality, extra["quality"]])
+            movies_all = self.movies + extra["movies"]
+        N = n + m_extra
+
+        candidates = np.ones(N, dtype=bool)
         candidates[liked_i + disliked_i] = False
         candidates[[s["index"] for s in signals]] = False
+        if m_extra:  # exact IDs stay excluded whichever source retrieved them
+            seen = set(liked) | set(disliked)
+            candidates[n:] &= np.array([m["id"] not in seen for m in extra["movies"]])
         if eligible_keys is not None:
             allowed = set(eligible_keys)
-            candidates &= np.array([canonical_key(m) in allowed for m in self.movies])
+            candidates &= np.array([canonical_key(m) in allowed for m in movies_all])
         if recent_playback_only:
-            candidates &= np.array([canonical_key(m) in recent for m in self.movies])
+            candidates &= np.array([canonical_key(m) in recent for m in movies_all])
 
         if not liked_i and not disliked_i and not external_likes and not external_dislikes and not mood:
             weights, mode = {"content": 0, "collab": 0, "quality": 1}, "popular"
@@ -315,12 +412,14 @@ class Recommender:
         parts = {
             "content": _minmax(content, candidates),
             "collab": _minmax(collab, candidates),
-            "quality": _minmax(self.quality, candidates),
+            "quality": _minmax(quality, candidates),
         }
         if signals:
             # Bound the entire implicit contribution to 10%; explicit baseline retains 90%.
-            implicit = sum(s["strength"] / VIEWING_CONFIG["maxStrength"] *
-                           (0.6 * self.content_sim[s["index"]] + 0.4 * self.collab_sim[s["index"]])
+            def viewing_row(i):
+                row = 0.6 * self.content_sim[i] + 0.4 * self.collab_sim[i]
+                return np.concatenate([row, 0.6 * (E @ self.X[i])]) if m_extra else row
+            implicit = sum(s["strength"] / VIEWING_CONFIG["maxStrength"] * viewing_row(s["index"])
                            for s in signals) / len(signals)
             parts["viewing"] = np.clip(implicit, 0, 1)
             weights = {name: weight * (1 - VIEWING_CONFIG["blend"]) for name, weight in weights.items()}
@@ -333,7 +432,10 @@ class Recommender:
             candidates &= content > 0.05
 
         ranked = [int(i) for i in np.argsort(-score, kind="stable") if candidates[i]][: k * 3]
-        chosen = self._mmr(ranked, score, k) if mode != "popular" else ranked[:k]
+        if mode == "popular":
+            chosen = ranked[:k]
+        else:
+            chosen = self._mmr_union(ranked, score, k, E) if m_extra else self._mmr(ranked, score, k)
 
         mood_terms = self._mood_terms(mood) if mood else set()
         top = score[chosen].max() if chosen else 1.0
@@ -344,8 +446,20 @@ class Recommender:
             for j, value in seed["vector"]:
                 vector[j] = value
             length = np.linalg.norm(vector)
-            external_links.append((seed, self.X @ (vector / length) if length else np.zeros(n)))
+            similarity = self.X @ (vector / length) if length else np.zeros(n)
+            if m_extra:
+                similarity = np.concatenate([similarity, E @ (vector / length) if length else np.zeros(m_extra)])
+            external_links.append((seed, similarity))
         for idx in chosen:
+            if idx >= n:
+                because, shared, reason = self._extra_explanation(idx - n, extra, liked_i, external, external_links,
+                                                                  weights, signals, parts, mood)
+                items.append({**extra["movies"][idx - n],
+                              "score": round(float(score[idx]), 4),
+                              "match": int(round(55 + 44 * score[idx] / top)) if top > 0 else 55,
+                              "reason": reason, "because": because, "shared": shared[:4],
+                              "breakdown": {name: round(float(weights[name] * parts[name][idx]), 4) for name in parts}})
+                continue
             because, shared = None, []
             link_strength = 0
             if liked_i:
@@ -403,6 +517,7 @@ class Recommender:
             related_candidates[liked_i + disliked_i] = False
             for seed, relevance in external_links:
                 # This shelf explains an explicit like, independently of the Top Picks filter/mood.
+                relevance = relevance[:n]  # snapshot shelf; discovered titles appear in Top Picks
                 pool = [int(i) for i in np.argsort(-relevance, kind="stable") if related_candidates[i] and relevance[i] > .01][:42]
                 result["because_rows"].append({"source": {"id": int(seed["key"].split(":")[1]),
                                                         **{k: v for k, v in seed.items() if k != "vector"}},

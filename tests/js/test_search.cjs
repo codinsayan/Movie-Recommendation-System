@@ -32,6 +32,7 @@ function harness({ live = true, fetcher } = {}) {
     document: { body, querySelector: s => nodes.get(s), querySelectorAll: () => [] },
     window: {}, location: { hostname: "localhost" }, matchMedia: () => ({ matches: false }),
     ...clock, scrollTo: position => positions.push(position), console,
+    AbortController, // browsers provide it; the app aborts superseded recommendation requests
     CinemagicProviders: require("../../frontend/providers.js"),
     CinemagicViewingStore: require("../../frontend/viewing.js"),
     CinemagicPreferenceStore: require("../../frontend/preferences.js"),

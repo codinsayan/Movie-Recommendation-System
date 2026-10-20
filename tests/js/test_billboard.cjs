@@ -36,6 +36,7 @@ function harness(respond = async () => output()) {
     requestAnimationFrame: cb => cb(), Image: Element, console,
     setTimeout: (callback, delay) => { timers.set(++serial, { callback, delay }); return serial; },
     clearTimeout: id => timers.delete(id),
+    AbortController, // browsers provide it; the app aborts superseded recommendation requests
     CinemagicProviders: require("../../frontend/providers.js"),
     CinemagicViewingStore: require("../../frontend/viewing.js"),
     CinemagicPreferenceStore: require("../../frontend/preferences.js"),

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from recommender import load_default
 from catalog import Catalog, CatalogError
+from discovery import Discovery
 from preferences import ExternalProfile, PreferenceFeatures
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -18,6 +19,7 @@ app = FastAPI(title="Cinemagic Recommender", version="0.3.0")
 engine = load_default()
 catalog = Catalog.from_environment()
 preference_features = PreferenceFeatures(engine, catalog)
+discovery = Discovery(engine, catalog)
 
 
 def model_ids():
@@ -31,7 +33,7 @@ def catalogue_error(error):
 
 @app.get("/api/capabilities")
 def capabilities():
-    return {"catalogue": {"live_search": catalog.configured,
+    return {"catalogue": {"live_search": catalog.configured, "dynamic_discovery": discovery.available,
                           "snapshot_source": engine.movies[0].get("source") if engine.movies else None},
             "preferences": engine.meta()["preferences"]}
 
@@ -111,6 +113,7 @@ class RecommendRequest(BaseModel):
     recent_playback_only: bool = Field(default=False, strict=True)
     eligible_keys: list[MovieKey] | None = Field(default=None, max_length=5000)
     external_preferences: ExternalProfile | None = None
+    discover: bool = Field(default=False, strict=True)
 
 
 @app.get("/api/health")
@@ -130,12 +133,20 @@ def movies():
 
 @app.post("/api/recommend")
 def recommend(req: RecommendRequest):
+    external = req.external_preferences.model_dump() if req.external_preferences else None
     try:
-        return engine.recommend(req.liked, req.disliked, req.mood, req.k,
-                                viewing=req.viewing.model_dump() if req.viewing else None,
-                                use_viewing=req.use_viewing, recent_playback_only=req.recent_playback_only,
-                                eligible_keys=req.eligible_keys,
-                                external_preferences=req.external_preferences.model_dump() if req.external_preferences else None)
+        extra, report = None, None
+        if req.discover:
+            # Upstream failures never fail the request: the snapshot remains the fallback pool.
+            extra, report = discovery.candidates(req.liked, req.disliked, external)
+        result = engine.recommend(req.liked, req.disliked, req.mood, req.k,
+                                  viewing=req.viewing.model_dump() if req.viewing else None,
+                                  use_viewing=req.use_viewing, recent_playback_only=req.recent_playback_only,
+                                  eligible_keys=req.eligible_keys, external_preferences=external, extra=extra)
+        if report is not None:
+            report["recommended"] = sum(1 for item in result["items"] if item.get("dynamic"))
+            result["discovery"] = report
+        return result
     except ValueError:
         raise HTTPException(status_code=422, detail="External preferences are invalid or use an incompatible feature version.") from None
 
