@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Status as of 2026-10-20
 
-This section records the implemented streaming work on `feature/streaming-platform` through `2d590cd`. These changes have not been assigned a new release version or deployed to Render. The versioned entries below retain the earlier Iterations 1-3 and static-hosting release history.
+This section records the implemented streaming work on `feature/streaming-platform` through `ab1ee7b` (S5D documentation). The S5B-S5D commits are local and not yet pushed. These changes have not been assigned a new release version or deployed to Render. The versioned entries below retain the earlier Iterations 1-3 and static-hosting release history.
 
 | Iteration | Implementation and validation status |
 |---|---|
@@ -21,12 +21,18 @@ This section records the implemented streaming work on `feature/streaming-platfo
 | S4 | Live search, remote details, metadata caching and landscape search gallery implemented |
 | S5 | Opt-in measured-viewing recommendations and recent-playback filtering implemented; proxy evaluation and parity passed; broader relevance review remains open |
 | S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
-| S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic and live API checks passed; browser review pending |
-| S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark and live API checks passed; browser review pending |
+| S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic, live API and rendered-browser checks passed (browser walkthrough recorded in S5D) |
+| S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Dynamic evaluation recorded: offline proxy, live replay, browser walkthrough; popularity calibration adopted; embeddings deferred; human relevance ratings pending |
 | S6, S7 | Planning documents added; these phases have not been implemented |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
+
+**Open items:**
+- **Human relevance ratings for S5D** are pending in [s5d-review.md](docs/evaluation/s5d-review.md). S6 starts after they are recorded.
+- Broader live playback acceptance remains open from S1-S3: per-film, per-provider and per-device checks, autoplay-on-switch and live resume.
+- Push `feature/streaming-platform` (S5B-S5D are local), then release versioning (S6) and Render deployment (S7).
+- The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
 
 ### S1 - Source adapters and movie identity (2026-10-20)
 
@@ -133,45 +139,6 @@ Commit: `11fb898`.
 - Rejected late broader responses after filter changes and kept fallback failures usable.
 - Added seven regression cases using real app closures and the exported static engine; recorded a passing 98-test suite at that checkpoint.
 
-### S5D - Evaluate and accept dynamic recommendations (2026-10-20)
-
-Branch: `feature/streaming-platform`. Phase: [dynamic evaluation](docs/streaming/05d-dynamic-evaluation.md).
-
-- **World proxy** (`scripts/evaluate_dynamic.py`, offline): the snapshot is split into a 312-film starter catalogue and a 135-film external world. 80 profiles use the production `Discovery` against a fake TMDB, with the edge to the held-out target removed. Dynamic retrieval plus bounded ranking reaches recall 0.80 (vs 0.575) and HR@10 0.538 / NDCG@10 0.331 (vs 0.400 / 0.256 for S5A inputs alone). Summary-only metadata halves world-target hits, and unfamiliar vocabulary correctly leaves an external like unavailable. 0 dislike violations and 0 invalid explanations. Labelled as a transductive graph proxy.
-- **Live replay:** `scripts/record_dynamic_fixture.py` recorded real TMDB pools for 12 profiles (`docs/evaluation/s5d-live-fixture.json`, 367 films), covering niche, new-release, non-English, external like/dislike, related-dislike, multi-interest, dislike-only and cold start.
-- **Calibration adopted:** `DISCOVERY_POLICY` = pool prior (one-directional) + related confidence. S5B shrank discovered films towards the acclaimed snapshot's prior, which flattered thin-vote titles. On live pools, picks under 300 votes drop from 17.5% to 11.7%, the median votes of discovered picks go from 1,171 to 2,116 and mean rating from 7.34 to 7.50; proxy accuracy is unchanged. No hard vote floor. A first non-directional version boosted thin-vote films in cold start and was corrected.
-- **Embeddings deferred:** 70% of discovered-film tokens are in the vocabulary and none of the 367 films has an empty vector. The measured problem was popularity calibration, not meaning.
-- **Browser walkthrough** (`scripts/browser_walkthrough.py`, headless Edge, real UI): discovered badges and provenance, like/dislike from details visible in 0.33–0.36 s warm, Watch routes to the provider by TMDB ID, rapid toggles are debounced into one request, main thread blocked at most 79 ms. The static build shows no discovery and re-ranks in 0.27 s. Desktop and true 390 px mobile screenshots are under `docs/evaluation/screens/`.
-- "How it works" now explains discovered films, calibration, caching, failure fallback, static limits and when "Because you loved" appears.
-- Human relevance ratings: `docs/evaluation/s5d-review.md` gives side-by-side S5B vs calibrated top 10s for every profile and is waiting for a person to rate them.
-
-### S5C - Scalable profiles and bounded ranking (2026-10-20)
-
-Branch: `feature/streaming-platform`. Phase: [scalable ranking](docs/streaming/05c-scalable-ranking.md).
-
-- Added `backend/ranking.py`: the `rank-v2` contract, per-request `RANKING_BUDGET`, the `CINEMAGIC_RANKING=snapshot` rollback switch and `FeatureStore`, a thread-safe LRU of sparse TF-IDF rows keyed by canonical ID, metadata language and `feature_version`. It holds 4,000 entries / 16 MiB, encodes misses in batches of 64, re-encodes when the metadata digest changes, and drops other feature versions on `bind`.
-- Discovered candidates stay sparse end to end. MMR compares only the bounded pool (`min(3k, 300)` rows) built from sparse rows, with an exact incremental redundancy update; checks gave identical selections to the previous implementation. Exclusions apply before the pool is cut.
-- Measured viewing now covers watched TMDB films outside the snapshot. Features come from the cache only (at most 20 titles) with the same 10% cap and content-only evidence; explicit choices win. Uncached titles are reported pending and fetched in the background. The response adds `viewing_status`, and the UI notes pending titles.
-- "Because you loved" now requires `EXPLAIN_FLOOR = 0.03` of link in both Python and the browser engine, which removes fabricated reasons such as Toy Story → *The Godfather*. Weak-link picks read "A well-rated pick to widen your taste". Discovered films report `component_availability`, and missing related-title evidence is stated, not imputed.
-- `Catalog.cached_movies()` reads a whole pool in one query; the SQLite schema is written once per process; deleted or damaged cache files behave as misses. Warm live requests dropped from 0.4–1.1 s to about 0.2–0.3 s.
-- Every recommendation response includes `ranking` diagnostics (contract, mode, candidates, eligible, rerank pool, signals, feature-cache stats, timing); `/api/capabilities` reports `ranking`.
-- Added `scripts/benchmark_ranking.py`. With a cache growing from 0 to 20,000 entries, per-request work stays flat: 120 encoded cold / 0 warm, 6 / 0 upstream calls, a 300-row rerank pool, a 2.15 MB request peak (previously 29 MB), and about 55 ms warm.
-- Tests: 12 in `tests/test_ranking.py` plus a JS derived-cache independence case (**135 passed**). The static export carries `explainFloor` and `rerankPool`, and Python/JS parity holds.
-
-### S5B - Dynamic recommendation candidates (2026-10-20)
-
-Branch: `feature/streaming-platform`. Phase: [dynamic discovery](docs/streaming/05b-dynamic-discovery.md).
-
-- Added `backend/discovery.py`: bounded retrieval of candidates beyond the 447-film snapshot from TMDB related titles of up to 4 seed likes (most recent plus spread across history), acclaimed films in the top 2 taste genres, new releases from the last 120 days, and popular/top-rated starter pools for cold-start and dislike-only profiles.
-- Added cached `Catalog.related()`, `Catalog.discover()` (allow-listed parameters only) and `Catalog.cached_movie()`; TTLs are 24 h related, 6 h discover, 3 h new releases. They reuse the existing timeout, rate-limit, sanitized-error and stale-cache behaviour.
-- Budgets: 300-candidate pool, 4 concurrent upstream requests process-wide, 12 background detail lookups per request. Detail enrichment never blocks a response; candidates are labelled `full` or `summary` metadata.
-- `Recommender.recommend(extra=...)` ranks discovered films alongside the snapshot: fitted TF-IDF content (no refit, no matrix growth), TMDB related-title evidence as the collaborative signal (`RELATED_LINK = 0.3`, calibrated to a direct snapshot-graph link), and quality on the snapshot's scale. MMR and explanations cover the union; the snapshot-only path is unchanged.
-- Exact liked/disliked IDs are excluded across every source; dislikes stay a similarity penalty, not a genre ban.
-- `POST /api/recommend` accepts `discover: true` and returns a `discovery` report (status ok/partial/unavailable, sources, pool, enrichment, upstream calls, cache hits, stale). `/api/capabilities` reports `dynamic_discovery`. Upstream failures never fail the request.
-- Frontend: requests discovery only from a configured backend; registers discovered films so details, likes/dislikes (S5A), Watchlist and playback work; aborts superseded refreshes; shows a **Discovered** badge, an honest Top Picks status line and retrieval sources in the "why" panel. Static mode is unchanged.
-- Tests: 12 deterministic mock-TMDB tests in `tests/test_discovery.py` (**123 passed** in total). JS harnesses provide `AbortController` like browsers.
-- Live check: for Inception + Interstellar + The Dark Knight, 5 of the top 12 picks came from outside the snapshot (e.g. Batman (1989), Primer, The Electric State). Latency: 1.9 s cold, 0.4-1.1 s warm.
-
 ### S5A - External likes/dislikes and feature resolution (2026-10-20)
 
 Implementation commit: `cadd680`. Phase and evidence: [dynamic preferences](docs/streaming/05a-dynamic-preferences.md).
@@ -210,6 +177,162 @@ Commit: `2d590cd`.
 - Verified nine related cards in Sintel's details and visually inspected desktop 1440 x 1000 and mobile 390 x 844 screenshots. The test profile contained synthetic data; user browser storage was not read or changed. Temporary browser artifacts were removed afterward.
 - Left broader human relevance, locale/device and live third-party player acceptance visible; these focused checks do not complete every release/deployment requirement.
 
+### Changelog consolidation (2026-10-20)
+
+Commit: `1b56dad`.
+
+- Consolidated the complete iteration and implementation changelog against Git history and the phase records before S5B began.
+
+### S5B - Dynamic recommendation candidates (2026-10-20)
+
+Commits: `f42497d` (implementation), `8af3455` (docs). Phase: [dynamic discovery](docs/streaming/05b-dynamic-discovery.md).
+
+**Retrieval (`backend/discovery.py`)**
+- Bounded retrieval of candidates beyond the 447-film snapshot from four sources:
+  - TMDB related titles of up to **4 seed likes**: the two most recent, then likes spread evenly across older history (`select_seeds`);
+  - acclaimed films (`vote_average.desc`, at least 1,000 votes, 2 pages) in the **top 2 taste genres**, counted from snapshot likes plus the S5A external profile. The first live run with a most-voted query added zero new titles, because the snapshot already holds them;
+  - **new releases** from the last 120 days (`popularity.desc`, at least 50 votes);
+  - for cold-start and dislike-only profiles, popular (2 pages, at least 500 votes) and top-rated (at least 3,000 votes) **starter pools**.
+- Budgets:
+  - a **300**-candidate pool, merged in deterministic submission order;
+  - **4** concurrent upstream requests, enforced by a process-wide semaphore shared by all requests;
+  - **12** background detail lookups per request on a 2-worker queue, so enrichment never blocks a response. Candidates are labelled `full` or `summary` metadata.
+- Exact liked, disliked and snapshot IDs are dropped at merge time, whichever source returned them.
+- Each source fails independently. The report is `ok`, `partial` or `unavailable`, stale cache entries are flagged, and the request itself never fails because discovery did.
+
+**Catalogue (`backend/catalog.py`)**
+- Added cached `Catalog.related()`, `Catalog.discover()` and `Catalog.cached_movie()`.
+  - `discover()` takes allow-listed sort keys, page 1-3, a bounded vote minimum, genres OR-joined, and a validated ISO date.
+  - TTLs: related 24 h, discover 6 h, new releases 3 h.
+  - List responses are validated as lists. The existing timeout, rate-limit, sanitized-error and stale-cache behaviour is reused.
+
+**Ranking (`backend/recommender.py`)**
+- `recommend(extra=...)` scores discovered films alongside the snapshot:
+  - content: the fitted TF-IDF vocabulary, with no refit and no matrix growth;
+  - collaborative: TMDB related-title evidence, `RELATED_LINK = 0.3` per related seed, calibrated to a direct snapshot-graph link;
+  - quality: `quality_of()` on the snapshot's scale.
+- MMR runs over the union (`_mmr_union`), and snapshot pairs keep the exact `content_sim`.
+- Explanations come from `_extra_explanation`: "Because you loved X" with `evidence: "tmdb-related"`, a content link, an external seed, viewing, "New release that fits your taste", "Discovered for your taste" or "Popular right now".
+- The snapshot-only path is unchanged.
+
+**API and frontend**
+- `POST /api/recommend` accepts `discover: true` and returns a `discovery` report covering:
+  - status, profile, seeds, genres and per-source counts;
+  - pool size, enriched, summary-only and queued counts;
+  - upstream calls, cache hits, stale flag, failed sources and the number of films recommended.
+- `/api/capabilities` reports `dynamic_discovery`.
+- The frontend requests discovery only from a configured backend.
+  - Discovered films are registered with the catalogue, so details, likes/dislikes (through S5A), Watchlist and playback work.
+  - Each refresh uses an `AbortController`, so an older pool can never overwrite newer rows.
+  - The UI shows a **Discovered** tile badge, an honest Top Picks subtitle (count, partial or stale notes) and the retrieval sources in the "why" panel.
+  - Static mode never sends `discover`.
+
+**Tests and evidence**
+- 12 deterministic mock-TMDB tests in `tests/test_discovery.py` (fixture IDs 910000001-910000008): **123 passed**. JS harnesses now provide `AbortController` like browsers.
+- Live check: for Inception + Interstellar + The Dark Knight, 5 of the top 12 picks came from outside the snapshot (Batman (1989), Primer, The Electric State, Stargate: Continuum, Batman and Harley Quinn). Latency: 1.9 s cold, 0.4-1.1 s warm after moving enrichment off the request path (it was 4-5 s before).
+
+**Process and operational notes**
+- S5B was first built on a separate `feature/s5b-dynamic-discovery` branch. At the user's request it was fast-forwarded into `feature/streaming-platform`, and the extra branch, which was never pushed, was deleted. Branch references in the docs were corrected.
+- A user-reported "no discovery in the response" turned out to be a **stale server**. A `run.py` started before S5B still held port 8000, so the new launch failed to bind and the old code kept answering (its `/api/capabilities` had no `dynamic_discovery`). Restarting fixed it. Check what is listening on port 8000 before restarting.
+- Superhero profiles discover fewer new films because the snapshot already contains most of them.
+- The user chose to keep the existing streaming providers unchanged; no further piracy streaming sources were researched or added.
+
+### S5C - Scalable profiles and bounded ranking (2026-10-20)
+
+Commits: `20ac7f6` (implementation), `713a0c0` (docs). Phase: [scalable ranking](docs/streaming/05c-scalable-ranking.md).
+
+**Contracts, cache and budgets (`backend/ranking.py`)**
+- Added:
+  - the `rank-v2` contract and the per-request `RANKING_BUDGET`: rerank pool 300, encode batch 64, external viewing 20, feature cache 4,000 entries / 16 MiB;
+  - the `CINEMAGIC_RANKING=snapshot` rollback switch;
+  - `FeatureStore`, a thread-safe LRU of sparse TF-IDF rows.
+- `FeatureStore` behaviour:
+  - keyed by canonical ID, metadata language and `feature_version`;
+  - re-encodes when the metadata digest changes;
+  - drops other feature versions on `bind`;
+  - encodes misses in batches;
+  - reports hits, misses, re-encodes and evictions.
+- `Discovery` uses the shared store, so discovered rows are **sparse CSR** instead of a dense 300 × 7,395 matrix. It reports `timing_ms.retrieve`/`encode` and per-request encoding counts.
+
+**Scoring and reranking**
+- MMR builds its pairwise matrix from sparse rows of the bounded pool only, with an exact incremental redundancy update. 30 randomised checks gave identical selections to the previous implementation.
+- The rerank pool is `min(3k, 300)`, and exclusions apply before it is cut.
+- Measured viewing now includes watched TMDB films **outside the snapshot**:
+  - features are read from the cache only, for the 20 most recent titles;
+  - they give content-only evidence under the same 10% cap;
+  - explicit likes and dislikes win;
+  - uncached titles are reported as `viewing_status.pending` and fetched in the background;
+  - they add "Because you watched" explanations and rows.
+- **Honest explanations:** "Because you loved X" requires `EXPLAIN_FLOOR = 0.03` of link, in Python and the browser engine. Before, Toy Story → *The Godfather* (0.018, nothing shared) and Parasite → *The Shawshank Redemption* (0.007) were labelled as such. Weak-link picks now read "A well-rated pick to widen your taste".
+- Discovered films report `component_availability`; missing related-title evidence is stated, never imputed.
+
+**Performance and robustness**
+- `Catalog.cached_movies()` reads a whole pool in one query, where warm discovery had opened about 120 SQLite connections and rewritten the schema on each one.
+- The schema is written once per process. A deleted cache file is recreated, and a locked or damaged one behaves as a cache miss.
+- Every response carries `ranking` diagnostics (contract, mode, candidates, eligible, rerank pool, signals, feature-cache stats, timing). `/api/capabilities` reports `ranking`.
+- `requirements.txt` lists `scipy` explicitly.
+
+**Frontend**
+- "Because you watched" vs "Because you loved" is now correct in the hover preview and the details side panel.
+- The "why" panel shows the pick's reason when no film is named, and states when a discovered film has no related-title evidence.
+- The Top Picks subtitle notes watched films waiting for metadata.
+- The static export carries `explainFloor` and `rerankPool`.
+
+**Tests and evidence**
+- 12 tests in `tests/test_ranking.py`, plus a JS case showing that losing or invalidating derived features never touches taste, Watchlist or viewing, and that new choices resolve incrementally. Two S5B tests that asked for `k=1000` now use `eligible_keys`, because the rerank pool is bounded. **135 passed**.
+- `scripts/benchmark_ranking.py`: as the cache grew from 0 to 20,000 entries, per-request work stayed flat.
+  - 120 films encoded cold, 0 warm; 6 upstream calls cold, 0 warm;
+  - a 300-row rerank pool;
+  - a **2.15 MB** request peak, down from 29 MB;
+  - about 55 ms warm.
+- Live: warm requests dropped from 0.4-1.1 s to 0.2-0.3 s, with 37-85 ms spent ranking. No top-40 pick lacked a reason for the tested profiles.
+
+### S5D - Evaluate and accept dynamic recommendations (2026-10-20)
+
+Commits: `c9bcaed` (implementation), `ab1ee7b` (docs). Phase: [dynamic evaluation](docs/streaming/05d-dynamic-evaluation.md).
+
+**Calibration adopted (`backend/recommender.py`)**
+- The problem: S5B shrank discovered films towards the acclaimed snapshot's prior (median 13,370 votes, mean 7.49). That flattered thin-vote titles, and every TMDB-related title got a full direct-link score. With only Parasite liked, 15 of the top 20 were discovered films with a median of about 300 votes; *The Middle Man* had 56.
+- The fix: `DISCOVERY_POLICY` = pool prior + related confidence.
+  - A discovered film's quality is also estimated against the pool it was retrieved with, and the **lower** of the two estimates is kept, so it is never a boost.
+  - Related-title evidence is scaled by `votes / (votes + pool median votes)`.
+  - There is no hard vote floor.
+- A first, two-way version boosted thin-vote films in cold start (*Michael (2026)* above *The Godfather*). Making it one-directional fixed that, and cold start now matches S5B exactly.
+- Results on live pools:
+  - picks under 300 votes: 17.5% → 11.7%;
+  - median votes of discovered picks: 1,171 → 2,116;
+  - mean rating: 7.34 → 7.50;
+  - diversity: 0.935 → 0.944;
+  - a 37.5% discovered share remains.
+- Examples: Pixar's *Rock Dog* moves from #4 to #9 and *Blue's Big City Adventure* leaves the top 10; for Parasite, *The Middle Man*, *Good News* and *Somewhere in Queens* give way to *American Psycho*, *The Wolf of Wall Street* and *Falling Down*.
+
+**Evaluation tooling and results**
+- `scripts/record_dynamic_fixture.py` records real TMDB pools through the production `Discovery`, with retries for a flaky network. The fixture is `docs/evaluation/s5d-live-fixture.json`: 12 profiles and 367 films, covering:
+  - Pixar, Nolan, a single niche like (Parasite), romance and horror;
+  - multi-interest and a related dislike;
+  - an external like and external dislike (Primer / Transformers: RotF);
+  - non-English originals (Burning, Shoplifters) and a 2026 new release;
+  - dislike-only and cold start.
+- `scripts/evaluate_dynamic.py` runs offline and writes `s5d-results.json` and `s5d-review.md`.
+  - **World proxy:** the snapshot is split into 312 starter and 135 world films, and 80 profiles run with the edge to the held-out target removed. Dynamic retrieval plus bounded ranking reaches recall **0.80** (vs 0.575) and HR@10 **0.538** / NDCG@10 **0.331**. A snapshot engine scores 0.400 / 0.203, and S5A inputs alone 0.400 / 0.256.
+  - Summary-only metadata halves world-target hits (0.382 → 0.206). Unfamiliar vocabulary correctly leaves an external like unavailable.
+  - 0 dislike violations and 0 invalid explanations in every scenario.
+  - It is labelled as a transductive graph proxy, not user evidence.
+  - Policies were compared on a common pool; in the proxy they show no harm.
+- **Embeddings deferred:** 70% of discovered-film tokens are in the vocabulary, the median is 23 features (40 for snapshot films), and no film has an empty vector. The measured problem was popularity calibration, not meaning.
+- `scripts/browser_walkthrough.py` drives the real UI in headless Edge; results are in `s5d-browser.json`.
+  - Discovered badges and provenance appear.
+  - A like or dislike from details is visible in 0.33-0.36 s warm (1.2-2.6 s on a cold, flaky network).
+  - Watch routes to CineSrc by TMDB ID.
+  - Rapid toggles are debounced into one request.
+  - The main thread blocks for at most 79 ms.
+  - The static build shows no discovery and re-ranks in 0.27 s.
+  - Headless Edge cannot make a window narrower than about 500 px (it reported 518), so the phone screenshot renders in a true 390 px iframe. Screenshots are in `docs/evaluation/screens/`.
+- "How it works" explains discovered films, calibration, caching, failure fallback, static limits and when "Because you loved" appears.
+- A new calibration regression test brings the total to **136 passed**, plus the JS suites.
+- During this milestone the network intermittently cut TLS connections to TMDB (`UNEXPECTED_EOF`). The app degraded to `partial` discovery reports, as designed.
+- **Pending:** human relevance ratings in `docs/evaluation/s5d-review.md`, which shows the S5B vs calibrated top 10 for every profile.
+
 ### Research, documentation and plans added (2026-10-20)
 
 Documentation commits: `f032f77`, `bae6b09`, `2fdaadc`.
@@ -218,17 +341,24 @@ Documentation commits: `f032f77`, `bae6b09`, `2fdaadc`.
 - Recorded the user's final preference for **manual** source switching, replacing the earlier automatic-failover proposal. The larger provider list is research/backlog; only the three selected adapters are integrated.
 - Added S6 release-readiness planning for provider configuration, operational checks, actual browser/playback evidence, regressions and rollback. S6 implementation remains pending.
 - Added S7 Render deployment planning for one FastAPI Web Service serving frontend/API/model, private credentials, build/start/health settings, disposable cache behavior, hosted acceptance and rollback. No Render service has been created or deployed.
-- Inserted S5A-S5D before S6/S7 while preserving those labels. S5A is now implemented; S5B dynamic candidates, S5C scalable ranking and S5D acceptance remain planned.
+- Inserted S5A-S5D before S6/S7 while preserving those labels. (All four have since been implemented; see the entries above.)
 - Kept semantic embeddings as an optional measured follow-on, rather than an implemented model or a deployment prerequisite.
 - Updated README, architecture, evaluation notes, iteration status, source evidence and changelog alongside completed work. Kept the older Iterations 4-6 plans separate; partial overlapping features do not mark those iterations complete.
 - Consolidated this changelog against the existing Git history and phase records, retaining prior release entries, separating planning from implementation, and recording the latest validation limits.
 
 ### Implementation commit index
 
-All entries below existed before this changelog consolidation. Commits from 2026-10-20 are unreleased streaming-branch work; the earlier versioned history follows this index.
+Commits from 2026-10-20 are unreleased streaming-branch work; the earlier versioned history follows this index.
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-10-20 | `ab1ee7b` | S5D evaluation, calibration decision and browser evidence (docs) |
+| 2026-10-20 | `c9bcaed` | S5D discovery calibration and evaluation tooling |
+| 2026-10-20 | `713a0c0` | S5C scalable ranking design, budgets and benchmark (docs) |
+| 2026-10-20 | `20ac7f6` | S5C bounded sparse ranking with a versioned feature cache |
+| 2026-10-20 | `8af3455` | S5B dynamic discovery design, budgets and evidence (docs) |
+| 2026-10-20 | `f42497d` | S5B dynamic candidates beyond the snapshot |
+| 2026-10-20 | `1b56dad` | Consolidated iteration and implementation changelog |
 | 2026-10-20 | `2d590cd` | S5A refresh ordering, filtered shelves and external related-film fix |
 | 2026-10-20 | `cadd680` | S5A resolved external preferences |
 | 2026-10-20 | `add890c` | Automatic-search landscape gallery |
