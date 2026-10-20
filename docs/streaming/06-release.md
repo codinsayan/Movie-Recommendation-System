@@ -1,16 +1,16 @@
-# S6: Deployment and release validation
+# S6: Release readiness and operational checks
 
-Status: planned. Depends on [S1-S5](README.md#delivery-sequence).
+Status: planned. Depends on [S1-S5](README.md#delivery-sequence). Next: [S7 Render deployment](07-render-deployment.md). Hosting setup and final public-URL verification are tracked in S7.
 
 ## Outcome
 
-Release a usable movie discovery/player experience with manual source selection and recorded end-to-end evidence.
+Prepare a tested movie discovery/player release candidate with manual source selection, configurable providers and recorded acceptance evidence for the Render deployment iteration.
 
 ## Work
 
-- [ ] Deploy FastAPI and the frontend together for the full live-search experience. Retain GitHub Pages as a clearly scoped snapshot demo if desired.
+- [ ] Verify FastAPI and the frontend run together as a release candidate. Retain GitHub Pages as a clearly scoped snapshot demo; actual Render deployment is S7.
 - [ ] Configure allowed provider/frame origins and required player permissions from the selected registry. Use standard unsandboxed movie embeds per the user's explicit compatibility choice; retain HTTPS, fixed provider origins and incoming message validation.
-- [ ] Keep keys server-side and persist the metadata cache appropriately for the selected host. Browser viewing state remains local until a separately planned account feature.
+- [ ] Verify keys stay server-side and the metadata cache accepts a configurable writable path. S7 selects disposable or persistent hosting storage. Browser viewing state remains local until a separately planned account feature.
 - [ ] Add provider enable/disable configuration. A removed provider disappears from future choices; an active failure shows a message and waits for viewer selection.
 - [ ] Check desktop/mobile layout, fullscreen, captions where offered, keyboard/focus behavior, browser autoplay restrictions and player disposal.
 - [ ] Add targeted automated tests for lifecycle, source selection and state isolation. Mock external responses/events in CI and keep real-network playback exercises separate.
@@ -21,11 +21,11 @@ Release a usable movie discovery/player experience with manual source selection 
 
 ## Expected files
 
-Deployment configuration, `.github/workflows/pages.yml` if required, provider configuration, `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, and playback-validation evidence created during S1.
+Provider configuration, `.github/workflows/pages.yml` if required, `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, and playback-validation evidence created during S1. Render-specific deployment files and hosted evidence belong to S7.
 
 ## Release acceptance
 
-- [ ] Movie search -> details -> Watch movie -> manual source selection -> close works in the deployed environment.
+- [ ] Movie search -> details -> Watch movie -> manual source selection -> close works in the release-candidate environment; repeat against the public Render URL in S7.
 - [ ] Errors and silent frames leave the selector usable. No error, timeout or hidden retry changes the source automatically.
 - [ ] One movie iframe is active; previous movies cannot update the current player's state.
 - [ ] Resume/history/watchlist and recommendations behave according to S3/S5 acceptance criteria.

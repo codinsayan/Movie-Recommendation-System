@@ -155,6 +155,7 @@ Interactive API docs are at `http://127.0.0.1:8000/docs`.
 
 ## Documentation
 
+- [Render deployment iteration (S7)](docs/streaming/07-render-deployment.md): planned full-project hosting, environment settings, public acceptance checks and rollback; deployment has not been performed yet
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system design and request flow
 - [docs/ALGORITHM.md](docs/ALGORITHM.md): the maths behind the recommendations
 - [docs/ITERATIONS.md](docs/ITERATIONS.md): roadmap, iteration by iteration

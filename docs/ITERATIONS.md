@@ -13,7 +13,8 @@ The product work follows [the streaming roadmap](streaming/README.md), with **vi
 | [S3](streaming/03-progress-and-watchlist.md) | Resume, Continue watching and an independent watchlist |
 | [S4](streaming/04-search-and-catalogue.md) | Implemented: paginated live search and cached remote details; API/client checks passed |
 | [S5](streaming/05-recommendations.md) | Implemented: opt-in viewing signals, recent-playback filtering, parity tests and proxy evaluation |
-| [S6](streaming/06-release.md) | Deployment and end-to-end release evidence |
+| [S6](streaming/06-release.md) | Release readiness, provider configuration and acceptance evidence |
+| [S7](streaming/07-render-deployment.md) | Planned: full-project Render deployment, hosted verification and rollback |
 
 S1-S2 form the first demo milestone. The evaluation/model/polish iterations below retain their original numbering and remain future work; relevant tasks are incorporated into S5/S6 without implying those older iterations are complete.
 

@@ -36,11 +36,12 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S3: Personal viewing state](03-progress-and-watchlist.md) | Resume, Continue watching, independent watchlist, position transfer | S2 | Code implemented; browser acceptance pending |
 | [S4: Search and catalogue growth](04-search-and-catalogue.md) | Paginated TMDB-backed discovery, metadata cache, broader language coverage | S2; reuse S3 identity conventions | Implemented; API/client checks passed |
 | [S5: Viewing-aware recommendations](05-recommendations.md) | Measured viewing, device-local playback eligibility and explanations | S3 and S4 | Implemented as opt-in; evaluation/parity passed |
-| [S6: Release and operational checks](06-release.md) | Verified deployment, provider configuration, regression evidence | S1-S5 | Planned |
+| [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 | Planned |
+| [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Planned |
 
-**First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S6 grow and release the product.
+**First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S6 grow and validate the release candidate; S7 deploys it to Render.
 
-The older recommender evaluation/model experiments remain recorded in [ITERATIONS.md](../ITERATIONS.md). Streaming work uses S1-S6 labels to avoid assigning conflicting version numbers. Decide release versions at implementation time.
+The older recommender evaluation/model experiments remain recorded in [ITERATIONS.md](../ITERATIONS.md). Streaming work uses S1-S7 labels to avoid assigning conflicting version numbers. Decide release versions at implementation time.
 
 ## Implementation boundaries
 
@@ -68,4 +69,4 @@ The full suite passes 98 tests. S5 adds ranking/eligibility and Python/JavaScrip
 
 ## Deferred work
 
-Automatic provider failover, stream extraction/proxying, TV episode navigation, accounts and cross-device sync, subscription billing, and enabling the entire provider directory are outside S1-S6. The source selector and adapter boundary allow additional evaluated providers later.
+Automatic provider failover, stream extraction/proxying, TV episode navigation, accounts and cross-device sync, subscription billing, and enabling the entire provider directory are outside S1-S7. The source selector and adapter boundary allow additional evaluated providers later.

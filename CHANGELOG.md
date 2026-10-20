@@ -9,6 +9,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Keep the home banner populated with clearly labelled broader suggestions when recent-playback filtering has no eligible picks. Add Show all picks recovery, clear stale banner movies/timers, and reject late filter responses. Full suite: 98 tests, including seven banner regression cases.
 
 ### Added
+- Planned S7 iteration for full-project Render deployment, separated from S6 release readiness, with build/start commands, private credentials, disposable-cache policy, hosted checks and rollback.
 - S5 opt-in viewing-aware recommendations with measured unique watch intervals, capped repeat-session influence, ?Because you watched? rows and matching Python/browser scoring.
 - Device-local recent-playback filtering with a seven-day TTL, provider-specific failure invalidation and eligibility applied before top-k/MMR.
 - Browser history-schema migration without inferring watch time from resume positions; clearing history preserves explicit taste and Watchlist.
