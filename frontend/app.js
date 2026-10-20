@@ -757,6 +757,24 @@
   const runtimeText = (min) => (min ? `${Math.floor(min / 60)}h ${min % 60}m` : "");
   const prettyTag = (t) => (t === "sci-fi" ? t : t.replace(/-/g, " "));
 
+  async function similarMovies(id, k = 30) {
+    if (!engine || state.byId.has(id)) return api(`/api/movies/${id}/similar?k=${k}`);
+    const cached = preferenceResolver?.records.get(`tmdb:${id}`);
+    if (preferenceResolver?.compatible(cached)) return engine.similarExternal(cached, k);
+    const movie = byId(id);
+    if (movie?.full_details && movie.metadata_language === "en-US") return engine.similarExternal(engine.resolvePreference(movie), k);
+    throw Object.assign(new Error("Similar movies need compatible cached English metadata or the backend app."), { status: 503 });
+  }
+
+  async function configurePreferenceResolver() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const meta = await api("/api/meta", null, { signal: controller.signal });
+      preferenceResolver.configure(meta.preferences, { backend: !engine, localResolve: engine ? movie => engine.resolvePreference(movie) : null });
+    } finally { clearTimeout(timeout); }
+  }
+
   async function openMovie(id) {
     let m = byId(id);
     if (!m) return;
@@ -821,13 +839,9 @@
         <div class="like-grid" id="similarGrid">${Array.from({ length: 6 }, () => `<div class="like-card skeleton" style="height:230px"></div>`).join("")}</div>
       </div>`);
     animateBars($("#modalBody"));
-    if (!state.byId.has(id)) {
-      $("#similarGrid").innerHTML = `<p class="empty">Direct similar-title lookup is unavailable for this unindexed movie. Likes and dislikes can still shape your picks after its metadata resolves.</p>`;
-      return;
-    }
     const detailEpoch = modalEpoch;
     try {
-      const sims = await api(`/api/movies/${id}/similar?k=9`);
+      const sims = (await similarMovies(id)).filter(s => !state.disliked.has(s.id)).slice(0, 9);
       if (modalMovieId !== id || modalEpoch !== detailEpoch) return;
       $("#similarGrid").innerHTML = sims.map((s, i) => {
         const r = state.recMap.get(s.id);
@@ -842,9 +856,9 @@
               <div>${s.year} · ${s.genres.slice(0, 2).map(esc).join(", ")}</div>
             </div>
           </article>`;
-      }).join("");
-    } catch {
-      if (modalMovieId === id && modalEpoch === detailEpoch) $("#similarGrid").innerHTML = `<p class="empty">Couldn't load similar films.</p>`;
+      }).join("") || `<p class="empty">No matching films have usable metadata in the current catalogue.</p>`;
+    } catch (error) {
+      if (modalMovieId === id && modalEpoch === detailEpoch) $("#similarGrid").innerHTML = `<p class="empty">${error.status === 503 ? "Similar movies need compatible cached metadata or an available backend." : "Couldn't load similar films. Please try again."}</p>`;
     }
   }
 
@@ -940,7 +954,11 @@
       if (t.closest("[data-show-all-picks]")) return showAllPicks();
       if (t.closest("[data-search-more]")) return catalogue?.more();
       if (t.closest("[data-search-retry]")) return catalogue?.setQuery(state.query);
-      if (t.closest("[data-retry-preferences]")) return preferenceResolver?.retry();
+      if (t.closest("[data-retry-preferences]")) {
+        if (preferenceResolver?.config) return preferenceResolver.retry();
+        configurePreferenceResolver().then(() => preferenceResolver.retry()).catch(() => toast("Movie metadata is still unavailable. Your preferences are saved."));
+        return;
+      }
       const act = t.closest("[data-act]");
       if (act) { e.stopPropagation(); setTaste(Number(act.dataset.id), act.dataset.act, act); return; }
       if (t.closest("[data-close]") || t.id === "modal") return closeModal();
@@ -1064,10 +1082,9 @@
       fetcher: (path, options) => api(path, null, options), lookup: id => catalogue.get(id),
       onChange: () => { refresh({ immediate: true }); renderDrawer(); } });
     preferenceResolver.sync(state.liked, state.disliked);
-    api("/api/meta").then(meta => {
-      preferenceResolver.configure(meta.preferences, { backend: !engine, localResolve: engine ? movie => engine.resolvePreference(movie) : null });
-      refresh({ immediate: true }); renderDrawer();
-    }).catch(() => { /* Choices remain saved and pending until features are available. */ });
+    try {
+      await configurePreferenceResolver();
+    } catch { /* Choices remain saved and pending until features are available. */ }
     renderMoods();
     renderOnboard();
     renderDrawer();

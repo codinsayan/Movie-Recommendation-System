@@ -399,8 +399,11 @@ class Recommender:
                   "watched_rows": watched_rows}
         if external:
             result["because_rows"] = []
+            related_candidates = np.ones(n, dtype=bool)
+            related_candidates[liked_i + disliked_i] = False
             for seed, relevance in external_links:
-                pool = [int(i) for i in np.argsort(-relevance, kind="stable") if candidates[i] and relevance[i] > .01][:42]
+                # This shelf explains an explicit like, independently of the Top Picks filter/mood.
+                pool = [int(i) for i in np.argsort(-relevance, kind="stable") if related_candidates[i] and relevance[i] > .01][:42]
                 result["because_rows"].append({"source": {"id": int(seed["key"].split(":")[1]),
                                                         **{k: v for k, v in seed.items() if k != "vector"}},
                                                 "items": [self._card(i) for i in self._mmr(pool, relevance, 14)]})
@@ -434,6 +437,25 @@ class Recommender:
             self._card(j, similarity=round(float(sim[j]), 4), shared=sorted(_tokens(self.movies[j]) & base)[:4])
             for j in order
         ]
+
+    def similar_external(self, record: dict, k: int = 6) -> list[dict]:
+        """Related snapshot films from a resolved movie; no candidate/catalogue expansion."""
+        if record.get("feature_version") != self.feature_version or record.get("version") != 1:
+            raise ValueError("Incompatible external movie features")
+        if record.get("status") != "applied":
+            return []
+        vector = np.zeros(self.X.shape[1])
+        for j, value in record["vector"]:
+            vector[j] = value
+        length = np.linalg.norm(vector)
+        relevance = self.X @ (vector / length) if length else np.zeros(self.n)
+        source_id = record["movie"]["id"]
+        pool = [int(i) for i in np.argsort(-relevance, kind="stable")
+                if self.movies[i]["id"] != source_id and relevance[i] > .01][: k * 3]
+        tokens = _tokens(record["movie"])
+        return [self._card(i, similarity=round(float(relevance[i]), 4),
+                           shared=sorted(_tokens(self.movies[i]) & tokens)[:4])
+                for i in self._mmr(pool, relevance, k)]
 
     def meta(self) -> dict:
         info = {

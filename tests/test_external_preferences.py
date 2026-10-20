@@ -91,6 +91,18 @@ def test_missing_vocabulary_is_unavailable_and_missing_keywords_can_use_overview
     assert engine.resolve_preference(partial)["status"] == "applied"
 
 
+def test_external_related_shelf_is_independent_of_top_picks_filters(engine):
+    record = engine.resolve_preference(external_movie(engine))
+    disliked = engine.movies[0]["id"]
+    request = {"liked": [record["movie"]["id"]], "disliked": [disliked], "external_preferences": aggregate(engine, [record])}
+    broad = engine.recommend(**request)
+    filtered = engine.recommend(**request, recent_playback_only=True, eligible_keys=[], mood="space")
+    assert filtered["items"] == []
+    assert filtered["because_rows"] == broad["because_rows"]
+    assert filtered["because_rows"][0]["items"]
+    assert all(m["id"] != disliked for m in filtered["because_rows"][0]["items"])
+
+
 def test_resolution_route_uses_english_complete_metadata_and_cache(engine, tmp_path, monkeypatch):
     calls = []
     def upstream(request):
@@ -115,6 +127,11 @@ def test_resolution_route_uses_english_complete_metadata_and_cache(engine, tmp_p
     assert client.get(f"/api/preferences/tmdb/{engine.movies[0]['id']}").status_code == 422
     request = {"liked": [2000000001], "external_preferences": aggregate(engine, [first.json()])}
     assert client.post("/api/recommend", json=request).status_code == 200
+    related = client.get("/api/movies/2000000001/similar?k=9")
+    assert related.status_code == 200 and related.json()
+    assert len(calls) == 1
+    assert all(m["id"] != 2000000001 and m["similarity"] > 0 for m in related.json())
+    assert client.get("/api/movies/2000000001/similar?k=31").status_code == 422
     request["external_preferences"]["feature_version"] = "obsolete"
     assert client.post("/api/recommend", json=request).status_code == 422
 
@@ -160,6 +177,15 @@ def test_resolver_browser_lifecycle():
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node required")
+def test_app_boot_restores_external_preferences_before_recommending(engine, tmp_path):
+    model = tmp_path / "model.json"; model.write_text(json.dumps(build_model(engine)), encoding="utf-8")
+    record = engine.resolve_preference(external_movie(engine))
+    proc = subprocess.run([shutil.which("node"), str(ROOT / "tests/js/test_preference_boot.cjs"), str(model)],
+                          input=json.dumps(record), capture_output=True, text=True, encoding="utf-8")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node required")
 def test_external_python_browser_transform_and_ranking_parity(engine, tmp_path):
     movies = [external_movie(engine), external_movie(engine, 12, 2000000002),
               {**external_movie(engine, 20, 2000000003), "tags": ["Time Travel", "unfamiliar-keyword"],
@@ -174,6 +200,7 @@ def test_external_python_browser_transform_and_ranking_parity(engine, tmp_path):
     cases.append({**cases[0], "use_viewing": True, "now": 1000000000,
                   "viewing": {"version": 1, "signals": [{"key": f"tmdb:{engine.movies[10]['id']}", "watched_seconds": 180,
                               "duration": 600, "plays": 1, "updated_at": 999999999}], "playback": []}})
+    cases.append({**cases[-1], "recent_playback_only": True, "eligible_keys": []})
     model = tmp_path / "model.json"; model.write_text(json.dumps(build_model(engine)), encoding="utf-8")
     script = """
 const fs=require('fs'), Engine=require(process.argv[1]), Resolver=require(process.argv[3]), assert=require('assert/strict');
@@ -187,7 +214,7 @@ const results=input.cases.map(c=>{
   assert.deepEqual(restored.payload(),r.payload());
   return e.recommend(c.liked,c.disliked,c.mood,c.k,{...c,external_preferences:restored.payload()});
 });
-console.log(JSON.stringify({records,results}));
+console.log(JSON.stringify({records,results,similar:records.map(r=>e.similarExternal(r,9))}));
 """
     proc = subprocess.run([shutil.which("node"), "-e", script, str(ROOT / "frontend/engine.js"), str(model), str(ROOT / "frontend/preference-resolver.js")],
                           input=json.dumps({"movies": movies, "cases": cases}), capture_output=True, text=True, encoding="utf-8", check=True)
@@ -196,6 +223,11 @@ console.log(JSON.stringify({records,results}));
         assert py["movie"] == browser["movie"]
         assert py["taste"] == browser["taste"]
         assert np.array(py["vector"]) == pytest.approx(np.array(browser["vector"]), abs=1e-12)
+    for record, browser in zip(records, js["similar"]):
+        py = engine.similar_external(record, 9)
+        assert [m["id"] for m in browser] == [m["id"] for m in py]
+        assert [m["shared"] for m in browser] == [m["shared"] for m in py]
+        assert [m["similarity"] for m in browser] == pytest.approx([m["similarity"] for m in py], abs=1e-4)
     for case, browser in zip(cases, js["results"]):
         py = engine.recommend(**case)
         assert browser["mode"] == py["mode"] and browser["taste"] == py["taste"]

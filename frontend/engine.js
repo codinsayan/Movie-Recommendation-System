@@ -350,7 +350,8 @@
       });
       const result = { mode, items, taste: this.tasteProfile(L, D, external), watched_rows };
       if (external) result.because_rows = externalLinks.map(({ seed, similarity }) => {
-        const pool = [...similarity.keys()].sort((a, b) => similarity[b] - similarity[a]).filter(i => candidates[i] && similarity[i] > .01).slice(0, 42);
+        const excluded = new Set([...L, ...D]);
+        const pool = [...similarity.keys()].sort((a, b) => similarity[b] - similarity[a]).filter(i => !excluded.has(i) && similarity[i] > .01).slice(0, 42);
         const { vector, ...source } = seed;
         return { source: { id: Number(seed.key.split(":")[1]), ...source }, items: this.mmr(pool, similarity, 14).map(i => ({ ...this.movies[i] })) };
       });
@@ -383,6 +384,20 @@
         similarity: round(sim[j], 4),
         shared: sortedStrings([...this.tokenSets[j]].filter((t) => this.tokenSets[i].has(t))).slice(0, 4),
       }));
+    }
+
+    similarExternal(record, k = 6) {
+      if (record?.version !== 1 || record.feature_version !== this.metaInfo.preferences?.feature_version) throw Object.assign(new Error("Incompatible external movie features"), { status: 422 });
+      if (record.status !== "applied") return [];
+      const vector = new Float64Array(this.idf.length);
+      record.vector.forEach(([j, v]) => vector[j] = v);
+      const norm = Math.sqrt(vector.reduce((s, v) => s + v * v, 0));
+      const similarity = Float64Array.from(this.X, row => norm ? row.reduce((s, [j, v]) => s + v * vector[j], 0) / norm : 0);
+      const pool = [...similarity.keys()].sort((a, b) => similarity[b] - similarity[a])
+        .filter(i => this.movies[i].id !== record.movie.id && similarity[i] > .01).slice(0, k * 3);
+      const tokens = new Set([...record.movie.genres.map(g => g.toLowerCase()), ...record.movie.tags, ...(record.movie.people || [])]);
+      return this.mmr(pool, similarity, k).map(i => ({ ...this.movies[i], similarity: round(similarity[i], 4),
+        shared: sortedStrings([...this.tokenSets[i]].filter(t => tokens.has(t))).slice(0, 4) }));
     }
 
     /** Route a request exactly like the FastAPI app would. */

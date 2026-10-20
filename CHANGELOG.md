@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 ## [Unreleased]
 
 ### Fixed
+- Restore cached external features before the first recommendation request after reload, keep explicit Because you loved shelves independent of Top Picks playback/mood filters, and enable content-based More Like This for external movies. Full suite: 111 passed; isolated desktop/mobile Chrome reload, filter and details checks passed.
 - Keep the home banner populated with clearly labelled broader suggestions when recent-playback filtering has no eligible picks. Add Show all picks recovery, clear stale banner movies/timers, and reject late filter responses. Full suite: 98 tests, including seven banner regression cases.
 
 ### Added

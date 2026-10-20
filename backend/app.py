@@ -141,11 +141,16 @@ def recommend(req: RecommendRequest):
 
 
 @app.get("/api/movies/{movie_id}/similar")
-def similar(movie_id: int, k: int = 6):
+def similar(movie_id: int = ApiPath(ge=1, le=2147483647), k: int = Query(default=6, ge=1, le=30)):
     try:
         return engine.similar(movie_id, k)
     except KeyError:
-        raise HTTPException(status_code=404, detail="Movie not found")
+        if engine.movies[0].get("source") != "tmdb":
+            raise HTTPException(status_code=404, detail="Movie not found")
+        try:
+            return engine.similar_external(preference_features.resolve(movie_id), k)
+        except CatalogError as error:
+            catalogue_error(error)
 
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
