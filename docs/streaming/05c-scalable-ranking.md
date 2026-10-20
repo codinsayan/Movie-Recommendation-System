@@ -120,7 +120,7 @@ The discovery report also gives `timing_ms.retrieve` and `timing_ms.encode`, plu
   | All dislikes | personal mode, crowd-favourite reason, no "because" |
 - [x] Offline/static supported inputs remain deterministic and in Python/JavaScript parity. Unsupported live capability is described rather than imitated with stale data.
 - [x] Reset/removal and schema migration preserve browser-local taste, Watchlist and unrelated viewing history according to their separate controls. Shown by the existing S3/S5 tests plus a new JS case: corrupting the derived feature cache, or changing the feature version, leaves likes, the Watchlist and progress untouched.
-- [ ] Rendered desktop/mobile walkthrough of the new explanation text and the watched-external pending note, and S5D relevance review.
+- [x] Rendered desktop/mobile walkthrough and S5D relevance review, recorded in [S5D](05d-dynamic-evaluation.md). Human ratings are still pending there.
 
 ## Evidence (20 October 2026)
 

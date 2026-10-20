@@ -23,7 +23,8 @@ This section records the implemented streaming work on `feature/streaming-platfo
 | S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
 | S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic and live API checks passed; browser review pending |
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark and live API checks passed; browser review pending |
-| S5D, S6, S7 | Planning documents added; these phases have not been implemented |
+| S5D | Dynamic evaluation recorded: offline proxy, live replay, browser walkthrough; popularity calibration adopted; embeddings deferred; human relevance ratings pending |
+| S6, S7 | Planning documents added; these phases have not been implemented |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
@@ -131,6 +132,18 @@ Commit: `11fb898`.
 - Cleared stale banner movies, backgrounds, poster, dots and rotation timers when neither strict nor broader picks exist; added recovery actions.
 - Rejected late broader responses after filter changes and kept fallback failures usable.
 - Added seven regression cases using real app closures and the exported static engine; recorded a passing 98-test suite at that checkpoint.
+
+### S5D - Evaluate and accept dynamic recommendations (2026-10-20)
+
+Branch: `feature/streaming-platform`. Phase: [dynamic evaluation](docs/streaming/05d-dynamic-evaluation.md).
+
+- **World proxy** (`scripts/evaluate_dynamic.py`, offline): the snapshot is split into a 312-film starter catalogue and a 135-film external world. 80 profiles use the production `Discovery` against a fake TMDB, with the edge to the held-out target removed. Dynamic retrieval plus bounded ranking reaches recall 0.80 (vs 0.575) and HR@10 0.538 / NDCG@10 0.331 (vs 0.400 / 0.256 for S5A inputs alone). Summary-only metadata halves world-target hits, and unfamiliar vocabulary correctly leaves an external like unavailable. 0 dislike violations and 0 invalid explanations. Labelled as a transductive graph proxy.
+- **Live replay:** `scripts/record_dynamic_fixture.py` recorded real TMDB pools for 12 profiles (`docs/evaluation/s5d-live-fixture.json`, 367 films), covering niche, new-release, non-English, external like/dislike, related-dislike, multi-interest, dislike-only and cold start.
+- **Calibration adopted:** `DISCOVERY_POLICY` = pool prior (one-directional) + related confidence. S5B shrank discovered films towards the acclaimed snapshot's prior, which flattered thin-vote titles. On live pools, picks under 300 votes drop from 17.5% to 11.7%, the median votes of discovered picks go from 1,171 to 2,116 and mean rating from 7.34 to 7.50; proxy accuracy is unchanged. No hard vote floor. A first non-directional version boosted thin-vote films in cold start and was corrected.
+- **Embeddings deferred:** 70% of discovered-film tokens are in the vocabulary and none of the 367 films has an empty vector. The measured problem was popularity calibration, not meaning.
+- **Browser walkthrough** (`scripts/browser_walkthrough.py`, headless Edge, real UI): discovered badges and provenance, like/dislike from details visible in 0.33–0.36 s warm, Watch routes to the provider by TMDB ID, rapid toggles are debounced into one request, main thread blocked at most 79 ms. The static build shows no discovery and re-ranks in 0.27 s. Desktop and true 390 px mobile screenshots are under `docs/evaluation/screens/`.
+- "How it works" now explains discovered films, calibration, caching, failure fallback, static limits and when "Because you loved" appears.
+- Human relevance ratings: `docs/evaluation/s5d-review.md` gives side-by-side S5B vs calibrated top 10s for every profile and is waiting for a person to rate them.
 
 ### S5C - Scalable profiles and bounded ranking (2026-10-20)
 

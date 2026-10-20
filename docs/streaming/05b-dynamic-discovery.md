@@ -73,7 +73,7 @@ MMR runs over the union. Snapshot pairs use the exact `content_sim` values, so s
 - [x] Candidate count, upstream calls and concurrency stay within configured budgets even with many saved preferences or many result pages.
 - [x] Missing credentials, empty recommendation endpoints, rate limits, stale cache and partial failures preserve usable fallback results and truthful explanations.
 - [x] Dynamic cards preserve canonical identity and browser-local persistence across refresh. Static mode does not advertise a fresh live pool.
-- [ ] Rendered desktop/mobile browser walkthrough of discovered cards (badge, details, like, Watch) and S5D relevance/budget review.
+- [x] Rendered desktop/mobile browser walkthrough of discovered cards (badge, details, like, Watch) and S5D relevance/budget review. Recorded in [S5D](05d-dynamic-evaluation.md#part-3-rendered-browser-walkthrough). The low-vote finding below led to the S5D calibration; human ratings are still pending.
 
 ## Evidence (20 October 2026)
 

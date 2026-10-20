@@ -1,6 +1,6 @@
 # S5 viewing-signal evaluation
 
-S5A external-preference implementation and its separate deterministic/live API/client evidence are recorded in [S5A](streaming/05a-dynamic-preferences.md#implementation-evidence-20-october-2026). The S5 metrics below remain the original snapshot/viewing experiment; they do not establish dynamic recommendation quality. S5B-S5D evaluation remains planned.
+S5A external-preference implementation and its separate deterministic/live API/client evidence are recorded in [S5A](streaming/05a-dynamic-preferences.md#implementation-evidence-20-october-2026). The S5 metrics below remain the original snapshot/viewing experiment; they do not establish dynamic recommendation quality. **Dynamic recommendations (S5A-S5C) are evaluated in [S5D](streaming/05d-dynamic-evaluation.md)**: an offline world proxy, a live-pool replay with a popularity calibration, a rendered-browser walkthrough and resource benchmarks. Raw results are in [s5d-results.json](evaluation/s5d-results.json) and [s5d-browser.json](evaluation/s5d-browser.json); human relevance ratings are pending in [s5d-review.md](evaluation/s5d-review.md).
 
 Recorded 20 October 2026. Raw results, runtime versions and snapshot/profile hashes: [s5-results.json](evaluation/s5-results.json).
 

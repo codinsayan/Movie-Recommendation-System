@@ -65,7 +65,7 @@ The recent-playback option is a strict filter, so it can have no eligible picks.
 
 The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Matching movies load automatically after a **300 ms typing pause**; no Enter is needed. Search replaces the home banner/rows with a responsive landscape grid, using backdrops where available and showing titles and years. Choose **Load more** for another page, or clear the search with **×** / **Esc** to return home. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
 
-Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. S5A lets their explicit likes/dislikes influence snapshot recommendations after English feature metadata resolves. Remote titles receive content-based More Like This neighbours from the snapshot without an invented personalized match score. With S5B, the backend also retrieves fresh recommendation candidates (TMDB related titles of your likes, acclaimed films in your taste genres, new releases) and ranks them with the same engine; they carry a Discovered badge. Discovery does not enlarge the model. S5C keeps that work bounded: discovered films are cached as sparse vectors, only the top `min(3k, 300)` candidates are reranked, and watched films outside the snapshot count towards viewing-based picks once their metadata is cached. Set `CINEMAGIC_RANKING=snapshot` to roll back to snapshot-only ranking.
+Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. S5A lets their explicit likes/dislikes influence snapshot recommendations after English feature metadata resolves. Remote titles receive content-based More Like This neighbours from the snapshot without an invented personalized match score. With S5B, the backend also retrieves fresh recommendation candidates (TMDB related titles of your likes, acclaimed films in your taste genres, new releases) and ranks them with the same engine; they carry a Discovered badge. Discovery does not enlarge the model. S5C keeps that work bounded: discovered films are cached as sparse vectors, only the top `min(3k, 300)` candidates are reranked, and watched films outside the snapshot count towards viewing-based picks once their metadata is cached. Set `CINEMAGIC_RANKING=snapshot` to roll back to snapshot-only ranking. S5D calibrated discovered films against the pool they were found in, so a handful of votes no longer outranks well-loved films; see [the evaluation](docs/streaming/05d-dynamic-evaluation.md).
 
 SQLite caches searches for one hour and details for one day, with stale fallback during upstream failures. The cache is bounded to 5,000 entries and git-ignored. Set `CINEMAGIC_CACHE_PATH` to change its location. Missing credentials or upstream failures leave snapshot browsing available.
 
@@ -143,6 +143,9 @@ scripts/
   build_tmdb_catalog.py  builds the real-world catalogue from the TMDB API
   export_static.py    exports the trained model to JSON for engine.js
   benchmark_ranking.py  S5C offline benchmark: per-request work vs a growing feature cache
+  record_dynamic_fixture.py  S5D: records real TMDB discovery pools (needs keys)
+  evaluate_dynamic.py   S5D offline evaluation: world proxy, live replay, review sheet
+  browser_walkthrough.py  S5D headless-Edge walkthrough of the real UI with timings
 .github/workflows/
   pages.yml           test + export + deploy to GitHub Pages
 tests/                engine + API tests (pytest)

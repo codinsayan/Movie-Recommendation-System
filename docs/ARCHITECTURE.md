@@ -38,6 +38,17 @@ The existing engine adds the aggregate to its positive/negative profile. Externa
 
 The exported model includes the feature contract through `meta`. The browser engine normalizes/encodes compatible complete English metadata and matches Python scoring; cached compatible vectors also work offline. Fresh or incompatible metadata stays pending in static mode. Startup awaits feature-contract configuration before the first recommendation request, with a five-second metadata deadline and a recoverable pending fallback. S5C will optimize catalogue/profile scaling further; this milestone retains the 447-film candidate pool and global snapshot matrices.
 
+## S5B-S5D dynamic candidates and bounded ranking
+
+With a configured backend, `/api/recommend` with `discover: true` runs a versioned pipeline (`rank-v2`):
+
+1. **Retrieval** (`backend/discovery.py`): related titles of up to 4 seed likes, acclaimed films in the top taste genres, recent releases, and starter pools for cold-start or dislike-only profiles. At most 300 candidates and 4 concurrent upstream calls; detail enrichment runs in the background.
+2. **Encoding** (`backend/ranking.py` `FeatureStore`): sparse TF-IDF rows in the fitted vocabulary, cached by canonical ID, language and `feature_version`.
+3. **Profile and scoring** (`Recommender.recommend(extra=...)`): the snapshot plus candidates are scored with content, TMDB related-title evidence and quality. Discovered films are calibrated against the pool they were found in (`DISCOVERY_POLICY`, S5D).
+4. **Reranking:** MMR over the top `min(3k, 300)` eligible rows only.
+
+The snapshot model never grows. `CINEMAGIC_RANKING=snapshot` rolls back to snapshot-only ranking. The static build never discovers. Evidence: [S5B](streaming/05b-dynamic-discovery.md), [S5C](streaming/05c-scalable-ranking.md), [S5D](streaming/05d-dynamic-evaluation.md).
+
 ## Overview
 
 ```

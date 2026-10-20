@@ -1,0 +1,500 @@
+{
+  "version": 1,
+  "seed": 2026,
+  "k": 10,
+  "explain_floor": 0.03,
+  "policies": {
+    "s5b_snapshot_prior": {
+      "quality_prior": "snapshot",
+      "related_confidence": false,
+      "min_votes": 0
+    },
+    "pool_prior": {
+      "quality_prior": "pool",
+      "related_confidence": false,
+      "min_votes": 0
+    },
+    "pool_prior_related_confidence": {
+      "quality_prior": "pool",
+      "related_confidence": true,
+      "min_votes": 0
+    },
+    "vote_floor_100": {
+      "quality_prior": "snapshot",
+      "related_confidence": false,
+      "min_votes": 100
+    },
+    "pool_prior_confidence_floor_50": {
+      "quality_prior": "pool",
+      "related_confidence": true,
+      "min_votes": 50
+    }
+  },
+  "default_policy": {
+    "quality_prior": "pool",
+    "related_confidence": true,
+    "min_votes": 0
+  },
+  "recommended_policy": "pool_prior_related_confidence",
+  "inputs": {
+    "snapshot_sha256": "a23e4a0b654634696ccc76fd5957ab4abf9abe01b161064b832d95a88ceab00c",
+    "live_fixture_sha256": "a0b39228b5fe3f48a7f90118f1d789d26ff1f4f5353ff8bda1db28548bd5ff28",
+    "live_fixture_recorded": "2026-10-20",
+    "feature_version": "tfidf-v1-ccf0b832fb0f31b94cf8f219"
+  },
+  "runtime": {
+    "python": "3.13.5",
+    "numpy": "2.3.2",
+    "scikit_learn": "1.7.1"
+  },
+  "world_proxy": {
+    "protocol": {
+      "seed": 2026,
+      "starter_films": 312,
+      "world_only_films": 135,
+      "profiles": 80,
+      "k": 10,
+      "held_out_edge": "external like -> target removed from related titles",
+      "label": "transductive graph proxy; not independent user evidence"
+    },
+    "full_metadata": {
+      "external_like_unavailable": 0,
+      "variants": {
+        "A_snapshot": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.3534
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5123,
+          "diversity": 0.9283,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "B_dynamic_inputs": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4453
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5369,
+          "diversity": 0.9288,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "C_dynamic_retrieval": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3976
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2404
+          },
+          "retrieval_recall": 0.8,
+          "coverage": 0.6353,
+          "diversity": 0.9239,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        }
+      },
+      "policies_on_common_pool": {
+        "s5b_snapshot_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6304,
+            "ndcg@10": 0.3891
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2453
+          }
+        },
+        "pool_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6304,
+            "ndcg@10": 0.3891
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2453
+          }
+        },
+        "pool_prior_related_confidence": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3976
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2404
+          }
+        },
+        "vote_floor_100": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6304,
+            "ndcg@10": 0.3891
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2453
+          }
+        },
+        "pool_prior_confidence_floor_50": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3976
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3824,
+            "ndcg@10": 0.2404
+          }
+        }
+      }
+    },
+    "summary_only_candidates": {
+      "external_like_unavailable": 0,
+      "variants": {
+        "A_snapshot": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.3534
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5123,
+          "diversity": 0.9283,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "B_dynamic_inputs": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4453
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5369,
+          "diversity": 0.9288,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "C_dynamic_retrieval": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4445
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1117
+          },
+          "retrieval_recall": 0.8,
+          "coverage": 0.6063,
+          "diversity": 0.9257,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        }
+      },
+      "policies_on_common_pool": {
+        "s5b_snapshot_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4435
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1138
+          }
+        },
+        "pool_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4435
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1138
+          }
+        },
+        "pool_prior_related_confidence": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4445
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1117
+          }
+        },
+        "vote_floor_100": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4435
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1138
+          }
+        },
+        "pool_prior_confidence_floor_50": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.4445
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2059,
+            "ndcg@10": 0.1117
+          }
+        }
+      }
+    },
+    "unfamiliar_external_like": {
+      "external_like_unavailable": 80,
+      "variants": {
+        "A_snapshot": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.3534
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5123,
+          "diversity": 0.9283,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "B_dynamic_inputs": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6957,
+            "ndcg@10": 0.3534
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.0,
+            "ndcg@10": 0.0
+          },
+          "retrieval_recall": 0.575,
+          "coverage": 0.5123,
+          "diversity": 0.9283,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        },
+        "C_dynamic_retrieval": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3363
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2941,
+            "ndcg@10": 0.1702
+          },
+          "retrieval_recall": 0.8,
+          "coverage": 0.5973,
+          "diversity": 0.9239,
+          "dislike_violations": 0,
+          "invalid_because": 0
+        }
+      },
+      "policies_on_common_pool": {
+        "s5b_snapshot_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6087,
+            "ndcg@10": 0.3075
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3235,
+            "ndcg@10": 0.1843
+          }
+        },
+        "pool_prior": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6087,
+            "ndcg@10": 0.3075
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3235,
+            "ndcg@10": 0.1843
+          }
+        },
+        "pool_prior_related_confidence": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3363
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2941,
+            "ndcg@10": 0.1702
+          }
+        },
+        "vote_floor_100": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6087,
+            "ndcg@10": 0.3075
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.3235,
+            "ndcg@10": 0.1843
+          }
+        },
+        "pool_prior_confidence_floor_50": {
+          "starter_targets": {
+            "n": 46,
+            "hr@10": 0.6522,
+            "ndcg@10": 0.3363
+          },
+          "world_targets": {
+            "n": 34,
+            "hr@10": 0.2941,
+            "ndcg@10": 0.1702
+          }
+        }
+      }
+    }
+  },
+  "live_replay": {
+    "s5b_snapshot_prior": {
+      "discovered_top10": 0.475,
+      "discovered_top20": 0.4958,
+      "median_votes_discovered_top20": 1170.65,
+      "under_100_votes_top20": 0.0583,
+      "under_300_votes_top20": 0.175,
+      "mean_rating_top20": 7.3438,
+      "diversity_top10": 0.935,
+      "because_share_top20": 0.8333,
+      "dislike_violations": 0,
+      "invalid_because": 0
+    },
+    "pool_prior": {
+      "discovered_top10": 0.4417,
+      "discovered_top20": 0.4708,
+      "median_votes_discovered_top20": 1169.1,
+      "under_100_votes_top20": 0.0625,
+      "under_300_votes_top20": 0.1708,
+      "mean_rating_top20": 7.3779,
+      "diversity_top10": 0.9389,
+      "because_share_top20": 0.8292,
+      "dislike_violations": 0,
+      "invalid_because": 0
+    },
+    "pool_prior_related_confidence": {
+      "discovered_top10": 0.375,
+      "discovered_top20": 0.3875,
+      "median_votes_discovered_top20": 2115.8,
+      "under_100_votes_top20": 0.0375,
+      "under_300_votes_top20": 0.1167,
+      "mean_rating_top20": 7.4975,
+      "diversity_top10": 0.9436,
+      "because_share_top20": 0.8292,
+      "dislike_violations": 0,
+      "invalid_because": 0
+    },
+    "vote_floor_100": {
+      "discovered_top10": 0.475,
+      "discovered_top20": 0.4708,
+      "median_votes_discovered_top20": 1386.25,
+      "under_100_votes_top20": 0.0,
+      "under_300_votes_top20": 0.1292,
+      "mean_rating_top20": 7.3688,
+      "diversity_top10": 0.9373,
+      "because_share_top20": 0.8333,
+      "dislike_violations": 0,
+      "invalid_because": 0
+    },
+    "pool_prior_confidence_floor_50": {
+      "discovered_top10": 0.375,
+      "discovered_top20": 0.3875,
+      "median_votes_discovered_top20": 2115.9,
+      "under_100_votes_top20": 0.025,
+      "under_300_votes_top20": 0.1083,
+      "mean_rating_top20": 7.5071,
+      "diversity_top10": 0.9426,
+      "because_share_top20": 0.8292,
+      "dislike_violations": 0,
+      "invalid_because": 0
+    }
+  },
+  "vocabulary": {
+    "discovered_unique": 367,
+    "median_features_discovered": 23.0,
+    "median_features_snapshot": 40.0,
+    "zero_feature_discovered": 0,
+    "under_10_features_discovered": 3,
+    "median_token_share_in_vocabulary": 0.6977,
+    "original_languages": {
+      "en": 308,
+      "ja": 31,
+      "ko": 12,
+      "es": 5,
+      "fr": 2,
+      "pt": 2,
+      "de": 2,
+      "zh": 1
+    },
+    "external_preferences": {
+      "resolved": 5,
+      "applied": 5,
+      "median_features": 31.0
+    }
+  }
+}

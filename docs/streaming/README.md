@@ -39,7 +39,7 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S5A: Dynamic preferences](05a-dynamic-preferences.md) | Apply external likes/dislikes using resolved metadata and honest pending states | S4 and S5 | Implemented; API/static/boot tests and focused desktop/mobile browser checks passed |
 | [S5B: Dynamic discovery](05b-dynamic-discovery.md) | Retrieve new recommendation candidates beyond the starter snapshot | S5A | Implemented; deterministic/live API checks passed, browser review pending |
 | [S5C: Scalable ranking](05c-scalable-ranking.md) | Sparse feature/profile scoring and bounded reranking instead of growing global matrices | S5A and S5B | Implemented; tests, benchmark and live API checks passed, browser review pending |
-| [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Planned |
+| [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Evaluated; calibration adopted, embeddings deferred; human relevance ratings pending |
 | [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Planned |
 | [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Planned |
 
@@ -51,7 +51,7 @@ The older recommender evaluation/model experiments remain recorded in [ITERATION
 
 Implementation order: **S5 -> S5A -> S5B -> S5C -> S5D -> S6 -> S7**. The current 447-film snapshot remains the starter/offline fallback. The new phases make external likes/dislikes usable, retrieve fresh candidates and score bounded pools as the catalogue evolves. Candidate budgets are per-request limits, not a permanent 447/500-film discovery limit. The existing snapshot builder cap remains until deliberately revisited.
 
-Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. S5A external preferences are implemented with API/client/parity evidence. S5B candidate retrieval and S5C bounded sparse ranking are implemented with deterministic, benchmark and live API evidence; S5D evaluation remains planned; focused S5A reload, filter and detail flows pass isolated desktop/mobile browser checks; broader user review remains pending.
+Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. S5A external preferences are implemented with API/client/parity evidence. S5B candidate retrieval and S5C bounded sparse ranking are implemented with deterministic, benchmark and live API evidence. S5D recorded the offline proxy, live replay, rendered-browser walkthrough and a popularity calibration; its human relevance ratings remain pending; focused S5A reload, filter and detail flows pass isolated desktop/mobile browser checks; broader user review remains pending.
 
 ## Implementation boundaries
 

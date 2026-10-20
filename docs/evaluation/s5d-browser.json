@@ -1,0 +1,118 @@
+{
+  "recorded": "2026-10-20",
+  "browser": "msedge.exe",
+  "likes": "862,14160,354912",
+  "backend": {
+    "scenario": "backend",
+    "steps": [
+      {
+        "name": "boot",
+        "ms": 1229,
+        "picks": 14,
+        "discovered_badges": 4,
+        "subtitle": "Top Picks for You Re-ranked live from every like and pass includes 55 newly discovered films"
+      },
+      {
+        "name": "discovered_details",
+        "title": "Rock Dog",
+        "provenance": true,
+        "because": "Because you loved: Coco",
+        "reason_line": "",
+        "watch_button": true
+      },
+      {
+        "name": "like_discovered",
+        "fetch_ms": 291,
+        "visible_ms": 358,
+        "server_ms": 209
+      },
+      {
+        "name": "watch",
+        "provider_host": "cinesrc.st",
+        "uses_tmdb_id": true
+      },
+      {
+        "name": "dislike_discovered",
+        "title": "Rock Dog 2: Rock Around the Park",
+        "fetch_ms": 326,
+        "visible_ms": 326,
+        "server_ms": 210
+      },
+      {
+        "name": "rapid_toggles",
+        "requests": 1,
+        "aborted": 0,
+        "final_liked": true,
+        "absent_from_picks": true
+      }
+    ],
+    "errors": [],
+    "longtasks": {
+      "count": 4,
+      "total_ms": 238,
+      "max_ms": 79
+    },
+    "recommend_requests": [
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 187
+      },
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 250
+      },
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 209
+      },
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 221
+      },
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 210
+      },
+      {
+        "status": 200,
+        "aborted": false,
+        "ms": 211
+      }
+    ],
+    "console_errors": []
+  },
+  "static": {
+    "scenario": "static",
+    "steps": [
+      {
+        "name": "boot",
+        "ms": 1035,
+        "picks": 14,
+        "discovered_badges": 0,
+        "subtitle": "Top Picks for You Re-ranked live from every like and pass"
+      },
+      {
+        "name": "static_like",
+        "title": "Toy Story 2",
+        "visible_ms": 271
+      }
+    ],
+    "errors": [],
+    "longtasks": {
+      "count": 2,
+      "total_ms": 221,
+      "max_ms": 136
+    },
+    "recommend_requests": [],
+    "console_errors": []
+  },
+  "screenshots": {
+    "desktop": "docs/evaluation/screens/s5d-discovered-details-desktop.png",
+    "mobile": "docs/evaluation/screens/s5d-discovered-details-mobile.png"
+  }
+}
