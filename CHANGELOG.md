@@ -5,34 +5,215 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
-### Fixed
-- Restore cached external features before the first recommendation request after reload, keep explicit Because you loved shelves independent of Top Picks playback/mood filters, and enable content-based More Like This for external movies. Full suite: 111 passed; isolated desktop/mobile Chrome reload, filter and details checks passed.
-- Keep the home banner populated with clearly labelled broader suggestions when recent-playback filtering has no eligible picks. Add Show all picks recovery, clear stale banner movies/timers, and reject late filter responses. Full suite: 98 tests, including seven banner regression cases.
+### Status as of 2026-10-20
 
-### Added
-- S5A external explicit preferences: complete English metadata resolves to versioned fitted TF-IDF features; positive/negative aggregates influence snapshot picks, Taste DNA and content-based Because you loved rows without refitting or growing matrices. Device-local features persist separately from preferences, with pending/unavailable/stale states, bounded background lookup, retry and compatible static fallback. Dislikes win conflicting stored choices. Full suite: 109 passed; live Sintel API/client checks passed; rendered-browser acceptance pending.
-- Dedicated responsive search gallery with landscape artwork, visible titles/years, clear-search control and home restoration; automatic 300 ms title search, pagination and retry behavior are retained. Five new interaction cases pass; full suite: 99 passed. Rendered desktop/mobile checks remain pending.
-- Planned S5A-S5D iterations for external likes/dislikes, dynamic candidate discovery, scalable ranking and evaluation before S6 release readiness and S7 Render deployment; semantic embeddings remain an optional measured follow-on.
-- Planned S7 iteration for full-project Render deployment, separated from S6 release readiness, with build/start commands, private credentials, disposable-cache policy, hosted checks and rollback.
-- S5 opt-in viewing-aware recommendations with measured unique watch intervals, capped repeat-session influence, ?Because you watched? rows and matching Python/browser scoring.
-- Device-local recent-playback filtering with a seven-day TTL, provider-specific failure invalidation and eligibility applied before top-k/MMR.
-- Browser history-schema migration without inferring watch time from resume positions; clearing history preserves explicit taste and Watchlist.
-- Bounded snapshot refresh with a 500-film budget and optional prioritized TMDB IDs; no model expansion was performed.
-- Reproducible viewing-signal evaluation, model/runtime measurements and curated/TMDB parity tests; contract and parity checks pass; one informal relevance review is recorded, with broader relevance/browser acceptance pending.
-- S4 live TMDB search with pagination, metadata-language selection, original/alternative titles, remote detail/player/watchlist support and explicit model membership.
-- Bounded SQLite search/detail cache with schema versioning, refresh timestamps, stale fallback and sanitized timeout/auth/rate-limit errors. Static/curated builds retain snapshot search.
-- Separate browser catalogue controller with debounce, cancellation, late-response rejection and saved remote metadata; discovery does not rebuild recommendation matrices.
-- Device-local recommendation profiles that persist likes, dislikes and mood, restore before the first recommendation request, migrate legacy likes once, and isolate TMDB/curated IDs. Existing watchlist and viewing-history storage remains independent.
-- Custom dark source menu with red selected states, SVG icons, keyboard navigation and outside-click dismissal.
-- Autoplay requests with position preservation on manual source changes and Start over; CineSrc also receives its documented play command when ready.
-- Movie player preview with CineSrc, VidLink and VidSrc adapters and viewer-controlled source selection; errors and timeouts never change providers automatically.
-- Standard cross-origin movie iframes without sandbox restrictions, as requested after VidLink and VidSrc rejected sandboxed playback. Origin/window validation of player messages remains enabled.
-- Browser-local resume positions, preferred source, Continue Watching, Start over, history removal and a separate Watchlist.
-- Explicit catalogue origin/TMDB IDs in the API and static export, preventing curated ID collisions during playback.
-- Offline tests for provider message validation, one-frame cleanup, manual switching and progress persistence.
-- S1-S6 streaming roadmap and a live-playback validation record. The user confirms the sources work after the iframe compatibility change; autoplay, resume and full UI verification remain pending.
+This section records the implemented streaming work on `feature/streaming-platform` through `2d590cd`. These changes have not been assigned a new release version or deployed to Render. The versioned entries below retain the earlier Iterations 1-3 and static-hosting release history.
 
-Planned work is tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md).
+| Iteration | Implementation and validation status |
+|---|---|
+| Iteration 1 / v0.1.0 | Original hybrid recommender, API, curated dataset and first UI implemented |
+| Iteration 2 / v0.2.0 | Poster cache and Netflix-style redesign implemented |
+| v0.2.1 | Browser engine, Python/JavaScript parity and GitHub Pages workflow implemented |
+| Iteration 3 / v0.3.0 | TMDB snapshot, graph recommendations, quality prior, trailers and visual polish implemented |
+| S1 | Source adapters and canonical identities implemented; detailed provider playback proof remains incomplete |
+| S2 | Movie player, manual source switching, custom selector and autoplay requests implemented; broader live playback acceptance remains incomplete |
+| S3 | Device-local viewing state, independent Watchlist and persistent taste implemented; detailed live resume acceptance remains incomplete |
+| S4 | Live search, remote details, metadata caching and landscape search gallery implemented |
+| S5 | Opt-in measured-viewing recommendations and recent-playback filtering implemented; proxy evaluation and parity passed; broader relevance review remains open |
+| S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
+| S5B-S5D, S6, S7 | Planning documents added; these phases have not been implemented |
+
+The active recommendation candidates remain the **447-film TMDB snapshot**, with the separate **60-film curated dataset** retained. Search can discover other movies, and S5A can use their resolved explicit preferences, without automatically adding them to the recommendation candidate pool.
+
+### S1 - Source adapters and movie identity (2026-10-20)
+
+Implementation commit: `59853c9`. Phase: [source foundation](docs/streaming/01-source-foundation.md).
+
+- Added `frontend/providers.js` with CineSrc, VidLink and VidSrc .sh adapters, labels, enabled flags, fixed embed origins, documentation references and provider capabilities.
+- Added validated movie URL construction using explicit TMDB IDs, supported resume parameters and provider-specific player options.
+- Added provider-message parsing and normalized playback events where supported; malformed payloads and unsupported events are ignored.
+- Added canonical references containing catalogue origin, internal ID and explicit TMDB mapping. Curated IDs cannot be mistaken for unrelated TMDB IDs.
+- Included dataset origin and explicit TMDB identities in loaded movies, catalogue-builder output, API responses and browser-model exports.
+- Added offline identity, URL-builder and message-fixture checks. Missing mappings produce an unavailable state rather than a fabricated movie URL.
+
+### S2 - Player, source selection and compatibility (2026-10-20)
+
+Implementation commit: `a813113`; application integration shipped in `658ad76`. Phase: [player and manual switching](docs/streaming/02-player-and-manual-switching.md).
+
+- Added `frontend/player.js` and the responsive movie-player overlay with title, source selector, status/recovery text, close control and player host.
+- Added Watch movie actions to mapped movie details, previews and billboard flows while retaining separate trailer actions and recommendation explanations.
+- Selected CineSrc as the default, with VidLink and VidSrc available as manually chosen alternatives; an enabled saved preference can be used when opening a player.
+- Kept one active movie iframe. Manual changes save progress, dispose the previous frame/listeners and create the selected source; closing or opening another film invalidates stale callbacks.
+- Validated player-message origin, active iframe window, payload/movie identity and session generation before accepting provider events.
+- Kept the source selector outside the embed and usable when telemetry is missing. Errors and silent-player timeouts show recovery text and never switch providers automatically.
+- Added `frontend/source-picker.js`: a dark menu with a red selected state, shared SVG icons, highlighted options, ARIA selection/expanded state, keyboard navigation, Enter/Space selection, Home/End, Escape, Tab and outside-click dismissal.
+- Selecting the already active source closes the menu without reloading the player; destroying the menu removes its listeners.
+- Added autoplay requests when manually changing sources or choosing Start over, preserving the saved position where supported. Initial player opening remains opt-in; CineSrc also receives its play command after ready when autoplay was requested.
+- Changed movie embeds to standard cross-origin iframes without `sandbox` after the user reported VidLink/VidSrc sandbox errors and explicitly requested that compatibility change. Origin/window validation remains active; all three adapters are enabled.
+- Added focus restoration, billboard suspension during overlays, disposal and separate movie/trailer handling.
+- User feedback confirms the sources play after sandbox removal. This does not complete the per-film/provider/device matrix, autoplay-on-switch or live resume checks in [playback validation](docs/streaming/PLAYBACK_VALIDATION.md).
+
+### S3 - Device-local viewing state and taste persistence (2026-10-20)
+
+Implementation commit: `658ad76`. Phase: [progress and watchlist](docs/streaming/03-progress-and-watchlist.md).
+
+- Added `frontend/viewing.js` with versioned browser storage for preferred source, canonical movie keys, progress position, duration, update time and completion state.
+- Saved validated progress periodically, on pause and before player disposal; saved again on page-hide/visibility changes. Invalid/non-finite times and implausible durations are rejected.
+- Transferred a valid position into a newly selected provider's supported resume URL. Exact continuity across providers or film editions is not claimed.
+- Added Resume/Start over behavior, Continue Watching, removal of individual history and a separate Watchlist action/row.
+- Kept Watchlist, love-based My List, explicit dislikes, mood and viewing history independent. Saving to Watchlist does not like a movie; clearing history does not reset taste or Watchlist.
+- Added `frontend/preferences.js` and `cinemagic:preferences:v2`: likes, dislikes and mood persist without login and restore before recommendations. Migrated legacy `cinemagic:v1` likes once.
+- Kept TMDB and curated taste profiles separate, preventing numeric-ID collisions. Preferences are local to the browser profile and site origin; accounts and cross-device synchronization were not added.
+- Added validation and graceful handling for corrupt/denied storage. Taste write failures show a session-only warning; reset cannot re-import cleared legacy likes.
+- Added player/preferences integration tests covering switching, stale events, history separation, local restoration, migration and denied storage.
+
+### S4 - Live discovery and metadata cache (2026-10-20)
+
+Implementation commit: `3bb0863`. Phase: [search and catalogue](docs/streaming/04-search-and-catalogue.md).
+
+- Added `backend/catalog.py` and private TMDB-backed discovery beside the bounded recommender, keeping credentials on the server.
+- Added `/api/capabilities`, validated `/api/search?q=...&page=...&language=...` and `/api/movies/{id}?language=...` routes before the static mount.
+- Added title-query validation, canonical-ID validation, pagination through pages 1-500, metadata-language selection and explicit `in_model` membership.
+- Preserved original title/language, alternative titles, genres, keywords, overview, artwork, runtime, cast, director and trailer metadata where available. Metadata language does not select playback audio.
+- Added a versioned SQLite metadata cache capped at 5,000 entries: search TTL one hour, detail TTL one day, language-specific keys, refresh timestamps and stale fallback.
+- Added bounded upstream timeouts and sanitized authentication, rate-limit, not-found and malformed-response handling. Credentials are not returned in public capabilities or errors.
+- Added `frontend/catalogue.js` for remote records, pagination, deduplication, remembered metadata and capability detection. Search summaries do not overwrite fuller compatible details.
+- Added a 300 ms typing debounce, cancellation of earlier searches, sequence-based rejection of late responses, loading/empty/error states, Retry search and Load more.
+- Supported remote details, playback, taste controls, Watchlist and restored saved-title metadata without appending discovered movies to model matrices.
+- Kept static/curated search scoped to snapshot and saved metadata rather than pretending a browser-only deployment can privately call TMDB.
+- Initially showed unindexed similar-title lookup as unavailable; S5A later adds content-based snapshot neighbours without creating a new candidate catalogue.
+- Recorded initial validation: 50 pytest tests passed; Batman pages 1/2 returned 20 results each; Sintel (`tmdb:45745`) details loaded in English/Hindi outside the model; page 501 returned HTTP 422. The model stayed at 447 films.
+
+### S4 follow-up - Landscape search gallery (2026-10-20)
+
+Commit: `add890c`.
+
+- Replaced the search carousel among home recommendations with a dedicated results view. A nonempty query hides the billboard, moods, onboarding and ordinary rows.
+- Added landscape artwork using backdrops where available, poster/gradient fallbacks, visible titles/years and the existing movie/taste interactions.
+- Added a responsive grid with six columns on wide desktop layouts and two on phones, retaining the app's dark/red visual design.
+- Added a clear-search button, search/result association, focus styling and narrow-screen search positioning. Clear, Escape and navigation restore home browsing without resetting taste.
+- Kept automatic 300 ms fetching, metadata-language selection, pagination, retry and Enter-to-search-by-mood. Composition input waits for the completed text.
+- Removed the previous 30-title cap from static search results; all matching local titles can appear. Live results remain paginated.
+- Made row-scroll restoration tolerate a search grid without a horizontal scroller; entering search resets page scroll once rather than on every keystroke.
+- Added five interaction cases for automatic fetching, clear/stale-response behavior, pagination failures, static matching/escaping and composition/Escape.
+- Recorded 99 passing pytest tests and updated HTTP-served assets. A live `spider` query returned 20 movies, 17 with backdrops. Later S5A browser checks exercised the gallery when opening Sintel.
+
+### S5 - Opt-in viewing-aware recommendations (2026-10-20)
+
+Implementation commit: `36da399`. Phase: [viewing-aware recommendations](docs/streaming/05-recommendations.md). Results: [evaluation](docs/EVALUATION.md), [raw report](docs/evaluation/s5-results.json) and [informal review](docs/evaluation/s5-human-review.json).
+
+- Added a version-1 viewing request contract with measured signals, provider playback evidence, opt-in flags and optional canonical eligibility keys; Python/browser validation bounds payloads and numeric values.
+- Measured short forward-playing intervals against wall time in a visible tab; merged overlaps and broke continuity on seeks, pause/background gaps, source changes, errors and implausible progress.
+- Required both 120 measured seconds and 30% unique coverage before a movie contributes a viewing signal. Substantial repeat sessions raise strength from 0.15 to 0.20 to 0.25; repeated Play events alone do not count.
+- Kept resume/completion separate from measured coverage. Old resume positions, scrubbing to the end, iframe loads, play clicks and source errors do not manufacture watched time or dislikes.
+- Added Use viewing history as an opt-in experiment. Qualified viewing contributes at most 10%; the explicit baseline retains 90%, and explicit dislikes override conflicting positives.
+- Added Because you watched rows, a viewing score component and corresponding explanations while keeping Taste DNA/confidence based on explicit taste.
+- Added Top picks: played recently on this device. Qualification requires ten measured playing seconds within seven days, with provider-specific error invalidation; expired, future or absent playback evidence does not qualify.
+- Applied recommendation eligibility before normalization, top-pool truncation, MMR and top-k. Search, Watchlist and general catalogue browsing remain available when strict picks are empty.
+- Migrated viewing storage from schema 1 to 2 without inferring evidence from old progress. Clearing history during active playback cannot resurrect forgotten evidence and preserves likes, mood and Watchlist.
+- Retained stateless API requests and device-local options/evidence; viewing history is included only for enabled options. Unknown unindexed viewed titles stay history-only.
+- Kept Python and JavaScript scoring, explanations, signals and rows in parity on both curated and TMDB catalogues.
+- Added an explicit snapshot-refresh budget of at most 500 requested IDs with optional prioritized TMDB IDs. No dataset enlargement or snapshot rebuild was performed.
+- Added reproducible proxy evaluation with fixed profiles/seed, provenance hashes, popularity/explicit/viewing comparisons, HR@10, NDCG@10, coverage/diversity and runtime/model-size measurements.
+- Recorded unchanged HR@10 and small NDCG differences on synthetic/overlapping evaluation data; these do not establish real-user quality gains. Recorded one broadly positive user review and the reported Tenet discrepancy. The feature remains opt-in pending broader review.
+- Recorded 98 passing pytest tests, including 26 JavaScript playback/preferences cases and seven catalogue cases, plus live local API and static-export checks. The active model remained 447 films.
+
+### S5 follow-up - Empty-filter banner recovery (2026-10-20)
+
+Commit: `11fb898`.
+
+- Fixed a blank front banner when recent-playback filtering has no eligible picks.
+- Retained the strict Top Picks empty state while requesting broader banner suggestions with only the recent-playback constraint removed; mood, explicit taste and the viewing-history preference remain.
+- Labelled broader suggestions More to discover, without presenting them as recently verified playback.
+- Added Show all picks recovery, which turns off only the recent-playback filter.
+- Cleared stale banner movies, backgrounds, poster, dots and rotation timers when neither strict nor broader picks exist; added recovery actions.
+- Rejected late broader responses after filter changes and kept fallback failures usable.
+- Added seven regression cases using real app closures and the exported static engine; recorded a passing 98-test suite at that checkpoint.
+
+### S5A - External likes/dislikes and feature resolution (2026-10-20)
+
+Implementation commit: `cadd680`. Phase and evidence: [dynamic preferences](docs/streaming/05a-dynamic-preferences.md).
+
+- Added `backend/features.py`, `backend/preferences.py` and `frontend/preference-resolver.js` for resolved preferences on movies outside the snapshot.
+- Saved the explicit choice immediately, then retrieved complete English feature metadata through the validated private `/api/preferences/tmdb/{id}` endpoint. Display metadata language remains independent.
+- Shared genre normalization, keyword/person slugs and weighted document construction between snapshot and external features; retained byte-equivalent feature documents for the existing datasets.
+- Created feature-version identifiers from the schema/language, fitted vocabulary/IDF and snapshot documents; exposed compatible metadata through API capabilities/meta and browser exports.
+- Transformed metadata with the existing fitted TF-IDF vocabulary, without fitting again, adding movie IDs or expanding similarity matrices. Unseen terms are ignored; zero-usable-feature movies are unavailable rather than assigned fictional similarity.
+- Added a version-1 `external_preferences` contract: signed sparse aggregate, resolved positive/negative counts, supported genre/tag weights and up to two positive explanation seeds.
+- Validated versions, finite values, dimensions, duplicate indices/terms, counts and active seed identities. Removed/reversed preferences cannot be reintroduced by late metadata.
+- Added resolved external likes/dislikes to positive/negative content profiles, Taste DNA, confidence and Because you loved rows. Unresolved choices are counted separately rather than represented as already applied.
+- Normalized available scoring weights; external metadata supplies content evidence rather than invented collaborative ratings. Marked unavailable score components and retained S5's 10% viewing cap.
+- Made dislikes win conflicting imported preferences. Kept exact exclusions and a softer similarity penalty rather than a genre-wide ban.
+- Added Applied, Pending, Unavailable and stale-feature states, per-title feedback, Retry metadata, missing-title placeholders and honest storage/version error messages.
+- Hydrated at most two choices concurrently in the client with 30-second fetch limits; serialized server hydration and reused a 512-record feature LRU plus the existing metadata cache.
+- Stored derived features separately in `cinemagic:preference-features:v1`. Capped the persistent feature cache at 200 records and 2 MiB of estimated UTF-16 storage, shrinking further on quota failures; active uncached features remain usable in session and rehydrate after reload.
+- Preserved preference IDs when feature storage fails or entries are evicted; retained a bounded inactive session cache. Made the existing 10,000-per-side preference limit visible for new choices and bounded API lists accordingly.
+- Added compatible offline/static reuse of cached vectors or complete cached English metadata; fresh/incompatible titles remain pending when private backend lookup is unavailable.
+- Added negative-only, missing-vocabulary/keywords, unavailable metadata, storage denial, cache eviction, retry, version mismatch, stale response and Python/browser transform/ranking checks.
+- Recorded 109 passing pytest tests at the feature checkpoint, ten resolver lifecycle cases, static export and live Sintel resolution: 24 nonzero English features, no model growth and changed personalized picks. Client-store reconstruction checks passed; later user feedback exposed the full-app issues fixed below.
+
+### S5A follow-up - Restore personalized picks and related movies (2026-10-20)
+
+Commit: `2d590cd`.
+
+- Investigated user feedback that Sintel remained Applied after refresh while recommendations appeared to revert and similar films were missing. The explicit like was saved; full-app startup and shelf filtering were incomplete.
+- Configured/restored cached external features before the first recommendation request after reload, removing the initial unpersonalized request. Added a five-second metadata deadline, usable pending fallback and contract-configuration retry.
+- Kept external Because you loved shelves independent of Top Picks mood/playback eligibility, matching indexed shelves; explicit liked/disliked candidates remain excluded. A viewing-based Odyssey shelf does not replace or relabel the Sintel shelf.
+- Extended `/api/movies/{id}/similar` to resolve external TMDB titles through the bounded feature service and return content-based snapshot neighbours, with validated IDs and `k` from 1 to 30.
+- Added matching Python/browser external-similarity methods and enabled More Like This in external movie details. Static mode uses compatible cached vectors or complete English metadata; empty/unavailable outcomes stay explicit.
+- Kept movie/overlay generation checks so late similar-title responses cannot replace a newer dialog; filtered explicit dislikes from displayed related cards.
+- Added two real app-bootstrap regression cases: delayed feature configuration across two boots and metadata-timeout recovery. Expanded API/parity coverage for direct external similarity and filtered explicit shelves.
+- Recorded **111 passing pytest tests** and a successful static export. These are the latest application regression results, not a new run for this documentation update.
+- Verified full page loads/reloads in an isolated headless Chrome profile: first request included Sintel's external profile, the same personalized picks survived refresh, and its explicit related shelf remained visible with synthetic The Odyssey history and both viewing switches.
+- Verified nine related cards in Sintel's details and visually inspected desktop 1440 x 1000 and mobile 390 x 844 screenshots. The test profile contained synthetic data; user browser storage was not read or changed. Temporary browser artifacts were removed afterward.
+- Left broader human relevance, locale/device and live third-party player acceptance visible; these focused checks do not complete every release/deployment requirement.
+
+### Research, documentation and plans added (2026-10-20)
+
+Documentation commits: `f032f77`, `bae6b09`, `2fdaadc`.
+
+- Added the [provider research directory](docs/STREAMING_PROVIDERS.md), [streaming feasibility notes](docs/STREAMING_FEASIBILITY.md), phased implementation roadmap and playback evidence/checklist.
+- Recorded the user's final preference for **manual** source switching, replacing the earlier automatic-failover proposal. The larger provider list is research/backlog; only the three selected adapters are integrated.
+- Added S6 release-readiness planning for provider configuration, operational checks, actual browser/playback evidence, regressions and rollback. S6 implementation remains pending.
+- Added S7 Render deployment planning for one FastAPI Web Service serving frontend/API/model, private credentials, build/start/health settings, disposable cache behavior, hosted acceptance and rollback. No Render service has been created or deployed.
+- Inserted S5A-S5D before S6/S7 while preserving those labels. S5A is now implemented; S5B dynamic candidates, S5C scalable ranking and S5D acceptance remain planned.
+- Kept semantic embeddings as an optional measured follow-on, rather than an implemented model or a deployment prerequisite.
+- Updated README, architecture, evaluation notes, iteration status, source evidence and changelog alongside completed work. Kept the older Iterations 4-6 plans separate; partial overlapping features do not mark those iterations complete.
+- Consolidated this changelog against the existing Git history and phase records, retaining prior release entries, separating planning from implementation, and recording the latest validation limits.
+
+### Implementation commit index
+
+All entries below existed before this changelog consolidation. Commits from 2026-10-20 are unreleased streaming-branch work; the earlier versioned history follows this index.
+
+| Date | Commit | Change |
+|---|---|---|
+| 2026-10-20 | `2d590cd` | S5A refresh ordering, filtered shelves and external related-film fix |
+| 2026-10-20 | `cadd680` | S5A resolved external preferences |
+| 2026-10-20 | `add890c` | Automatic-search landscape gallery |
+| 2026-10-20 | `2fdaadc` | S5A-S5D upgrade planning before S6/S7 |
+| 2026-10-20 | `bae6b09` | S7 Render deployment plan |
+| 2026-10-20 | `11fb898` | Empty recent-playback banner recovery |
+| 2026-10-20 | `36da399` | S5 opt-in viewing-aware ranking |
+| 2026-10-20 | `3bb0863` | S4 live discovery and metadata cache |
+| 2026-10-20 | `658ad76` | S3 viewing/taste persistence and app integration |
+| 2026-10-20 | `a813113` | S2 player and custom manual source selector |
+| 2026-10-20 | `59853c9` | S1 adapters and explicit identities |
+| 2026-10-20 | `f032f77` | Streaming research and phased roadmap |
+| 2026-10-16 | `0b6576d` | Merge TMDB feature branch into the v0.3.0 history |
+| 2026-10-16 | `55abf64` | v0.3.0 release metadata |
+| 2026-10-16 | `73dd67a` | SVG icon system and circular avatar polish |
+| 2026-10-16 | `9b2a805` | TMDB snapshot and mood-search tuning |
+| 2026-10-16 | `69d8a35` | TMDB builder and real-data engine support |
+| 2026-10-16 | `b951a55` | GitHub Pages test/export/deployment workflow |
+| 2026-10-16 | `047be1e` | Static in-browser recommendation engine |
+| 2026-10-16 | `7e18f44` | Initial README, architecture, algorithm, iteration and changelog docs |
+| 2026-10-16 | `a85ba97` | Netflix-style billboard, rows, previews and drawer |
+| 2026-10-16 | `03759aa` | Wikipedia poster download/cache |
+| 2026-10-16 | `21b46be` | FastAPI recommendation/similarity/statistics endpoints |
+| 2026-10-16 | `55f4aa4` | Curated dataset and hybrid recommender |
+| 2026-10-16 | `7892761` | Project setup, launcher and dependencies |
+
+Further work and remaining acceptance are tracked in [docs/ITERATIONS.md](docs/ITERATIONS.md) and the [streaming roadmap](docs/streaming/README.md). Planned work above is not a release or deployment claim.
 
 ## [0.3.0] - 2026-10-16 (Iteration 3: real-world data with TMDB)
 
