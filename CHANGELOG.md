@@ -25,7 +25,7 @@ This section records streaming work through S7.2 and the authorized publication/
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Evaluation recorded; calibration adopted, embeddings deferred; owner relevance acceptance 2/2 overall on 21 October |
 | S6 | Candidate implemented; 143 tests and six browser scenarios passed; owner general playback sign-off received 21 October; detailed public-release evidence remains open |
-| S7 | S7.1/S7.2 complete; Free Singapore service live with 57 fallback and 74 live HTTPS checks; S7.3 browser/cold-start acceptance remains open |
+| S7 | S7.1/S7.2 complete; Free Singapore service live with 57 fallback and 74 live HTTPS checks; owner confirms hosted playback/manual switching and refresh persistence; detailed S7.3 browser/cold-start acceptance remains open |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
@@ -34,6 +34,12 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - General playback sign-off received (**"everything works well"**). Detailed film/source/device/region records, explicit autoplay results and public-offering terms remain unrecorded.
 - Remaining hosted browser/player, storage, cold-start and recovery acceptance in S7; no final release tag is claimed.
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S7.3 - Hosted owner acceptance follow-up (2026-10-21)
+
+- Recorded the owner's **"Both persistence and playback work"** response to the hosted Sintel (2010, TMDB 45745) exercise at **https://cinemagic-trbu.onrender.com**: like, refresh, watch and manually switch sources. This confirms the requested hosted playback/manual-switching flow and like/recommendation persistence across refresh.
+- Updated hosted deployment evidence, playback validation, S7 checklist and status. Left individual provider/device/country, resume/autoplay/fullscreen/captions, other saved-state fields, redeploy persistence and cold-start/cache-reset evidence open; no unreported result or full S7 completion is inferred.
+- Documentation only; no app configuration, running revision, release version or automated test result changed. The earlier 74 live HTTPS checks remain the recorded automated evidence.
 
 ### S7.2 - Create Render Free Singapore service (2026-10-21)
 

@@ -41,8 +41,12 @@ Automatic approval review rejected copying the local TMDB token to Render withou
 - An error-level log query from the second deployment's start through post-smoke returned no entries. This is a bounded observation, not a claim of future uptime.
 - Auto-deploy remained **off**, compute **free**, region **singapore**, and branch **main** when rechecked. Subsequent documentation-only commits do not alter the running revision automatically.
 
+## Owner hosted browser confirmation
+
+On **21 October 2026**, the owner was asked to use **https://cinemagic-trbu.onrender.com**, try **Sintel (2010, TMDB 45745)**, like it, refresh, watch and switch sources manually. The owner replied **"Both persistence and playback work"**. This records a passing owner check for the requested hosted flow: the like/recommendations survive refresh and playback/manual switching work. Browser/device/country, individual source results, resume position, autoplay, fullscreen and captions were not supplied. No per-source matrix or storage-survival result across a redeploy is inferred.
+
 ## Remaining hosted acceptance
 
-Live metadata search, pagination, external preferences and dynamic ranking passed after private token entry and redeployment. Complete the real hosted browser/player, device-local storage across refresh/redeploy, cache-reset and idle cold-start checks in [S7](../streaming/07-render-deployment.md). The configuration redeploy above establishes successful redeployment, but no browser profile was measured across it. API checks do not establish that third-party video plays or that browser autoplay/fullscreen/captions work. A hosted Sintel browser check was requested from the owner; no result is inferred while it is pending.
+Live metadata search, pagination, external preferences and dynamic ranking passed after private token entry and redeployment. The owner confirmed hosted playback/manual switching and like/recommendation persistence across refresh. Remaining checks in [S7](../streaming/07-render-deployment.md) include detailed player/device behavior, other saved-state fields, storage across a redeploy, cache reset and idle cold start. The configuration redeploy above establishes successful redeployment, but no browser profile was measured across it. API checks alone do not establish media playback; that functional confirmation comes from the owner's hosted report above.
 
 The full pinned-runtime regression suite and Linux CI already passed before deployment; see [package validation](S7_VALIDATION.md) and [GitHub validation](GITHUB_VALIDATION.md). This record does not claim all S7 acceptance checks are complete.

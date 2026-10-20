@@ -6,7 +6,13 @@ Date: 20 October 2026. Branch: `feature/streaming-platform`.
 
 Asked to check Sintel (2010, TMDB 45745) with the available sources and report playback, switching/resume, fullscreen/captions and browser/device/country, the owner replied **"everything works well"**. This records general functional sign-off on the requested playback exercise with no problems reported. The reply does not identify the film actually used, individual source outcomes, autoplay behavior, browser/device, country or provider terms. Those details are not inferred. The detailed matrix below remains an evidence-collection record, not a reason to request the same general confirmation again.
 
-The S5D relevance response was **2/2 overall**, recorded in [the review sheet](../evaluation/s5d-review.md). Public-hosted checks remain S7 work.
+The S5D relevance response was **2/2 overall**, recorded in [the review sheet](../evaluation/s5d-review.md).
+
+## S7 hosted owner confirmation: 21 October 2026
+
+For **https://cinemagic-trbu.onrender.com**, the owner was asked to try **Sintel (2010, TMDB 45745)**, like it, refresh, watch and manually switch sources, then report whether the like/recommendations persist and playback works. The owner replied **"Both persistence and playback work"**. Record the requested hosted flow as owner-confirmed: playback/manual switching and like/recommendation persistence across refresh pass. This is hosted-origin evidence in addition to the earlier local sign-off.
+
+No browser/device/country, individual source names, audio/video breakdown, resume position, autoplay, fullscreen/captions or state across a redeploy was reported. The detailed source matrix below remains unfilled for those fields. The [Render evidence](../deployment/RENDER_VALIDATION.md) separately records the deployed revision and 74 passing live HTTPS checks. This follow-up changes documentation only; no automated suite was rerun.
 
 ## Implemented preview
 

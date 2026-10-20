@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: **S7.1 and S7.2 complete; S7.3 hosted API checks pass, browser/cold-start acceptance remains open.** The public origin is **https://cinemagic-trbu.onrender.com**, deployed from main on Free/Singapore. Initial credential-free HTTPS smoke passed **57 checks**; after the owner privately entered the TMDB token, redeployment reached live and **74 live HTTPS checks passed**. See [Render evidence](../deployment/RENDER_VALIDATION.md), [publication evidence](../deployment/GITHUB_VALIDATION.md), [runbook](../deployment/RENDER.md) and [package evidence](../deployment/S7_VALIDATION.md).
+Status: **S7.1 and S7.2 complete; S7.3 hosted API checks and owner playback/refresh-persistence check pass. Detailed browser/cold-start acceptance remains open.** The public origin is **https://cinemagic-trbu.onrender.com**, deployed from main on Free/Singapore. Initial credential-free HTTPS smoke passed **57 checks**; after the owner privately entered the TMDB token, redeployment reached live and **74 live HTTPS checks passed**. On 21 October the owner confirmed **"Both persistence and playback work"** for the requested hosted Sintel flow. See [Render evidence](../deployment/RENDER_VALIDATION.md), [publication evidence](../deployment/GITHUB_VALIDATION.md), [runbook](../deployment/RENDER.md) and [package evidence](../deployment/S7_VALIDATION.md).
 
 ## Outcome
 
@@ -48,6 +48,7 @@ Browser profiles are still stored locally. Redeploying at the same origin should
 
 - [x] Initial public HTTPS smoke verified the actual API, application scripts/styles and snapshot model. Private `.env`, backend source and cache paths return 404. No token value was fetched or recorded. Hosted live-token validation is separate.
 - [x] Live API smoke passed after private token entry and redeployment: two search pages, external details/preference resolution and dynamic recommendations (`ok`, 60 candidates, no failed sources). [74-check evidence](../deployment/hosted-smoke.json).
+- [x] Owner confirmed hosted playback/manual switching and like/recommendation persistence across refresh for the requested Sintel flow: **"Both persistence and playback work"**, 21 October 2026. [Report and scope](PLAYBACK_VALIDATION.md#s7-hosted-owner-confirmation-21-october-2026).
 - [ ] Search for an unindexed movie, load another result page, open details, save to Watchlist and refresh. Confirm live capabilities and cached fallback match S4.
 - [ ] Run search -> details -> Watch movie -> manually choose another source -> close. Record provider/device/region/film evidence in [PLAYBACK_VALIDATION.md](PLAYBACK_VALIDATION.md); local playback reports do not establish hosted-origin compatibility.
 - [ ] Verify only one player is active and errors/timeouts leave source selection to the viewer. Check fullscreen/captions where supported, autoplay restrictions, desktop/mobile layout and keyboard/focus behavior on the deployed origin.
