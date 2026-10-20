@@ -15,7 +15,7 @@ from catalog import Catalog, CatalogError
 from discovery import Discovery
 from preferences import ExternalProfile, PreferenceFeatures
 from ranking import RANKING_BUDGET, RANKING_CONTRACT, FeatureStore, ranking_mode
-from release import VERSION, frame_policy, playback_config, playback_script
+from release import VERSION, deployment_info, frame_policy, playback_config, playback_script
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -37,6 +37,11 @@ async def playback_headers(request, call_next):
 @app.get("/api/playback")
 def playback_settings():
     return playback
+
+
+@app.get("/api/deployment")
+def deployment_identity():
+    return deployment_info()
 
 
 @app.get("/playback-config.js", include_in_schema=False)

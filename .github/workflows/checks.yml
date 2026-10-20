@@ -14,11 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CINEMAGIC_PROVIDERS: cinesrc,vidlink,vidsrc
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version-file: .python-version
           cache: pip
       - uses: actions/setup-node@v4
         with:
@@ -30,6 +32,22 @@ jobs:
         run: for file in frontend/*.js; do node --check "$file"; done
       - name: Check static playback policy
         run: node -e "const p=require('./frontend/providers.js'); if(p.list().length!==3)process.exit(1)"
+      - name: Start full-project service and verify deployment contract
+        env:
+          CINEMAGIC_DATASET: tmdb
+          TMDB_READ_ACCESS_TOKEN: ''
+          TMDB_API_KEY: ''
+          CINEMAGIC_CACHE_PATH: ${{ runner.temp }}/cinemagic/catalogue.sqlite3
+          RENDER_GIT_COMMIT: ${{ github.sha }}
+        run: |
+          uvicorn app:app --app-dir backend --host 0.0.0.0 --port 8765 --workers 1 &
+          service_pid=$!
+          trap 'kill "$service_pid" 2>/dev/null || true' EXIT
+          python scripts/smoke_deployment.py http://127.0.0.1:8765 --wait-seconds 30 --expected-commit "$GITHUB_SHA" --output "$RUNNER_TEMP/cinemagic-smoke.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-smoke-evidence
+          path: ${{ runner.temp }}/cinemagic-smoke.json
       - uses: actions/upload-artifact@v4
         with:
           name: cinemagic-release-candidate

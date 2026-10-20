@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Status as of 2026-10-21
 
-This section records implemented streaming work on `feature/streaming-platform` through S6. S6 assigns candidate version **0.4.0-rc.1**; it is not a final release, tag or deployment. The earlier S5B-S5D work and this phase have not been pushed by this task. Earlier Iterations 1-3 and static-hosting release history are retained below.
+This section records implemented streaming work on `feature/streaming-platform` through S7.1 deployment preparation. The candidate remains **0.4.0-rc.1**; it is not a final release, tag or hosted deployment. Local work has not been pushed by this task. Earlier Iterations 1-3 and static-hosting release history are retained below.
 
 | Iteration | Implementation and validation status |
 |---|---|
@@ -25,7 +25,7 @@ This section records implemented streaming work on `feature/streaming-platform` 
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Evaluation recorded; calibration adopted, embeddings deferred; owner relevance acceptance 2/2 overall on 21 October |
 | S6 | Candidate implemented; 143 tests and six browser scenarios passed; owner general playback sign-off received 21 October; detailed public-release evidence remains open |
-| S7 | Render planning only; no service created or deployed |
+| S7 | S7.1 Blueprint/runtime/smoke/CI package implemented and locally tested; no service created or deployed |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
@@ -34,6 +34,20 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - General playback sign-off received (**"everything works well"**). Detailed film/source/device/region records, explicit autoplay results and public-offering terms remain unrecorded.
 - Final candidate acceptance, any separately authorized push/release, then Render deployment (S7).
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S7.1 - Render deployment package and local validation (2026-10-21)
+
+- Added root `render.yaml` for one Free Python Web Service in Singapore, explicitly using `feature/streaming-platform`, repository-root builds, `/api/health`, one Uvicorn worker on `0.0.0.0:$PORT`, and manual redeployment. No database, paid disk or separate frontend service is provisioned by the file.
+- Added a private Blueprint prompt (`sync: false`) for the TMDB Read Access Token; configured the TMDB catalogue, dynamic ranking, three manually selected providers, disposable `/tmp/cinemagic/catalogue.sqlite3`, unbuffered logs and bounded scientific-library threads. No credential values were copied into code, YAML, frontend assets or evidence.
+- Pinned Python 3.13.5 in `.python-version` and the full runtime dependency closure in `requirements-runtime.txt`. `requirements.txt` now adds development/test tools separately. Kept NumPy/SciPy/scikit-learn model versions stable; updated and tested the web runtime/certificate bundle in an isolated environment, including patched Starlette after its published static-file Range advisory. No global Python packages were changed.
+- Added public `/api/deployment` with release and validated full Render Git SHA only; malformed/absent revisions are null, and hosting secrets/environment dumps are never returned.
+- Added `scripts/smoke_deployment.py` for real backend/frontend/assets, snapshot/export/feature parity, explicit exclusions, private-path isolation, missing-credential fallback and optional exact-revision checks. Optional live mode checks pagination, external details/preference application and dynamic retrieval; partial discovery is not reported as a passing live deployment. Video and personal browser state are not exercised by the API checker.
+- Added eleven pytest deployment cases covering Blueprint/runtime/secret contracts, public revision identity, credential-bearing/insecure/invalid URLs, wrong deployed SHA, HTML instead of API JSON, stale model exports, missing-credential behavior and partial live retrieval. **154 tests pass** in a clean pinned environment, with one upstream test-only deprecation warning.
+- Extended branch/PR CI to the pinned Python, full-service CLI startup, exact-commit smoke check and evidence artifact. CI runs remain pending until the branch is published.
+- Validated the Blueprint against Render's current official schema. Resolved all 24 Linux runtime packages to pinned CPython 3.13.5 wheels with no unpinned transitive dependencies. Linux execution and actual Render build/startup remain hosted checks.
+- Exported the 447-film browser model and public policy; verified local HTTP startup with empty metadata credentials, working snapshot recommendations and explicit live-search unavailability. Recorded reviewed [local smoke JSON](docs/deployment/local-smoke.json) and [validation summary](docs/deployment/S7_VALIDATION.md). The local revision remains null rather than pretending to be a deployed Render commit.
+- Added the [Render runbook](docs/deployment/RENDER.md), private-input/setup steps, origin/storage/free-cache behavior and rollback instructions. Updated README, architecture, environment example and roadmap. Ignored disposable `.s7-local/` resolver/schema/test-environment outputs.
+- Read GitHub's branch revision without mutation and confirmed it is behind the local package; publishing the prepared branch is required before Blueprint import. Render account/repository connection and private token entry are pending. No push, cloud service, deployment URL, hosted media result or complete S7 acceptance is claimed.
 
 ### S5D/S6 - Owner acceptance follow-up (2026-10-21)
 

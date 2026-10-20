@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: planned; next implementation phase. Depends on [S6 release readiness](06-release.md), following [S5A-S5D](README.md#dynamic-recommendation-upgrade). S1-S5D and S6 code are implemented; S6 automated checks pass as `0.4.0-rc.1`. On 21 October 2026 the owner rated relevance 2/2 overall and reported that the requested playback exercise works well. Detailed source/device/region evidence and public-offering terms remain unrecorded. No Render configuration, service or hosted verification has been created yet.
+Status: **S7.1 implemented and locally validated on 21 October 2026; S7.2/S7.3 await account setup and a real deployment**. The Blueprint, pinned runtime and deployment smoke checks are prepared. No Render service, public URL or hosted acceptance is claimed. S6 and the owner's 2/2 relevance/general playback sign-off remain recorded. See [setup runbook](../deployment/RENDER.md) and [local evidence](../deployment/S7_VALIDATION.md).
 
 ## Outcome
 
@@ -10,14 +10,14 @@ Start with Render Free for the college demo. Render documents idle spin-down aft
 
 ## S7.1: Prepare and validate the deployment package
 
-- [ ] Add a `render.yaml` Blueprint for one Python Web Service. Keep the repository root as the working directory so backend data and frontend assets are both included.
-- [ ] Choose an explicitly tested deployment branch/commit. The current streaming work is on `feature/streaming-platform`; selecting an older `main` must not silently deploy the pre-streaming project.
-- [ ] Specify a supported Python version, reproducible runtime dependencies and required build steps. Keep model/data files and frontend assets in the deploy; exclude credentials, local caches and development artifacts.
-- [ ] Include the committed starter snapshot and compatible browser export. Do not fetch a live catalogue during build. Runtime dynamic retrieval/feature caching uses the private TMDB credential, S5A-S5D contracts and measured resource budgets.
-- [ ] Validate startup with the hosting command below, not the localhost-only `python run.py` launcher. Verify `/api/health`, `/`, static assets, recommendation routes and catalogue capabilities.
-- [ ] Run the current full regression suite and static export. Record the tested commit and results before deployment.
+- [x] `render.yaml` defines one Free Python Web Service at repository root, Singapore, with manual redeployment and no disk/database.
+- [x] Explicit branch `feature/streaming-platform`; publish the prepared commit before importing the Blueprint. `/api/deployment` exposes the public full Render commit SHA for exact hosted verification. GitHub was checked read-only: its branch is older than the prepared local work.
+- [x] `.python-version` pins tested Python 3.13.5. `requirements-runtime.txt` pins the full runtime dependency closure; development tools stay in `requirements.txt`. Patched FastAPI/Starlette are validated in a clean environment. Secrets/caches/local validation outputs remain ignored and outside frontend assets.
+- [x] Build exports the committed 447-film snapshot and public playback policy without live catalogue fetching. Runtime retrieval/feature hydration remains S5A-S5D.
+- [x] Local Uvicorn startup with the same host, one-worker and port configuration passes the real HTTP smoke check, including assets, model parity, recommendations, capabilities, missing-credential fallback and private-path isolation. Linux CI is configured to exercise the literal Blueprint-style CLI after push; an actual Render build is not inferred.
+- [x] Clean pinned-runtime regression suite **154 passed**; model/policy export succeeds. Official Render schema validation and Linux wheel resolution pass. [Evidence](../deployment/S7_VALIDATION.md).
 
-Planned settings, to be verified during implementation:
+Prepared settings; hosted behavior remains to verify:
 
 | Setting | Value |
 |---|---|
@@ -25,11 +25,13 @@ Planned settings, to be verified during implementation:
 | Runtime | Python |
 | Plan | Free demo instance |
 | Root directory | Repository root |
-| Build command | `pip install -r requirements.txt && python scripts/export_static.py` |
-| Start command | `uvicorn app:app --app-dir backend --host 0.0.0.0 --port $PORT` |
+| Build command | `pip install --no-cache-dir -r requirements-runtime.txt && python scripts/export_static.py` |
+| Start command | `uvicorn app:app --app-dir backend --host 0.0.0.0 --port $PORT --workers 1` |
 | Health-check path | `/api/health` |
 | Dataset | `CINEMAGIC_DATASET=tmdb` |
 | Demo cache path | `CINEMAGIC_CACHE_PATH=/tmp/cinemagic/catalogue.sqlite3` |
+| Runtime / region | Python 3.13.5 / Singapore |
+| Auto-redeploy | Off; initial Blueprint creation still deploys |
 
 ## S7.2: Configure and deploy the service
 
@@ -61,7 +63,7 @@ Browser profiles are still stored locally. Redeploying at the same origin should
 
 ## Required inputs at implementation time
 
-A Render account connected to the GitHub repository, the selected deployment branch/commit, and the existing TMDB credential configured privately in Render. Free hosting is the planned starting point; a paid plan/disk or custom domain is a separate deployment choice.
+A Render account connected to `codinsayan/Movie-Recommendation-System`, the prepared branch published to GitHub, and the existing TMDB Read Access Token entered privately in Render. No token/password needs to be sent through chat. Free/Singapore is configured; paid storage or custom domains are separate choices. After service creation, provide the public URL and deployed full SHA so hosted checks can run. [Step-by-step setup](../deployment/RENDER.md).
 
 ## Completion evidence
 

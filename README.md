@@ -103,6 +103,8 @@ python run.py                              # serves the TMDB catalogue automatic
 
 ## Deployment (GitHub Pages)
 
+For the full frontend/API/live-discovery application, S7.1 now provides a [Render Blueprint and setup runbook](docs/deployment/RENDER.md). The package pins Python/runtime dependencies, exports the snapshot fallback, and includes a hosted smoke checker with exact Git-revision verification. Local preparation is tested; a Render account, repository connection, published branch and private TMDB secret are still needed. **No Render service URL is claimed yet.** [Local validation](docs/deployment/S7_VALIDATION.md).
+
 GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
 
 1. `scripts/export_static.py` exports the trained model (sparse TF-IDF/content and collaborative vectors, vocabulary and config) to `frontend/data/model.json` (about 1.3 MiB for the TMDB snapshot), plus the public `frontend/playback-config.js`. No credentials are exported.
@@ -166,6 +168,7 @@ CHANGELOG.md
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | liveness check |
+| `GET` | `/api/deployment` | public release and validated Render commit SHA, or null locally; no environment/secret dump |
 | `GET` | `/api/playback` | public release/provider configuration; no keys |
 | `GET` | `/api/movies` | full catalogue |
 | `GET` | `/api/capabilities` | live-search configuration and snapshot origin; no credentials returned |

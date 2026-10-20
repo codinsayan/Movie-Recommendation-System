@@ -14,3 +14,6 @@ frontend/data/
 
 # Runtime discovery cache (contains no API credentials)
 backend/data/*.sqlite3*
+
+# Disposable S7 resolver/schema/build evidence (publish only reviewed summaries).
+.s7-local/

@@ -1,5 +1,13 @@
 # Architecture
 
+## S7.1 deployment package
+
+`render.yaml` runs the entire project as one Free Python web service from `feature/streaming-platform`. Python is selected by `.python-version`; the complete runtime closure is pinned in `requirements-runtime.txt`, while pytest/YAML tooling remains in `requirements.txt`. The framework pins were updated past a published Starlette file-response advisory and validated in a clean environment. Build exports the committed snapshot/public policy without fetching movie data; runtime is a single Uvicorn worker bound to `0.0.0.0:$PORT`. Scientific thread counts are bounded by the hosting environment. There is no separate frontend build/server, account database or video proxy.
+
+The private TMDB secret is a Blueprint `sync: false` input. Metadata SQLite uses disposable `/tmp/cinemagic/catalogue.sqlite3`; sparse vectors remain derived in-memory data. All durable user choices still live in browser storage, separated by origin. Startup does not depend on a live metadata request. The default deployment keeps dynamic ranking with snapshot fallback and manual movie-source selection.
+
+`/api/deployment` allowlists only release and a validated 40-character `RENDER_GIT_COMMIT`. The smoke checker verifies this against the intended revision, API/frontend/assets, model/feature parity, exclusions and private-path isolation; optional live checks exercise metadata/external preferences/dynamic discovery. It distinguishes partial upstream results from a passing live deployment. Linux CI is configured for the selected Python, export and full-service startup; local Windows validation and Linux wheel resolution do not establish a successful Render deploy. [Setup](deployment/RENDER.md), [evidence and remaining hosted checks](deployment/S7_VALIDATION.md).
+
 ## S6 release candidate and playback policy
 
 FastAPI reports `0.4.0-rc.1`. `backend/release.py` reads the fixed `frontend/provider-registry.json` and the process environment `CINEMAGIC_PROVIDERS`. Unset enables all entries, an empty value disables all, and an ordered subset selects known adapters only. Unknown or duplicate entries fail startup; configuration cannot introduce arbitrary frame URLs. `frontend/providers.js` binds each registry entry to its event adapter, exposes only enabled choices and supplies iframe permissions to `player.js`.

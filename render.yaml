@@ -1,0 +1,29 @@
+# One full-project service; import this Blueprint from feature/streaming-platform.
+services:
+  - type: web
+    name: cinemagic
+    runtime: python
+    plan: free
+    region: singapore
+    branch: feature/streaming-platform
+    autoDeployTrigger: 'off'
+    buildCommand: pip install --no-cache-dir -r requirements-runtime.txt && python scripts/export_static.py
+    startCommand: uvicorn app:app --app-dir backend --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: TMDB_READ_ACCESS_TOKEN
+        sync: false
+      - key: CINEMAGIC_DATASET
+        value: tmdb
+      - key: CINEMAGIC_CACHE_PATH
+        value: /tmp/cinemagic/catalogue.sqlite3
+      - key: CINEMAGIC_PROVIDERS
+        value: cinesrc,vidlink,vidsrc
+      - key: CINEMAGIC_RANKING
+        value: dynamic
+      - key: PYTHONUNBUFFERED
+        value: '1'
+      - key: OPENBLAS_NUM_THREADS
+        value: '1'
+      - key: OMP_NUM_THREADS
+        value: '1'

@@ -3,11 +3,18 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VERSION = "0.4.0-rc.1"
 REGISTRY = json.loads((ROOT / "frontend" / "provider-registry.json").read_text(encoding="utf-8"))
+
+
+def deployment_info() -> dict:
+    """Expose only public revision identity, never a dump of hosting environment."""
+    commit = os.environ.get("RENDER_GIT_COMMIT", "")
+    return {"release": VERSION, "commit": commit.lower() if re.fullmatch(r"[0-9a-fA-F]{40}", commit) else None}
 
 
 def playback_config(value: str | None = None) -> dict:
