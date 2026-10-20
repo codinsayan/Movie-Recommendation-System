@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: **S7.1 validated; streaming branch published and fast-forward merged into main on 21 October 2026. GitHub release checks and Pages deployment passed.** The owner reports Render/GitHub repository access connected; the Render integration in this session is not installed yet. Service creation, private TMDB secret entry and hosted acceptance remain pending. See [publication evidence](../deployment/GITHUB_VALIDATION.md), [setup runbook](../deployment/RENDER.md) and [package evidence](../deployment/S7_VALIDATION.md).
+Status: **S7.1 and S7.2 complete; S7.3 hosted API checks pass, browser/cold-start acceptance remains open.** The public origin is **https://cinemagic-trbu.onrender.com**, deployed from main on Free/Singapore. Initial credential-free HTTPS smoke passed **57 checks**; after the owner privately entered the TMDB token, redeployment reached live and **74 live HTTPS checks passed**. See [Render evidence](../deployment/RENDER_VALIDATION.md), [publication evidence](../deployment/GITHUB_VALIDATION.md), [runbook](../deployment/RENDER.md) and [package evidence](../deployment/S7_VALIDATION.md).
 
 ## Outcome
 
@@ -35,24 +35,26 @@ Prepared settings; hosted behavior remains to verify:
 
 ## S7.2: Configure and deploy the service
 
-- [x] Owner reports GitHub connected to Render with access to this repository. Streaming and main were both published at `0755f8f364c7780accc55058e17863a167186ef2`; Blueprint now selects main. The session's separate Render integration remains uninstalled, so service creation is not yet performed.
-- [ ] Configure the existing `TMDB_READ_ACCESS_TOKEN` as a Render secret, or use `TMDB_API_KEY` instead. Never place credential values in the Blueprint, commit, build output or frontend export.
-- [ ] Configure dataset, cache path and the provider settings established in S6. Keep the chosen provider order and manual switching behavior.
-- [ ] Deploy and record the service URL, deployed commit, plan, Python version, region and deployment date. Verify that the deployed commit includes S1-S5, accepted S5A-S5D work, S6 and the empty-filter banner fix.
-- [ ] Check build/startup logs and health checks. Confirm that the recommender fits the selected instance and that live search can reach TMDB without exposing credentials in errors.
-- [ ] Keep the free-instance cache disposable. If persistent caching is deliberately selected later, attach a paid-service disk and set the cache path inside its mount; preserve the cache schema and test restart recovery.
+- [x] GitHub access connected; streaming work published/merged into main. Render plugin installed/enabled but no account tools were exposed; used official browser-authenticated CLI 2.30.0. Owner selected Sayan's Workspace; service created directly with settings matching `render.yaml`, without attaching a Blueprint.
+- [x] Owner confirmed privately saving `TMDB_READ_ACCESS_TOKEN` in Render. No credential was placed in the Blueprint, commit, build output or frontend export. A redeployment activates the saved value; live validation is recorded separately.
+- [x] Configured dataset, disposable cache, dynamic ranking, bounded threads and S6 provider order/manual switching settings.
+- [x] Initial deployment reached live at **https://cinemagic-trbu.onrender.com**, revision `eae92cebecdc48f135ed9e2eb29e135e19501fd4`, Free/Singapore/Python 3.13.5, on 21 October 2026 locally. Includes all published streaming/recommendation fixes. [Deploy IDs and exact evidence](../deployment/RENDER_VALIDATION.md).
+- [x] Render build/startup and health checks passed; the recommender and live discovery completed on Free compute, with no entries returned by the post-deploy error-level log query. This is functional fit, not a concurrent-load or memory-capacity guarantee.
+- [x] Cache remains disposable, with no disk/database provisioned. Any later persistent storage is a separate choice requiring its own recovery validation.
 
 Browser profiles are still stored locally. Redeploying at the same origin should preserve them, but localhost, GitHub Pages and the Render URL have separate storage. A new Render URL will start with a new device profile; no account migration or cross-device synchronization is introduced.
 
 ## S7.3: Verify the public deployment and document recovery
 
-- [ ] Verify the public HTTPS URL serves the actual API and all scripts/styles/posters. Confirm the TMDB token and `.env` are not exposed as public assets.
+- [x] Initial public HTTPS smoke verified the actual API, application scripts/styles and snapshot model. Private `.env`, backend source and cache paths return 404. No token value was fetched or recorded. Hosted live-token validation is separate.
+- [x] Live API smoke passed after private token entry and redeployment: two search pages, external details/preference resolution and dynamic recommendations (`ok`, 60 candidates, no failed sources). [74-check evidence](../deployment/hosted-smoke.json).
 - [ ] Search for an unindexed movie, load another result page, open details, save to Watchlist and refresh. Confirm live capabilities and cached fallback match S4.
 - [ ] Run search -> details -> Watch movie -> manually choose another source -> close. Record provider/device/region/film evidence in [PLAYBACK_VALIDATION.md](PLAYBACK_VALIDATION.md); local playback reports do not establish hosted-origin compatibility.
 - [ ] Verify only one player is active and errors/timeouts leave source selection to the viewer. Check fullscreen/captions where supported, autoplay restrictions, desktop/mobile layout and keyboard/focus behavior on the deployed origin.
 - [ ] Verify device-local likes, mood, Watchlist, resume and S5 options survive refresh and a redeploy at the same origin. External preferences must resolve and influence dynamic ranking under S5A-S5D. Old resume positions must not become fabricated viewing signals.
 - [ ] Verify both S5 switches with no qualifying evidence: the strict Top Picks row explains the empty result, the banner offers labelled broader suggestions, and Show all picks disables only the recent-playback filter.
-- [ ] Verify missing credentials and upstream failures preserve snapshot recommendations and honest discovery error states.
+- [x] Initial missing-credential hosted smoke verified working snapshot recommendations and explicit live-search 503.
+- [ ] Exercise upstream-failure acceptance independently; no failure was injected into the public service.
 - [ ] Exercise a free-instance cold start and cache reset. Record the observed startup delay; an erased metadata/feature cache must not erase browser-local preference IDs or Watchlist. Exercise bounded feature rehydration and honest pending states for external preferences.
 - [ ] Document rollback to a known-good Render deployment/commit and provider-disable recovery using S6 configuration. Preserve browser storage compatibility and keep the snapshot demo usable.
 - [ ] Update the README with the verified public URL, actual service settings, deployment evidence and known limitations. Mark this iteration complete only after these hosted checks pass.

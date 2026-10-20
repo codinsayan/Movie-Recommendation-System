@@ -2,7 +2,7 @@
 
 Decision date: 20 October 2026. Branch: `feature/streaming-platform`.
 
-Status: S1-S5D and S6 are implemented; automated candidate checks pass as `0.4.0-rc.1`. On 21 October 2026 the owner supplied **2/2 overall relevance** and general playback sign-off (**"everything works well"**). Detailed source/device/region and public-offering records remain open; S5 stays opt-in. S7 Render deployment is next. The viewer switches sources **manually**. See [candidate evidence](../evaluation/s6/README.md) and [live validation](PLAYBACK_VALIDATION.md).
+Status: S1-S5D and S6 are implemented; automated candidate checks pass as `0.4.0-rc.1`. On 21 October 2026 the owner supplied **2/2 overall relevance** and general playback sign-off (**"everything works well"**). S7's Free Singapore service is deployed at **https://cinemagic-trbu.onrender.com**; see [hosted evidence](../deployment/RENDER_VALIDATION.md) for exact revisions and checks. Detailed hosted browser/source/device/region and cold-start acceptance remains open; S5 stays opt-in. The viewer switches sources **manually**. See [candidate evidence](../evaluation/s6/README.md) and [live validation](PLAYBACK_VALIDATION.md).
 
 ## Provider decision
 
@@ -41,7 +41,7 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S5C: Scalable ranking](05c-scalable-ranking.md) | Sparse feature/profile scoring and bounded reranking instead of growing global matrices | S5A and S5B | Implemented; tests, benchmark, live API and S5D rendered-browser checks passed |
 | [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Accepted with owner relevance 2/2 overall; calibration retained, embeddings deferred |
 | [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Implemented; automated checks and owner functional sign-off recorded; detailed public-release evidence remains open |
-| [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | S7.1 package implemented/tested; account setup, deployment and hosted checks pending |
+| [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Package/main publication passed; Free Singapore service live; hosted API and remaining browser/cold-start acceptance tracked separately |
 
 **First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S5 establish discovery and viewing signals. S5A-S5D implement and validate dynamic recommendations before S6 release readiness and S7 Render deployment.
 
@@ -51,7 +51,7 @@ The older recommender evaluation/model experiments remain recorded in [ITERATION
 
 Implementation order: **S5 -> S5A -> S5B -> S5C -> S5D -> S6 -> S7**. The current 447-film snapshot remains the starter/offline fallback. The new phases make external likes/dislikes usable, retrieve fresh candidates and score bounded pools as the catalogue evolves. Candidate budgets are per-request limits, not a permanent 447/500-film discovery limit. The existing snapshot builder cap remains until deliberately revisited.
 
-Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional follow-on. S5A-S5C are implemented with deterministic, benchmark, API and browser evidence. S5D recorded proxy/live replay, browser walkthrough and popularity calibration; on 21 October the owner rated relevance **2/2 overall**. S6 has automated checks and general owner playback sign-off. Detailed source/device/region and public-offering records remain open; S7 deployment is next.
+Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional follow-on. S5A-S5C are implemented with deterministic, benchmark, API and browser evidence. S5D recorded proxy/live replay, browser walkthrough and popularity calibration; on 21 October the owner rated relevance **2/2 overall**. S6 has automated checks and general owner playback sign-off. S7 has a live Render service; detailed hosted source/device/region, cold-start and public-offering records remain open.
 
 ## Implementation boundaries
 

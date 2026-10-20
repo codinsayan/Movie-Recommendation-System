@@ -31,7 +31,7 @@ Playback positions and your preferred source are saved in this browser when the 
 
 The curated catalogue needs explicit TMDB mappings before full-film playback can be offered; its local numeric IDs are not sent to streaming providers. The same playback modules are included in the static export.
 
-The local release candidate is **0.4.0-rc.1**. S6 adds configurable sources, shared frame policy and branch/PR release checks. The recorded suite passes 143 tests; desktop/mobile Edge checks pass in backend and static modes. On 21 October 2026 the owner rated recommendation relevance **2/2 overall** and reported **"everything works well"** for the requested playback exercise. Detailed source/device/region evidence, explicit autoplay results and public-offering terms remain unrecorded. See [S6 evidence](docs/evaluation/s6/README.md) and [live playback validation](docs/streaming/PLAYBACK_VALIDATION.md). S7 Render deployment is next and has not been performed.
+The release candidate is **0.4.0-rc.1**. The full application is hosted at **[cinemagic-trbu.onrender.com](https://cinemagic-trbu.onrender.com)** on Render Free in Singapore. The S7 pinned-runtime suite passes **154 tests** and Linux release checks passed. On 21 October 2026 the owner rated recommendation relevance **2/2 overall** and reported **"everything works well"** for the earlier playback exercise. Detailed hosted source/device/region, autoplay and cold-start acceptance remains open. See [Render evidence](docs/deployment/RENDER_VALIDATION.md), [S6 evidence](docs/evaluation/s6/README.md) and [live playback validation](docs/streaming/PLAYBACK_VALIDATION.md).
 
 Set the process environment variable `CINEMAGIC_PROVIDERS=cinesrc,vidsrc` to remove VidLink, then restart the server and reload the page. Order sets the default when no enabled browser preference exists; an explicitly empty value disables movie sources while keeping the recommender/trailers. Unset restores all three. IDs must come from the fixed registry. For static hosting, export with the same environment and publish the new assets. Operational flags use the shell/hosting environment; the TMDB `.env` is separate. [Configuration and rollback examples](docs/streaming/06-release.md#configuration-and-rollback).
 
@@ -103,7 +103,7 @@ python run.py                              # serves the TMDB catalogue automatic
 
 ## Deployment (GitHub Pages)
 
-For the full frontend/API/live-discovery application, use the [Render Blueprint and setup runbook](docs/deployment/RENDER.md). The streaming work is published on **main**; GitHub's Linux release checks and Pages deployment passed. The package pins Python/runtime dependencies, exports the snapshot fallback, and verifies hosted Git revisions. Render service creation and private TMDB secret entry remain pending; **no Render URL is claimed yet**. [Package validation](docs/deployment/S7_VALIDATION.md), [GitHub publication evidence](docs/deployment/GITHUB_VALIDATION.md).
+The full frontend/API application runs at **[cinemagic-trbu.onrender.com](https://cinemagic-trbu.onrender.com)**. Render uses **main**, Free compute in Singapore, Python 3.13.5, one Uvicorn worker and manual deployments. Initial fallback smoke passed **57 checks**; after private token entry and redeployment, **74 live HTTPS checks passed**, including search pagination, external preferences and dynamic recommendations. Hosted browser/cold-start acceptance remains open. See [current hosted results](docs/deployment/RENDER_VALIDATION.md) and the [setup/recovery runbook](docs/deployment/RENDER.md). The package exports a 447-film fallback and verifies exact hosted Git revisions. GitHub Pages remains a separate static snapshot demo. [Package validation](docs/deployment/S7_VALIDATION.md), [GitHub publication evidence](docs/deployment/GITHUB_VALIDATION.md).
 
 GitHub Pages serves static files only, so the Pages build runs the recommender **in the browser**:
 
@@ -183,7 +183,7 @@ Interactive API docs are at `http://127.0.0.1:8000/docs`.
 ## Documentation
 
 - [Dynamic recommendation iterations (S5A-S5D)](docs/streaming/README.md#dynamic-recommendation-upgrade): S5A external likes/dislikes implemented; fresh candidates, scalable ranking and evaluation planned before S6/S7
-- [Render deployment iteration (S7)](docs/streaming/07-render-deployment.md): planned full-project hosting, environment settings, public acceptance checks and rollback; deployment has not been performed yet
+- [Render deployment iteration (S7)](docs/streaming/07-render-deployment.md): Free Singapore service deployed from main; hosted API validation and remaining browser/cold-start acceptance tracked separately
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system design and request flow
 - [docs/ALGORITHM.md](docs/ALGORITHM.md): the maths behind the recommendations
 - [docs/ITERATIONS.md](docs/ITERATIONS.md): roadmap, iteration by iteration

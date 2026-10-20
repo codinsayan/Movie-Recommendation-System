@@ -22,8 +22,8 @@ Recorded **21 October 2026** after the owner explicitly authorized pushing, merg
 
 The release job installed the pinned runtime with Python 3.13.5, ran tests/export/JavaScript checks, started the complete service on Linux, verified the exact revision through `/api/deployment`, and uploaded smoke evidence. The Pages job separately passed its Python 3.12 tests/export and published the static snapshot demo. The existing main-push workflow performed that authorized static deployment; it is not the Render backend deployment.
 
-## Render still pending
+## Render deployment follow-up
 
-The owner reports repository access granted to Render. No browser session is attached here. The Render integration was found and offered, and the owner chose to install/connect it, but its latest confirmed state is **not installed**. No Render API credentials were requested in chat, no secret was copied to GitHub, and no Render resource, deploy ID or public URL is claimed.
+The Render plugin is now confirmed installed and enabled. Account tools were unavailable in the session, so browser-authenticated Render CLI 2.30.0 was used. The owner selected Sayan's Workspace. The Free Singapore service **cinemagic** was created and the initial deployment reached **live** at https://cinemagic-trbu.onrender.com, using main revision `eae92cebecdc48f135ed9e2eb29e135e19501fd4`. No Render API credential was requested in chat and no secret was copied to GitHub. The owner entered the TMDB token privately in Render.
 
-After the integration is connected, create the configured Free/Singapore Python service from main, supply the TMDB credential privately, verify its actual deployed SHA, and run the hosted/API/browser checks in [S7](../streaming/07-render-deployment.md). Subsequent documentation commits may advance main beyond this tested code SHA; record the actual service revision rather than assuming it.
+See [Render evidence](RENDER_VALIDATION.md) for deploy IDs and hosted checks. Subsequent documentation commits may advance main beyond the deployed code SHA; automatic deployment remains off, and the hosted revision must be checked explicitly. Remaining browser/cold-start acceptance is tracked in [S7](../streaming/07-render-deployment.md).

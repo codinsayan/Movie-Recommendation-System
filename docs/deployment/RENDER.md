@@ -1,6 +1,12 @@
 # Render deployment runbook
 
-S7 package prepared on 21 October 2026. Cloud service creation and hosted acceptance are separate from local validation; no public URL exists in this repository yet.
+The Free Singapore service is deployed at **[cinemagic-trbu.onrender.com](https://cinemagic-trbu.onrender.com)**. See [deployment evidence](RENDER_VALIDATION.md) for its exact revision, deploy IDs and observed checks. Hosted browser/cold-start acceptance remains separate from API validation.
+
+## Existing service
+
+Use the [existing Render service](https://dashboard.render.com/web/srv-dbbvh47f3r2c73fs399g) for later changes. It was created directly through the official CLI with settings matching `render.yaml`; it is not attached to a Blueprint. Keep that file and the existing service configuration aligned. Do not import another Blueprint for routine updates, which could create a duplicate service. Automatic deployment is off; later commits require an explicit deploy.
+
+The owner selected Sayan's Workspace and entered the TMDB token privately through Render's Environment page. Never print stored secret values when inspecting or updating this service.
 
 ## What the owner needs
 
@@ -10,9 +16,9 @@ S7 package prepared on 21 October 2026. Cloud service creation and hosted accept
 
 No domain, paid disk, account system or separate frontend/backend hosting is required for the planned demo.
 
-## Import the prepared Blueprint
+## Reproduce the service with a Blueprint
 
-In Render, create a **Blueprint**, connect the repository above, and select **main** as the Blueprint branch. Use the root `render.yaml`. Review the concrete configuration before creating resources:
+For a deliberate fresh deployment, create a **Blueprint**, connect the repository above, and select **main** as the Blueprint branch. Use the root `render.yaml`. Review the concrete configuration before creating resources:
 
 | Setting | Prepared value |
 |---|---|
@@ -37,6 +43,16 @@ Wait for the build and health check. Record the resulting HTTPS URL and the depl
 References checked 21 October 2026: [Blueprint fields/secrets](https://render.com/docs/blueprint-spec), [Python selection](https://render.com/docs/python-version), [FastAPI hosting](https://render.com/docs/deploy-fastapi).
 
 ## Verify the actual service
+
+The observed live revision is `eae92cebecdc48f135ed9e2eb29e135e19501fd4`; [74 live HTTPS checks passed](hosted-smoke.json). A successful configuration redeploy was observed after private token entry. This establishes redeployment, not a tested rollback or browser-storage survival across it.
+
+For later authorized CLI deploys, verify the selected workspace, service and desired commit first. The installed CLI supports:
+
+```powershell
+render deploys create srv-dbbvh47f3r2c73fs399g --commit FULL_40_CHARACTER_SHA --wait --confirm --output json
+```
+
+Wait for terminal `live` status and rerun the smoke check; trigger acceptance alone is insufficient. Documentation-only commits can advance main while the running revision stays unchanged because auto-deploy is off.
 
 Run from the tested project environment, substituting the real URL and full SHA:
 

@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ### Status as of 2026-10-21
 
-This section records streaming work through S7.1 and the authorized publication/merge to **main**. The candidate remains **0.4.0-rc.1**. GitHub release checks and static Pages deployment passed; the Render service is not created yet. Earlier Iterations 1-3 and static-hosting release history are retained below.
+This section records streaming work through S7.2 and the authorized publication/merge to **main**. The candidate remains **0.4.0-rc.1**. GitHub release checks and static Pages deployment passed; the Free Singapore Render service is created and the initial deployment is live. Hosted acceptance is recorded separately below. Earlier Iterations 1-3 and static-hosting release history are retained below.
 
 | Iteration | Implementation and validation status |
 |---|---|
@@ -25,15 +25,26 @@ This section records streaming work through S7.1 and the authorized publication/
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
 | S5D | Evaluation recorded; calibration adopted, embeddings deferred; owner relevance acceptance 2/2 overall on 21 October |
 | S6 | Candidate implemented; 143 tests and six browser scenarios passed; owner general playback sign-off received 21 October; detailed public-release evidence remains open |
-| S7 | Package implemented; streaming branch pushed/merged to main; Linux CI and static Pages deployment passed; Render service/hosted acceptance pending |
+| S7 | S7.1/S7.2 complete; Free Singapore service live with 57 fallback and 74 live HTTPS checks; S7.3 browser/cold-start acceptance remains open |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
 **Open items:**
 - S5D received **2/2 overall relevance**; no individual profile, per-pick or baseline scores were supplied. See [review record](docs/evaluation/s5d-review.md).
 - General playback sign-off received (**"everything works well"**). Detailed film/source/device/region records, explicit autoplay results and public-offering terms remain unrecorded.
-- Final candidate acceptance, any separately authorized push/release, then Render deployment (S7).
+- Remaining hosted browser/player, storage, cold-start and recovery acceptance in S7; no final release tag is claimed.
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S7.2 - Create Render Free Singapore service (2026-10-21)
+
+- Confirmed Render plugin installed/enabled but account tools unavailable in this session; used the supported official CLI fallback. Downloaded CLI 2.30.0 into ignored `.s7-local/`, verified its release archive digest, authenticated through Render's browser flow, and selected Sayan's Workspace after owner confirmation. CLI Blueprint validation passed with one service; no existing services were present.
+- Created `cinemagic` (`srv-dbbvh47f3r2c73fs399g`) directly from **main**, matching the committed Blueprint's non-secret settings: Free compute, Singapore, Python 3.13.5, repository-root build/export, one Uvicorn worker, `/api/health`, disposable cache, dynamic ranking, S6 provider settings and automatic deploys off. No database, persistent disk or additional service was created.
+- Recorded the public URL **https://cinemagic-trbu.onrender.com** and exact source revision `eae92cebecdc48f135ed9e2eb29e135e19501fd4`. Initial deploy `dep-dbbvh4vf3r2c73fs3ba0` reached **live** after successful pinned installation and 447-film export, approximately 87.5 seconds after starting. This duration is not an idle cold-start measurement.
+- Ran **57 passing hosted HTTPS fallback checks**: health, exact revision, frontend scripts/styles, CSP/bootstrap, model/API parity, recommendations/exclusions, explicit missing-token search 503 and private paths returning 404. Saved public evidence in [hosted-fallback-smoke.json](docs/deployment/hosted-fallback-smoke.json).
+- Automatic review blocked an attempted local TMDB secret transfer; that command did not execute and no token was sent. The owner entered the token privately in Render and confirmed Save only; triggered same-revision deploy `dep-dbbvi8vf3r2c73fs76hg` to activate it. No credential was printed, committed or placed in evidence.
+- Added [hosted deployment evidence](docs/deployment/RENDER_VALIDATION.md); updated README, runbook, package/publication records and S7 status. Direct CLI creation does not attach the existing service to a Blueprint; documented avoiding duplicate imports and keeping service settings aligned with `render.yaml`.
+- Token-enabled deploy `dep-dbbvi8vf3r2c73fs76hg` reached **live** at the same source revision. **74 live HTTPS checks passed**, including Batman search pagination, Sintel details/external preference resolution, explicit exclusions and dynamic discovery (`ok`, 60 candidates, 0 failed sources, 4 recommendations). Initial retrieval was approximately 2,413.8 ms plus 7.6 ms feature encoding; summary candidates and 12 queued enrichments are recorded honestly, not as a load benchmark.
+- Post-deploy error-level query returned no entries. Rechecked Free/Singapore/main/manual-deploy settings. S7.1/S7.2 are complete; S7.3 API acceptance passed. Hosted browser/player, storage across refresh/redeploy, idle cold-start/cache-reset and recovery acceptance remain open. No media-playback result or full S7 completion is inferred from API checks.
 
 ### S7.2 - Publish streaming work and merge main (2026-10-21)
 

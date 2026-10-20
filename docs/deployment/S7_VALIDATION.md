@@ -1,6 +1,6 @@
 # S7.1 local deployment-package validation
 
-Recorded **21 October 2026**, branch `feature/streaming-platform`, working tree based on acceptance commit `1c0cbee`. The S7.1 implementation commit is recorded in Git history. **No Render service or public URL has been created or tested.**
+Recorded **21 October 2026**, branch `feature/streaming-platform`, working tree based on acceptance commit `1c0cbee`. The S7.1 implementation commit is recorded in Git history. This document records the original local validation; later service creation and hosted checks are recorded in [Render deployment evidence](RENDER_VALIDATION.md).
 
 | Check | Observed result |
 |---|---|
@@ -24,13 +24,11 @@ The installed S6 environment used Starlette 0.47.3. The maintainer's [file-respo
 
 Runtime resolution used public PyPI metadata/wheels. Render documents [Debian 12 native runtimes](https://render.com/docs/native-runtimes); the wheel check does not substitute for the actual deployment build. [Python selection](https://render.com/docs/python-version) and [Blueprint validation](https://render.com/docs/blueprint-spec) were checked against current primary documentation.
 
-## S7.2/S7.3 not yet observed
+## Follow-up deployment evidence
 
-- Session Render integration installation/connection, service creation and private TMDB secret entry. Owner reports the separate Render/GitHub repository connection is complete.
-- Initial Render deployment selected from published main (GitHub publication itself is complete).
-- Render build/startup logs, HTTPS URL, full deployed SHA and actual Linux memory.
-- Hosted live TMDB search/details/external preference/dynamic retrieval, provider playback and browser-state persistence.
-- Real free-instance cold start/cache reset/redeploy and dashboard rollback.
-- Detailed public-offering permission/source/device/region records from the earlier playback plan.
+- The plugin is installed/enabled; its account tools were unavailable in this session, so the authenticated official CLI was used after the owner selected Sayan's Workspace.
+- The Free Singapore service is created at **https://cinemagic-trbu.onrender.com**. Initial deployment of main revision `eae92cebecdc48f135ed9e2eb29e135e19501fd4` reached **live**, with Python 3.13.5 and successful pinned-runtime install/export.
+- The initial credential-free hosted smoke passed **57 checks**. The owner confirmed private token entry; the token-enabled redeployment reached **live** and passed **74 live HTTPS checks**, including search pagination, external preferences and dynamic discovery. See [the hosted record](RENDER_VALIDATION.md).
+- Hosted provider playback, browser-state persistence, actual Linux memory, idle cold start/cache reset and dashboard rollback remain separate acceptance items.
 
-The owner chose to connect the Render integration here; it still reported not installed at the last check. Use [the runbook](RENDER.md) for service settings. This evidence does not mark all of S7 complete.
+Use [the runbook](RENDER.md) for service settings. Original local evidence remains unchanged; this evidence does not mark all of S7 complete.
