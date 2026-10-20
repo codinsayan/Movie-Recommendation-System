@@ -65,7 +65,7 @@ The recent-playback option is a strict filter, so it can have no eligible picks.
 
 The backend app can search beyond the committed snapshot using the same TMDB credential in `.env`. Matching movies load automatically after a **300 ms typing pause**; no Enter is needed. Search replaces the home banner/rows with a responsive landscape grid, using backdrops where available and showing titles and years. Choose **Load more** for another page, or clear the search with **×** / **Esc** to return home. The **Details language** selector changes metadata; it does not select playback audio. Pressing Enter still searches the recommendation model by mood.
 
-Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. S5A lets their explicit likes/dislikes influence snapshot recommendations after English feature metadata resolves. Remote titles receive content-based More Like This neighbours from the snapshot without an invented personalized match score. S5B will add dynamic recommendation candidates. Discovery does not enlarge the model.
+Remote results support details, the movie player and Watchlist. Selected metadata is saved locally so bookmarked movies remain visible after refresh. S5A lets their explicit likes/dislikes influence snapshot recommendations after English feature metadata resolves. Remote titles receive content-based More Like This neighbours from the snapshot without an invented personalized match score. With S5B, the backend also retrieves fresh recommendation candidates (TMDB related titles of your likes, acclaimed films in your taste genres, new releases) and ranks them with the same engine; they carry a Discovered badge. Discovery does not enlarge the model.
 
 SQLite caches searches for one hour and details for one day, with stale fallback during upstream failures. The cache is bounded to 5,000 entries and git-ignored. Set `CINEMAGIC_CACHE_PATH` to change its location. Missing credentials or upstream failures leave snapshot browsing available.
 
@@ -73,7 +73,7 @@ GitHub Pages and curated mode retain snapshot/saved-title search. Live search re
 
 ### External likes and dislikes (S5A)
 
-Like or pass a searched movie outside the snapshot and the choice is saved immediately. The backend resolves its full metadata in English and transforms it with the existing fitted TF-IDF model. Resolved likes add content affinity; dislikes apply a softer negative influence and keep exact exclusions. No catalogue rebuild is needed. Recommendations still come from the existing snapshot until S5B. More Like This also works for an external movie when its metadata is usable. Because you loved shelves remain independent of the Top Picks playback filter.
+Like or pass a searched movie outside the snapshot and the choice is saved immediately. The backend resolves its full metadata in English and transforms it with the existing fitted TF-IDF model. Resolved likes add content affinity; dislikes apply a softer negative influence and keep exact exclusions. No catalogue rebuild is needed. With a configured backend, recommendations can also include newly discovered films (S5B); the static build keeps the snapshot. More Like This also works for an external movie when its metadata is usable. Because you loved shelves remain independent of the Top Picks playback filter.
 
 Cached external features are restored before the first recommendation request after refresh, so an applied like is not initially replaced by unpersonalized picks.
 

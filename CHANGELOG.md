@@ -21,7 +21,8 @@ This section records the implemented streaming work on `feature/streaming-platfo
 | S4 | Live search, remote details, metadata caching and landscape search gallery implemented |
 | S5 | Opt-in measured-viewing recommendations and recent-playback filtering implemented; proxy evaluation and parity passed; broader relevance review remains open |
 | S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
-| S5B-S5D, S6, S7 | Planning documents added; these phases have not been implemented |
+| S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic and live API checks passed; browser review pending |
+| S5C-S5D, S6, S7 | Planning documents added; these phases have not been implemented |
 
 The active recommendation candidates remain the **447-film TMDB snapshot**, with the separate **60-film curated dataset** retained. Search can discover other movies, and S5A can use their resolved explicit preferences, without automatically adding them to the recommendation candidate pool.
 
@@ -129,6 +130,20 @@ Commit: `11fb898`.
 - Cleared stale banner movies, backgrounds, poster, dots and rotation timers when neither strict nor broader picks exist; added recovery actions.
 - Rejected late broader responses after filter changes and kept fallback failures usable.
 - Added seven regression cases using real app closures and the exported static engine; recorded a passing 98-test suite at that checkpoint.
+
+### S5B - Dynamic recommendation candidates (2026-10-20)
+
+Branch: `feature/streaming-platform`. Phase: [dynamic discovery](docs/streaming/05b-dynamic-discovery.md).
+
+- Added `backend/discovery.py`: bounded retrieval of candidates beyond the 447-film snapshot from TMDB related titles of up to 4 seed likes (most recent plus spread across history), acclaimed films in the top 2 taste genres, new releases from the last 120 days, and popular/top-rated starter pools for cold-start and dislike-only profiles.
+- Added cached `Catalog.related()`, `Catalog.discover()` (allow-listed parameters only) and `Catalog.cached_movie()`; TTLs are 24 h related, 6 h discover, 3 h new releases. They reuse the existing timeout, rate-limit, sanitized-error and stale-cache behaviour.
+- Budgets: 300-candidate pool, 4 concurrent upstream requests process-wide, 12 background detail lookups per request. Detail enrichment never blocks a response; candidates are labelled `full` or `summary` metadata.
+- `Recommender.recommend(extra=...)` ranks discovered films alongside the snapshot: fitted TF-IDF content (no refit, no matrix growth), TMDB related-title evidence as the collaborative signal (`RELATED_LINK = 0.3`, calibrated to a direct snapshot-graph link), and quality on the snapshot's scale. MMR and explanations cover the union; the snapshot-only path is unchanged.
+- Exact liked/disliked IDs are excluded across every source; dislikes stay a similarity penalty, not a genre ban.
+- `POST /api/recommend` accepts `discover: true` and returns a `discovery` report (status ok/partial/unavailable, sources, pool, enrichment, upstream calls, cache hits, stale). `/api/capabilities` reports `dynamic_discovery`. Upstream failures never fail the request.
+- Frontend: requests discovery only from a configured backend; registers discovered films so details, likes/dislikes (S5A), Watchlist and playback work; aborts superseded refreshes; shows a **Discovered** badge, an honest Top Picks status line and retrieval sources in the "why" panel. Static mode is unchanged.
+- Tests: 12 deterministic mock-TMDB tests in `tests/test_discovery.py` (**123 passed** in total). JS harnesses provide `AbortController` like browsers.
+- Live check: for Inception + Interstellar + The Dark Knight, 5 of the top 12 picks came from outside the snapshot (e.g. Batman (1989), Primer, The Electric State). Latency: 1.9 s cold, 0.4-1.1 s warm.
 
 ### S5A - External likes/dislikes and feature resolution (2026-10-20)
 
