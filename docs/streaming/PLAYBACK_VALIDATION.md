@@ -2,6 +2,12 @@
 
 Date: 20 October 2026. Branch: `feature/streaming-platform`.
 
+## Owner follow-up: 21 October 2026
+
+Asked to check Sintel (2010, TMDB 45745) with the available sources and report playback, switching/resume, fullscreen/captions and browser/device/country, the owner replied **"everything works well"**. This records general functional sign-off on the requested playback exercise with no problems reported. The reply does not identify the film actually used, individual source outcomes, autoplay behavior, browser/device, country or provider terms. Those details are not inferred. The detailed matrix below remains an evidence-collection record, not a reason to request the same general confirmation again.
+
+The S5D relevance response was **2/2 overall**, recorded in [the review sheet](../evaluation/s5d-review.md). Public-hosted checks remain S7 work.
+
 ## Implemented preview
 
 CineSrc, VidLink and VidSrc adapters, the player overlay, manual source selector, browser-local progress/preference storage, Continue Watching, independent Watchlist, and explicit catalogue identities are implemented. Source errors and timeouts show recovery text and leave the selected source unchanged.
@@ -57,4 +63,4 @@ The S6 browser exercise uses Inception **metadata only**, blocked provider frame
 | VidLink | Sintel 45745, planned | Pending | Prior informal playback confirmation; film unspecified | Pending | Pending | Pending | Pending | Film reference above; provider/content offering terms pending |
 | VidSrc | Sintel 45745, planned | Pending | Prior informal playback confirmation; film unspecified | Pending | Pending | Pending | Pending | Film reference above; provider/content offering terms pending |
 
-Primary-source documentation checked 20 October 2026: [CineSrc integration](https://cinesrc.st/docs) and [VidLink integration](https://vidlink.pro/) were retrievable. The [VidSrc documentation URL](https://vidsrc.sh/vidsrc/docs/) could not be retrieved through the research tool in this run; this is not evidence of a provider outage. Consulted integration pages describe embeds, not proof of distribution permission for every indexed title. Current terms/permission acceptance remains open, as do actual fullscreen/captions, region/device behavior and the S5D human relevance review. No final public-release claim is made from the automated checks.
+Primary-source documentation checked 20 October 2026: [CineSrc integration](https://cinesrc.st/docs) and [VidLink integration](https://vidlink.pro/) were retrievable. The [VidSrc documentation URL](https://vidsrc.sh/vidsrc/docs/) could not be retrieved through the research tool in this run; this is not evidence of a provider outage. Consulted integration pages describe embeds, not proof of distribution permission for every indexed title. Current terms/permission acceptance and detailed device/region/source evidence remain open. The owner's 21 October general functional sign-off and overall relevance rating are recorded above; no final public-release claim is inferred.

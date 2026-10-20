@@ -1,6 +1,6 @@
 # S5D: Evaluate and accept dynamic recommendations
 
-Status: the evaluation is implemented and recorded on `feature/streaming-platform`. Offline proxy, live-fixture replay, resource benchmark and a headless rendered-browser walkthrough are all done. One calibration change was adopted. **Human relevance review is pending:** the sheet is generated, but the ratings must come from a person. Depends on [S5A](05a-dynamic-preferences.md), [S5B](05b-dynamic-discovery.md) and [S5C](05c-scalable-ranking.md). Next: [S6 release readiness](06-release.md), then [S7 Render deployment](07-render-deployment.md).
+Status: **accepted at the project-owner review level on 21 October 2026**. Offline proxy, live-fixture replay, resource benchmark and rendered-browser walkthrough are recorded. The owner rated the proposed recommendation sets **2/2 overall**; no per-pick or baseline ratings were supplied. One calibration change was adopted; embeddings stay deferred. See [the review record](../evaluation/s5d-review.md). Depends on S5A-S5C. [S6](06-release.md) is implemented; [S7 Render deployment](07-render-deployment.md) is next.
 
 ## Outcome
 
@@ -163,8 +163,8 @@ See [S5C evidence](05c-scalable-ranking.md#evidence-20-october-2026). Per-reques
 - [x] Likes and dislikes for new movies persist, exact exclusions hold, related penalties are calibrated, and explanations identify the real contributing evidence.
 - [x] The selected retrieval/ranking budgets pass documented latency/memory/request checks, and cache growth does not create unbounded per-request work.
 - [x] Regression tests and supported Python/browser parity pass (**136 passed**, plus the JS suites), with backend-only capabilities and static limits clearly identified.
-- [ ] Human relevance and actual browser-flow results are recorded with failures and limitations. **The browser flow is recorded; human relevance ratings are pending** in [s5d-review.md](../evaluation/s5d-review.md).
+- [x] Human relevance and browser-flow results recorded with limitations: the owner supplied an overall **2/2** on 21 October 2026; the earlier browser flow is recorded. Per-pick and baseline ratings remain uncollected; no human comparison metric is inferred. See [review record](../evaluation/s5d-review.md).
 - [x] Decide whether to keep the metadata baseline or plan a later embedding upgrade: **keep the metadata baseline**; embeddings are deferred. No blanket claim of complete metadata or guaranteed playback is made.
-- [ ] Update the roadmap to make S6 the next implementation phase only after these acceptance records exist. S6 is next **once the human review is filled in**.
+- [x] Roadmap reflects the recorded human review. S6 implementation was explicitly requested before this response arrived; its functional sign-off is now recorded separately. S7 is the next implementation phase.
 
 Commit this iteration as `codinsayan` only, without co-author trailers.

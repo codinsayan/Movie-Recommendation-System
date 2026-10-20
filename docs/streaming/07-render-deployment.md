@@ -1,6 +1,6 @@
 # S7: Full-project deployment on Render
 
-Status: planned. Added 20 October 2026. Depends on [S6 release readiness](06-release.md), which follows [S5A-S5D dynamic recommendations](README.md#dynamic-recommendation-upgrade). S1-S5D and S6 code are implemented; S6 automated candidate checks pass as `0.4.0-rc.1`, while human relevance/live-media acceptance remains open. No Render configuration, service or hosted verification has been created yet.
+Status: planned; next implementation phase. Depends on [S6 release readiness](06-release.md), following [S5A-S5D](README.md#dynamic-recommendation-upgrade). S1-S5D and S6 code are implemented; S6 automated checks pass as `0.4.0-rc.1`. On 21 October 2026 the owner rated relevance 2/2 overall and reported that the requested playback exercise works well. Detailed source/device/region evidence and public-offering terms remain unrecorded. No Render configuration, service or hosted verification has been created yet.
 
 ## Outcome
 

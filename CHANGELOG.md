@@ -5,7 +5,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
-### Status as of 2026-10-20
+### Status as of 2026-10-21
 
 This section records implemented streaming work on `feature/streaming-platform` through S6. S6 assigns candidate version **0.4.0-rc.1**; it is not a final release, tag or deployment. The earlier S5B-S5D work and this phase have not been pushed by this task. Earlier Iterations 1-3 and static-hosting release history are retained below.
 
@@ -23,17 +23,24 @@ This section records implemented streaming work on `feature/streaming-platform` 
 | S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
 | S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic, live API and rendered-browser checks passed (browser walkthrough recorded in S5D) |
 | S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark, live API and rendered-browser checks passed |
-| S5D | Dynamic evaluation recorded: offline proxy, live replay, browser walkthrough; popularity calibration adopted; embeddings deferred; human relevance ratings pending |
-| S6 | Candidate configuration/operations/CI implemented; 143 tests and six rendered-browser scenarios pass; final human/live-media acceptance pending |
+| S5D | Evaluation recorded; calibration adopted, embeddings deferred; owner relevance acceptance 2/2 overall on 21 October |
+| S6 | Candidate implemented; 143 tests and six browser scenarios passed; owner general playback sign-off received 21 October; detailed public-release evidence remains open |
 | S7 | Render planning only; no service created or deployed |
 
 The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
 **Open items:**
-- **Human relevance ratings for S5D** remain pending in [s5d-review.md](docs/evaluation/s5d-review.md); they remain a final S6 acceptance gate despite the user's request to proceed with implementation.
-- Broader live playback acceptance remains open from S1-S3: per-film, per-provider and per-device checks, autoplay-on-switch and live resume.
+- S5D received **2/2 overall relevance**; no individual profile, per-pick or baseline scores were supplied. See [review record](docs/evaluation/s5d-review.md).
+- General playback sign-off received (**"everything works well"**). Detailed film/source/device/region records, explicit autoplay results and public-offering terms remain unrecorded.
 - Final candidate acceptance, any separately authorized push/release, then Render deployment (S7).
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
+
+### S5D/S6 - Owner acceptance follow-up (2026-10-21)
+
+- Recorded the owner's **"2"** response as overall relevance **2/2** for the proposed recommendation sets and accepted S5D at the owner-review level. Left individual pick/baseline cells blank instead of inventing scores or a human comparison metric.
+- Recorded **"everything works well"** as general functional sign-off on the requested playback exercise. No film, individual source outcome, browser/device/country, explicit autoplay result or provider-terms approval was inferred.
+- Updated the review sheet, S5D/S6 acceptance docs, playback validation, S6 evidence summary, README and roadmap. S7 is next; detailed public-release/hosted evidence remains open.
+- Documentation only; no code, model, configuration, automated results, release version, tag, push or deployment changed. The 143-test/six-browser results remain dated 20 October 2026 and were not rerun for this recording update.
 
 ### S6 - Release candidate, provider configuration and operational checks (2026-10-20)
 

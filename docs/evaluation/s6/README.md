@@ -24,9 +24,9 @@ Movie metadata here is Inception (TMDB 27205); **external movie/trailer frame lo
 
 ## Remaining acceptance
 
-1. Human relevance ratings in [S5D review](../s5d-review.md).
-2. Real video/audio, resume, autoplay, fullscreen/captions and failures per source/device/region in [the live matrix](../../streaming/PLAYBACK_VALIDATION.md).
+1. **Received 21 October 2026:** owner relevance rating **2/2 overall** in [S5D review](../s5d-review.md). No per-pick or baseline scores supplied.
+2. **Received 21 October 2026:** owner replied **"everything works well"** to the requested live-playback exercise. General functional sign-off recorded in [live validation](../../streaming/PLAYBACK_VALIDATION.md). Film actually used, source-specific outcomes, device/browser/country and explicit autoplay result remain unrecorded.
 3. Current provider terms and content permission basis before public offering; integration documentation does not establish rights to indexed films.
 4. S7 creates the Render service and repeats acceptance at its public HTTPS URL.
 
-S6 implementation and automated candidate checks are complete. These outstanding gates prevent final release acceptance; no media outcomes, human ratings or hosted results are inferred.
+S6 implementation, automated checks and owner functional sign-off are recorded. Detailed playback provenance and public-offering/hosted checks remain open; the general responses are not expanded into individual media outcomes or quantitative human metrics.

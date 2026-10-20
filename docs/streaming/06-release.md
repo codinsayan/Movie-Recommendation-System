@@ -1,6 +1,6 @@
 # S6: Release readiness and operational checks
 
-Status: **implementation and automated release-candidate checks complete; final acceptance pending** (20 October 2026). Candidate: `0.4.0-rc.1`. The user requested S6 after the updated changelog; implementation proceeds while S5D human relevance ratings remain an explicit release gate. No final release, tag, push or deployment is implied. Next: [S7 Render deployment](07-render-deployment.md).
+Status: **implemented and automated checks passed; project-owner functional sign-off received 21 October 2026**. Candidate: `0.4.0-rc.1`. S5D received an overall relevance rating of **2/2**; the requested live-playback exercise received **"everything works well"**. Detailed source/device/region evidence and public-offering terms remain unrecorded. No final release, tag, push or deployment is implied. Next: [S7 Render deployment](07-render-deployment.md).
 
 ## Outcome
 
@@ -18,7 +18,7 @@ Prepare a tested movie discovery/player release candidate with manual source sel
 - [ ] Record a permitted-film playback matrix for both selected sources, devices, target region, progress transfer and observed failures. Confirm the permission basis and current provider terms for the content offered publicly.
 - [x] Updated README, architecture and changelog, including static/backend differences and actual acceptance limits.
 - [x] Documented provider disable, snapshot-ranking and code rollback without deleting browser storage.
-- [ ] Complete S5D human relevance ratings in [the review sheet](../evaluation/s5d-review.md).
+- [x] Record S5D human relevance acceptance: **2/2 overall** on 21 October 2026 in [the review sheet](../evaluation/s5d-review.md); individual ratings were not supplied.
 
 ## Expected files
 
@@ -29,7 +29,7 @@ Provider configuration, `.github/workflows/pages.yml` if required, `README.md`, 
 - [x] Search -> details -> Watch -> manual selection -> close works in local backend and static candidates; repeat against the public Render URL in S7.
 - [x] Error/timeout tests leave the selector usable and never switch automatically. Real-browser checks cover error recovery; deterministic tests also cover silent timeouts.
 - [x] One movie iframe; stale or wrong-origin messages cannot alter the active player.
-- [x] Automated state/recommendation contracts cover S3/S5/S5A-S5D, external preferences and dynamic candidates. New DOM checks cover refresh, Start over, trailer replacement and history/watchlist independence. Human relevance and actual media resume remain open.
+- [x] Automated state/recommendation contracts cover S3/S5/S5A-S5D, external preferences and dynamic candidates. New DOM checks cover refresh, Start over, trailer replacement and history/watchlist independence. Owner relevance and general playback sign-off received 21 October; detailed media-resume provenance remains unrecorded.
 - [x] Explicit missing-source/unavailable-title states; snapshot fallback/backend capability messaging remains covered.
 - [ ] Existing checks pass and recorded live evidence supports the published feature claims.
 
@@ -75,4 +75,4 @@ node scripts/check_release_browser.cjs --recorded 2026-10-20
 
 Browser checks need Node 22+ with global WebSocket and installed Edge/Chrome/Chromium (`CHROMIUM_PATH` override). They start isolated localhost servers on 8126/8127, use a temporary browser profile, empty credentials, and block external movie/trailer frames. Results/screenshots go to `docs/evaluation/s6/`. Close conflicting test servers first. CI runs deterministic tests, export and syntax checks; the installed-browser exercise is recorded separately. New live retrieval was not repeated for this policy change; prior S5D evidence remains linked.
 
-**Final gates:** complete S5D human ratings, actual permitted-film playback/fullscreen/captions/autoplay/resume and current provider terms/permission checks in [the live matrix](PLAYBACK_VALIDATION.md). Technical integration documentation does not establish catalogue-wide permission. S6 is **not fully accepted** until these are recorded. No Render files or hosted results were added; S7 remains planned.
+**Acceptance update, 21 October 2026:** S5D overall human relevance acceptance and S6 general playback sign-off are recorded. The owner reported no playback problems. The detailed film/source/device/region matrix, explicit actual-autoplay result and current provider terms/permission checks remain unrecorded in [live validation](PLAYBACK_VALIDATION.md); the general reply is not converted into fabricated individual passes. These remain limits on final public-release acceptance. No Render files or hosted results were added; S7 is the next implementation phase.

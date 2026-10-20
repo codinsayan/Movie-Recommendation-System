@@ -2,7 +2,7 @@
 
 Decision date: 20 October 2026. Branch: `feature/streaming-platform`.
 
-Status: S1-S5D code is implemented; S6 implementation and automated release-candidate checks are complete as `0.4.0-rc.1`. Human S5D ratings and detailed live-media acceptance remain open; S5 stays opt-in. S7 Render deployment remains planned. The viewer switches sources **manually**. See [candidate evidence](../evaluation/s6/README.md) and [live validation](PLAYBACK_VALIDATION.md).
+Status: S1-S5D and S6 are implemented; automated candidate checks pass as `0.4.0-rc.1`. On 21 October 2026 the owner supplied **2/2 overall relevance** and general playback sign-off (**"everything works well"**). Detailed source/device/region and public-offering records remain open; S5 stays opt-in. S7 Render deployment is next. The viewer switches sources **manually**. See [candidate evidence](../evaluation/s6/README.md) and [live validation](PLAYBACK_VALIDATION.md).
 
 ## Provider decision
 
@@ -39,8 +39,8 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S5A: Dynamic preferences](05a-dynamic-preferences.md) | Apply external likes/dislikes using resolved metadata and honest pending states | S4 and S5 | Implemented; API/static/boot tests and focused desktop/mobile browser checks passed |
 | [S5B: Dynamic discovery](05b-dynamic-discovery.md) | Retrieve new recommendation candidates beyond the starter snapshot | S5A | Implemented; deterministic/live API and S5D rendered-browser checks passed |
 | [S5C: Scalable ranking](05c-scalable-ranking.md) | Sparse feature/profile scoring and bounded reranking instead of growing global matrices | S5A and S5B | Implemented; tests, benchmark, live API and S5D rendered-browser checks passed |
-| [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Evaluated; calibration adopted, embeddings deferred; human relevance ratings pending |
-| [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Implemented; automated candidate checks pass; final human/live acceptance pending |
+| [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Accepted with owner relevance 2/2 overall; calibration retained, embeddings deferred |
+| [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Implemented; automated checks and owner functional sign-off recorded; detailed public-release evidence remains open |
 | [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Planned |
 
 **First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S5 establish discovery and viewing signals. S5A-S5D implement and validate dynamic recommendations before S6 release readiness and S7 Render deployment.
@@ -51,7 +51,7 @@ The older recommender evaluation/model experiments remain recorded in [ITERATION
 
 Implementation order: **S5 -> S5A -> S5B -> S5C -> S5D -> S6 -> S7**. The current 447-film snapshot remains the starter/offline fallback. The new phases make external likes/dislikes usable, retrieve fresh candidates and score bounded pools as the catalogue evolves. Candidate budgets are per-request limits, not a permanent 447/500-film discovery limit. The existing snapshot builder cap remains until deliberately revisited.
 
-Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional measured follow-on rather than a requirement for Render deployment. S5A external preferences are implemented with API/client/parity evidence. S5B candidate retrieval and S5C bounded sparse ranking are implemented with deterministic, benchmark and live API evidence. S5D recorded the offline proxy, live replay, rendered-browser walkthrough and a popularity calibration; its human relevance ratings remain pending; focused S5A reload, filter and detail flows pass isolated desktop/mobile browser checks; broader user review remains pending.
+Start with metadata-based features and reuse the existing stack. S5D evaluates relevance and resource costs; semantic embeddings remain an optional follow-on. S5A-S5C are implemented with deterministic, benchmark, API and browser evidence. S5D recorded proxy/live replay, browser walkthrough and popularity calibration; on 21 October the owner rated relevance **2/2 overall**. S6 has automated checks and general owner playback sign-off. Detailed source/device/region and public-offering records remain open; S7 deployment is next.
 
 ## Implementation boundaries
 
@@ -76,7 +76,7 @@ Movie identity must include its origin. TMDB dataset IDs are TMDB IDs; curated I
 
 Each phase has checkboxes, affected files, a demo and acceptance criteria in its linked document. Mark a phase done only when its acceptance evidence exists. Deterministic tests use simulated provider messages; live checks verify a small permitted-film set without making third-party network availability a CI dependency.
 
-The full suite passes **143 tests**, including external preference, dynamic retrieval, sparse ranking, evaluation and Python/JavaScript parity checks. The Node player/preferences runner has **29 cases** within that pytest suite. S6 additionally records **six rendered-browser scenarios**, including backend/static desktop/mobile and disabled-source recovery. See [S6 evidence](../evaluation/s6/README.md), [S5 evaluation](../EVALUATION.md) and the [S5D review sheet](../evaluation/s5d-review.md). Informal user playback confirmation is retained; detailed actual autoplay/resume/fullscreen/captions, per-device/region media results and human relevance ratings remain open.
+The recorded suite passes **143 tests**, including external preference, dynamic retrieval, sparse ranking, evaluation and Python/JavaScript parity checks. The Node player/preferences runner has **29 cases** within that suite. S6 additionally records **six browser scenarios** for backend/static desktop/mobile and disabled-source recovery. See [S6 evidence](../evaluation/s6/README.md), [S5 evaluation](../EVALUATION.md) and [S5D review](../evaluation/s5d-review.md). The owner's 21 October relevance rating and general playback sign-off are recorded; detailed source/device/region, explicit autoplay and public-offering evidence remain uncollected. Automated results remain dated 20 October.
 
 ## Deferred work
 
