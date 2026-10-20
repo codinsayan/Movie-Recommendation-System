@@ -90,7 +90,7 @@ Without MMR, loving *Inception* returns five near-clones. With MMR the list stil
 
 For each recommendation r:
 
-- **because**: the liked movie j maximising `content_sim(r,j) + collab_sim(r,j)`, giving "Because you loved *j*".
+- **because**: the liked movie j maximising `content_sim(r,j) + collab_sim(r,j)`, giving "Because you loved *j*", but only when that link is at least `EXPLAIN_FLOOR = 0.03`. Weaker links mean the pick is there for quality or diversity, so it reads "A well-rated pick to widen your taste" instead of naming an unrelated film (S5C).
 - **shared**: the intersection of r's and j's genres + tags (plus mood terms r matches).
 - **breakdown**: each signal's weighted contribution. The UI shows these as percentages of the total score.
 - **match**: a display value `55 + 44 · score / max_score` (55–99), so the best pick in the list reads about 99%.

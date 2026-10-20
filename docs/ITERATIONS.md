@@ -15,12 +15,12 @@ The product work follows [the streaming roadmap](streaming/README.md), with **vi
 | [S5](streaming/05-recommendations.md) | Implemented: opt-in viewing signals, recent-playback filtering, parity tests and proxy evaluation |
 | [S5A](streaming/05a-dynamic-preferences.md) | Implemented: external likes/dislikes and related snapshot movies; API/static/boot tests and focused desktop/mobile browser checks passed |
 | [S5B](streaming/05b-dynamic-discovery.md) | Implemented: fresh recommendation candidates beyond the starter catalogue (browser review pending) |
-| [S5C](streaming/05c-scalable-ranking.md) | Planned: sparse features/profiles and bounded candidate ranking |
+| [S5C](streaming/05c-scalable-ranking.md) | Implemented: versioned sparse feature cache, bounded reranking, external measured viewing, honest explanations, rollback (browser review pending) |
 | [S5D](streaming/05d-dynamic-evaluation.md) | Planned: dynamic relevance/scaling acceptance and optional embedding decision |
 | [S6](streaming/06-release.md) | Release readiness after S5A-S5D, provider configuration and acceptance evidence |
 | [S7](streaming/07-render-deployment.md) | Planned: full-project Render deployment, hosted verification and rollback |
 
-**Required next order:** S5A -> S5B -> S5C -> S5D -> S6 -> S7. S6/S7 retain their labels and wait until the dynamic-recommendation upgrade is implemented and accepted. S5A code, automated/live API checks and focused isolated-browser reload/detail/filter checks are complete; broader human relevance and locale review remain pending. S5B is implemented; S5C, S5D, S6 and S7 remain planned.
+**Required next order:** S5A -> S5B -> S5C -> S5D -> S6 -> S7. S6/S7 retain their labels and wait until the dynamic-recommendation upgrade is implemented and accepted. S5A code, automated/live API checks and focused isolated-browser reload/detail/filter checks are complete; broader human relevance and locale review remain pending. S5B and S5C are implemented; S5D, S6 and S7 remain planned.
 
 S1-S2 form the first demo milestone. The evaluation/model/polish iterations below retain their original numbering and remain future work; relevant tasks are incorporated into S5, S5A-S5D and S6 without implying those older iterations are complete.
 

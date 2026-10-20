@@ -22,9 +22,10 @@ This section records the implemented streaming work on `feature/streaming-platfo
 | S5 | Opt-in measured-viewing recommendations and recent-playback filtering implemented; proxy evaluation and parity passed; broader relevance review remains open |
 | S5A | External explicit preferences, related snapshot movies and refresh/filter fixes implemented; focused desktop/mobile Chrome checks passed |
 | S5B | Dynamic candidate retrieval beyond the snapshot implemented; deterministic and live API checks passed; browser review pending |
-| S5C-S5D, S6, S7 | Planning documents added; these phases have not been implemented |
+| S5C | Versioned sparse feature cache, bounded reranking, external measured viewing, explanation floor and rollback implemented; tests, benchmark and live API checks passed; browser review pending |
+| S5D, S6, S7 | Planning documents added; these phases have not been implemented |
 
-The active recommendation candidates remain the **447-film TMDB snapshot**, with the separate **60-film curated dataset** retained. Search can discover other movies, and S5A can use their resolved explicit preferences, without automatically adding them to the recommendation candidate pool.
+The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) remains the starter and offline pool. With a configured backend, S5B adds up to 300 freshly retrieved candidates per request and S5C ranks them with bounded sparse work; neither enlarges the snapshot model.
 
 ### S1 - Source adapters and movie identity (2026-10-20)
 
@@ -130,6 +131,19 @@ Commit: `11fb898`.
 - Cleared stale banner movies, backgrounds, poster, dots and rotation timers when neither strict nor broader picks exist; added recovery actions.
 - Rejected late broader responses after filter changes and kept fallback failures usable.
 - Added seven regression cases using real app closures and the exported static engine; recorded a passing 98-test suite at that checkpoint.
+
+### S5C - Scalable profiles and bounded ranking (2026-10-20)
+
+Branch: `feature/streaming-platform`. Phase: [scalable ranking](docs/streaming/05c-scalable-ranking.md).
+
+- Added `backend/ranking.py`: the `rank-v2` contract, per-request `RANKING_BUDGET`, the `CINEMAGIC_RANKING=snapshot` rollback switch and `FeatureStore`, a thread-safe LRU of sparse TF-IDF rows keyed by canonical ID, metadata language and `feature_version`. It holds 4,000 entries / 16 MiB, encodes misses in batches of 64, re-encodes when the metadata digest changes, and drops other feature versions on `bind`.
+- Discovered candidates stay sparse end to end. MMR compares only the bounded pool (`min(3k, 300)` rows) built from sparse rows, with an exact incremental redundancy update; checks gave identical selections to the previous implementation. Exclusions apply before the pool is cut.
+- Measured viewing now covers watched TMDB films outside the snapshot. Features come from the cache only (at most 20 titles) with the same 10% cap and content-only evidence; explicit choices win. Uncached titles are reported pending and fetched in the background. The response adds `viewing_status`, and the UI notes pending titles.
+- "Because you loved" now requires `EXPLAIN_FLOOR = 0.03` of link in both Python and the browser engine, which removes fabricated reasons such as Toy Story → *The Godfather*. Weak-link picks read "A well-rated pick to widen your taste". Discovered films report `component_availability`, and missing related-title evidence is stated, not imputed.
+- `Catalog.cached_movies()` reads a whole pool in one query; the SQLite schema is written once per process; deleted or damaged cache files behave as misses. Warm live requests dropped from 0.4–1.1 s to about 0.2–0.3 s.
+- Every recommendation response includes `ranking` diagnostics (contract, mode, candidates, eligible, rerank pool, signals, feature-cache stats, timing); `/api/capabilities` reports `ranking`.
+- Added `scripts/benchmark_ranking.py`. With a cache growing from 0 to 20,000 entries, per-request work stays flat: 120 encoded cold / 0 warm, 6 / 0 upstream calls, a 300-row rerank pool, a 2.15 MB request peak (previously 29 MB), and about 55 ms warm.
+- Tests: 12 in `tests/test_ranking.py` plus a JS derived-cache independence case (**135 passed**). The static export carries `explainFloor` and `rerankPool`, and Python/JS parity holds.
 
 ### S5B - Dynamic recommendation candidates (2026-10-20)
 
