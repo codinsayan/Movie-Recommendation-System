@@ -42,6 +42,7 @@ There is one active movie iframe. Closing the player or opening a different movi
 | [S5D: Dynamic evaluation](05d-dynamic-evaluation.md) | Relevance, parity, browser-flow and resource acceptance; optional embedding decision | S5A-S5C | Accepted with owner relevance 2/2 overall; calibration retained, embeddings deferred |
 | [S6: Release readiness and operational checks](06-release.md) | Provider configuration, release-candidate acceptance and regression evidence | S1-S5 and S5A-S5D | Implemented; automated checks and owner functional sign-off recorded; detailed public-release evidence remains open |
 | [S7: Render deployment](07-render-deployment.md) | One full-project Render service, hosted acceptance evidence and rollback | S6 | Package/main publication passed; Free Singapore service live; hosted API and remaining browser/cold-start acceptance tracked separately |
+| [S8: Your movie taste in 3D](08-recommendation-graph.md) | Small liked-movie graph under How it works, optional recommendation expansion and presentation controls | Existing preference/ranking contracts and deployed UI | Planned as S8A–S8D; default is liked movies, not the full catalogue |
 
 **First demo milestone:** S1 + S2. A user can search the existing catalogue, open a movie, and manually try another source. S3 completes resume behavior. S4-S5 establish discovery and viewing signals. S5A-S5D implement and validate dynamic recommendations before S6 release readiness and S7 Render deployment.
 

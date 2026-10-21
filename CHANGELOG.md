@@ -35,6 +35,13 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - Remaining hosted browser/player, storage, cold-start and recovery acceptance in S7; no final release tag is claimed.
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
 
+### S8 - Liked-movie 3D graph planning (2026-10-21)
+
+- Added the S8A–S8D plan for a compact 3D graph inside How it works. The owner's latest preference supersedes the earlier full-network opening: show liked movies by default, with explicit limited recommendation expansion around a selected movie.
+- Planned real evidence types, canonical identities, external/pending likes, static/backend parity, bounded scene sizes, accessible inspectors, touch/reduced-motion behaviour and graph cleanup. Proposed a lazily loaded, pinned, self-hosted 3d-force-graph renderer after checking primary documentation.
+- Verified the underlying committed snapshot has 447 movies and 1,275 undirected direct TMDB links; those counts do not describe the planned default liked-only scene. Distinguished direct links, computed similarities and actual recommendation reasons; no fabricated edges or confidence interpretation for 3D positions.
+- Linked the plan from the project docs and roadmap. Planning only: no app code, model, renderer dependency, endpoint, deployment or test result changed.
+
 ### Mobile UI follow-up (2026-10-21)
 
 - Reviewed home, search, movie details, player/source menu, My Taste and help screens from 320px phones through tablet and desktop widths. Kept the existing dark/red visual design.

@@ -184,6 +184,7 @@ Interactive API docs are at `http://127.0.0.1:8000/docs`.
 
 - [Dynamic recommendation iterations (S5A-S5D)](docs/streaming/README.md#dynamic-recommendation-upgrade): S5A external likes/dislikes implemented; fresh candidates, scalable ranking and evaluation planned before S6/S7
 - [Render deployment iteration (S7)](docs/streaming/07-render-deployment.md): Free Singapore service deployed from main; hosted API validation and remaining browser/cold-start acceptance tracked separately
+- [3D taste graph plan (S8A–S8D)](docs/streaming/08-recommendation-graph.md): proposed liked-movie network under How it works, with optional recommendation expansion and presentation controls
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system design and request flow
 - [docs/ALGORITHM.md](docs/ALGORITHM.md): the maths behind the recommendations
 - [docs/ITERATIONS.md](docs/ITERATIONS.md): roadmap, iteration by iteration
