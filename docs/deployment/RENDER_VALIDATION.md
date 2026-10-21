@@ -15,7 +15,9 @@ Recorded **21 October 2026** (Asia/Kolkata). The owner authorized deployment fro
 | Source branch | `main` |
 | Initial source revision | `eae92cebecdc48f135ed9e2eb29e135e19501fd4` |
 | Initial deploy ID | `dep-dbbvh4vf3r2c73fs3ba0` |
-| Live token-enabled deploy ID | `dep-dbbvi8vf3r2c73fs76hg` |
+| Initial token-enabled deploy ID | `dep-dbbvi8vf3r2c73fs76hg` |
+| Current source revision | `6b935301d6776b153d2de8abf825dfc34eaa9fb3` |
+| Current deploy ID | `dep-dbc093jrjlhs73abtbvg` |
 | Automatic deployment | Off |
 | Health-check path | `/api/health` |
 | Cache | `/tmp/cinemagic/catalogue.sqlite3`, disposable |
@@ -44,6 +46,12 @@ Automatic approval review rejected copying the local TMDB token to Render withou
 ## Owner hosted browser confirmation
 
 On **21 October 2026**, the owner was asked to use **https://cinemagic-trbu.onrender.com**, try **Sintel (2010, TMDB 45745)**, like it, refresh, watch and switch sources manually. The owner replied **"Both persistence and playback work"**. This records a passing owner check for the requested hosted flow: the like/recommendations survive refresh and playback/manual switching work. Browser/device/country, individual source results, resume position, autoplay, fullscreen and captions were not supplied. No per-source matrix or storage-survival result across a redeploy is inferred.
+
+## Mobile UI deployment follow-up: 21 October 2026
+
+Mobile fixes were committed on `fix/mobile-layout` and fast-forwarded/pushed to main at **`6b935301d6776b153d2de8abf825dfc34eaa9fb3`**, with **codinsayan** as sole author and committer. The main and branch release checks and Pages deployment succeeded. Render deployment **`dep-dbc093jrjlhs73abtbvg`** reached **live** at **2026-10-21 05:48:29 IST**, approximately **71.6 seconds** after starting, on the existing Free Singapore service. Automatic deployment remains off.
+
+The local suite passed **154 tests**; **six browser interaction scenarios** and **95 geometry checks across 35 screen/viewport combinations** passed. After deployment, **74 live HTTPS checks passed again** for the exact new revision. Public `styles.css` and `app.js` matched the committed source after line-ending normalization, and a post-deploy error-level log query returned no entries. See [mobile UI evidence and screenshots](../evaluation/mobile-ui/README.md) and [new hosted smoke](../evaluation/mobile-ui/hosted-smoke.json). Original deployment evidence above is retained as history. No new provider playback result is inferred from automated checks.
 
 ## Remaining hosted acceptance
 

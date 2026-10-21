@@ -31,9 +31,18 @@ An initial multi-width screenshot run timed out during a capture; the remaining 
 | Screen | Capture |
 |---|---|
 | Home, 390px | [home.png](home.png) |
+| Hosted search after thumbnails load, 390px | [search.png](search.png) |
 | Movie details, 320px | [details.png](details.png) |
 | My Taste after scrolling, 320px | [taste.png](taste.png) |
 | Player/source menu, 390px | [player.png](player.png) |
 | Help, 390px | [how.png](how.png) |
+
+## Published deployment
+
+Commit **`6b935301d6776b153d2de8abf825dfc34eaa9fb3`** was published on `fix/mobile-layout` and fast-forwarded to main, authored and committed solely as **codinsayan**. Both [main release checks](https://github.com/codinsayan/Movie-Recommendation-System/actions/runs/39520364596) and [branch release checks](https://github.com/codinsayan/Movie-Recommendation-System/actions/runs/39520364666) succeeded; [Pages deployment](https://github.com/codinsayan/Movie-Recommendation-System/actions/runs/39520364548) succeeded too.
+
+Render deploy **`dep-dbc093jrjlhs73abtbvg`** reached **live** at **05:48:29 IST on 21 October 2026** at **https://cinemagic-trbu.onrender.com**. **74 hosted live checks passed** for that exact revision: [hosted-smoke.json](hosted-smoke.json). The hosted CSS/JavaScript matched the committed files after line-ending normalization; a post-deploy error-level query returned no entries. The service stays Free/Singapore with manual deployment.
+
+All seven screens were also rendered on the hosted origin at **390×844**, with no measured page/content horizontal overflow and the sticky My Taste close control reachable after scrolling. Home, search, loaded movie details and the scrolled profile were visually inspected. [Hosted layout record](hosted-layout.json). The checker waits for live details to finish loading before using movie actions; these captures still block media frames and use an isolated browser profile.
 
 The earlier owner confirmation of live Render playback/refresh persistence remains recorded in [S7 evidence](../../deployment/RENDER_VALIDATION.md). This UI review does not expand that report to other devices or providers.

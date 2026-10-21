@@ -44,6 +44,7 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - Added a sticky My Taste heading/close control, clearer wrapping checkbox labels, visible remove buttons and wrapping footer controls. Bounded toast width and added bottom safe-area spacing.
 - Added separate browser-runner output directories to preserve historical S6 records, and reset independent scenarios before app boot to avoid inherited saved-source state while retaining refresh-persistence assertions.
 - Full regression suite **154 passed** and **six browser interaction scenarios passed**. Layout review passed **95 geometry checks across 35 screen/viewport combinations** at 320, 390, 560, 768 and 1440px. [Reviewed screenshots and evidence](docs/evaluation/mobile-ui/README.md). These are emulated Edge layout checks, not physical-phone or new live-media acceptance.
+- Published mobile commit `6b935301d6776b153d2de8abf825dfc34eaa9fb3` on `fix/mobile-layout` and fast-forwarded main, solely authored/committed as codinsayan. Main/branch release CI and Pages deployment passed. Render deploy `dep-dbc093jrjlhs73abtbvg` reached **live** on the existing Free Singapore service; **74 hosted live checks passed** for the exact revision. Verified hosted CSS/JavaScript parity and no entries in the post-deploy error-level query. Saved new hosted evidence separately from the initial S7 smoke.
 
 ### S7.3 - Hosted owner acceptance follow-up (2026-10-21)
 

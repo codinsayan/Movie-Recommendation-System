@@ -44,7 +44,7 @@ References checked 21 October 2026: [Blueprint fields/secrets](https://render.co
 
 ## Verify the actual service
 
-The observed live revision is `eae92cebecdc48f135ed9e2eb29e135e19501fd4`; [74 live HTTPS checks passed](hosted-smoke.json). A successful configuration redeploy was observed after private token entry. This establishes redeployment, not a tested rollback or browser-storage survival across it.
+The current verified live revision is `6b935301d6776b153d2de8abf825dfc34eaa9fb3` (mobile UI follow-up); [74 live HTTPS checks passed](../evaluation/mobile-ui/hosted-smoke.json). The original token-enabled deployment also passed its [74-check smoke](hosted-smoke.json), and the owner subsequently confirmed hosted playback/manual switching and refresh persistence. Neither deploy establishes a tested rollback or browser-storage survival across a redeploy.
 
 For later authorized CLI deploys, verify the selected workspace, service and desired commit first. The installed CLI supports:
 

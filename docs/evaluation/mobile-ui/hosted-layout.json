@@ -1,0 +1,49 @@
+{
+  "recorded": "2026-10-21",
+  "origin": "https://cinemagic-trbu.onrender.com",
+  "commit": "6b935301d6776b153d2de8abf825dfc34eaa9fb3",
+  "viewport": [
+    390,
+    844
+  ],
+  "browser": "Isolated headless Edge; blocked movie/trailer frames",
+  "screens": [
+    {
+      "screen": "home",
+      "horizontal_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "screen": "search",
+      "horizontal_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "screen": "details",
+      "horizontal_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "screen": "player",
+      "horizontal_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "screen": "taste",
+      "horizontal_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "screen": "taste-bottom",
+      "horizontal_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "screen": "how",
+      "horizontal_overflow": 0,
+      "inner_overflow": []
+    }
+  ]
+}
