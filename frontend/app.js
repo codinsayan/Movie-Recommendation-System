@@ -315,7 +315,7 @@
     $("#onboard").innerHTML = n >= 3 ? "" : `
       <div class="onboard">
         <b>${["Love 3 titles to unlock your Taste DNA", "Great start! Love 2 more…", "One more like and your profile unlocks…"][n]}</b>
-        <span>Hover any poster and tap the heart, or press <kbd>L</kbd> on a focused title.</span>
+        <span>${canHover ? "Hover any poster and tap the heart, or press <kbd>L</kbd> on a focused title." : "Open a movie and tap Love it to shape your recommendations."}</span>
         <div class="steps">${[0, 1, 2].map((i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</div>
       </div>`;
   }
@@ -503,15 +503,17 @@
       return `<div class="pick ${cls}" title="${esc(m?.title || `Movie ${id}`)}${info ? ` · ${esc(info.status)}: ${esc(info.reason || "Included in taste")}` : ""}">${m ? imgHTML(m) : `<span class="pending-title">Movie ${id}</span>`}${info && info.status !== "applied" ? `<span class="preference-badge">${esc(info.status)}</span>` : ""}<button data-remove="${id}" aria-label="Remove ${esc(m?.title || `Movie ${id}`)}">${icon("x")}</button></div>`;
     };
     $("#drawer").innerHTML = `
-      <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">${icon("x")}</button>
-      <h2>Your Taste DNA</h2>
+      <div class="drawer-heading">
+        <h2>Your Taste DNA</h2>
+        <button class="icon-btn drawer-close" data-close-drawer aria-label="Close">${icon("x")}</button>
+      </div>
       <p class="hint">${preferenceWarningShown ? "Session only: browser storage is unavailable." : "Saved in this browser. No account needed."}</p>
       <p class="hint">${hint}</p>
       ${resolution && resolution.applied + resolution.pending + resolution.unavailable ? `<div class="preference-resolution"><p class="hint" role="status">External choices: ${resolution.applied} applied · ${resolution.pending} pending · ${resolution.unavailable} unavailable.</p><p class="hint">Only resolved metadata affects taste. ${resolution.stale ? "Some cached features may be out of date. " : ""}Feature language is English; display language stays independent.</p>${resolution.pending || resolution.unavailable || resolution.stale ? `<button class="btn btn-grey btn-sm" data-retry-preferences>Retry metadata</button>` : ""}${preferenceResolver.storageFailed ? `<p class="hint">Feature caching is unavailable in this browser; saved choices will resolve again next visit.</p>` : ""}</div>` : ""}
       <div class="viewing-options">
-        <label><input type="checkbox" id="useViewing" ${options.use_viewing ? "checked" : ""}> Use viewing history <span>Experimental</span></label>
+        <label><input type="checkbox" id="useViewing" ${options.use_viewing ? "checked" : ""}><span>Use viewing history <small>Experimental</small></span></label>
         <p class="hint">Starts after at least 30% and 2 minutes measured playing. Earlier resume positions aren't treated as watched time. Likes and dislikes stay primary; playback problems aren't ratings.</p>
-        <label><input type="checkbox" id="recentPlaybackOnly" ${options.recent_playback_only ? "checked" : ""}> Top picks: only recently played on this device</label>
+        <label><input type="checkbox" id="recentPlaybackOnly" ${options.recent_playback_only ? "checked" : ""}><span>Top picks: only recently played on this device</span></label>
         <p class="hint">Only films with at least 10 seconds measured playing in the last 7 days. A later source error invalidates that source's record. If there are no matches, the banner offers broader suggestions.</p>
         <button class="btn btn-grey btn-sm" id="clearViewing">Clear viewing history</button>
       </div>

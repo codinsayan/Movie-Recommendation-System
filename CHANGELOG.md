@@ -35,6 +35,16 @@ The **447-film TMDB snapshot** (and the separate **60-film curated dataset**) re
 - Remaining hosted browser/player, storage, cold-start and recovery acceptance in S7; no final release tag is claimed.
 - The provider set is unchanged: CineSrc, VidLink and VidSrc. No further streaming servers were researched or added.
 
+### Mobile UI follow-up (2026-10-21)
+
+- Reviewed home, search, movie details, player/source menu, My Taste and help screens from 320px phones through tablet and desktop widths. Kept the existing dark/red visual design.
+- Reworked phone banner spacing and action wrapping; made moods horizontally scrollable, section subtitles wrap, and touch onboarding describe opening a movie and tapping Love it.
+- Enlarged phone navigation, details/player controls, source options and close buttons. Expanded search uses 16px text and sits beneath the navigation without covering results.
+- Reduced phone detail-poster size, balanced action rows, kept related films in two columns and bounded metadata/explanation widths. Help cards stack in one column.
+- Added a sticky My Taste heading/close control, clearer wrapping checkbox labels, visible remove buttons and wrapping footer controls. Bounded toast width and added bottom safe-area spacing.
+- Added separate browser-runner output directories to preserve historical S6 records, and reset independent scenarios before app boot to avoid inherited saved-source state while retaining refresh-persistence assertions.
+- Full regression suite **154 passed** and **six browser interaction scenarios passed**. Layout review passed **95 geometry checks across 35 screen/viewport combinations** at 320, 390, 560, 768 and 1440px. [Reviewed screenshots and evidence](docs/evaluation/mobile-ui/README.md). These are emulated Edge layout checks, not physical-phone or new live-media acceptance.
+
 ### S7.3 - Hosted owner acceptance follow-up (2026-10-21)
 
 - Recorded the owner's **"Both persistence and playback work"** response to the hosted Sintel (2010, TMDB 45745) exercise at **https://cinemagic-trbu.onrender.com**: like, refresh, watch and manually switch sources. This confirms the requested hosted playback/manual-switching flow and like/recommendation persistence across refresh.

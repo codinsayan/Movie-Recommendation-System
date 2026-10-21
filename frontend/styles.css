@@ -313,7 +313,7 @@ body.searching .rows { margin-top: 0; padding-top: 110px; min-height: 100vh; }
 .viewing-options { margin-top: 22px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
 .viewing-options label { display: flex; align-items: center; gap: 9px; font-size: .85rem; font-weight: 600; margin-bottom: 7px; }
 .viewing-options input { accent-color: var(--red); flex-shrink: 0; width: 16px; height: 16px; }
-.viewing-options label span { color: #ff6b73; font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; }
+.viewing-options label small { display: inline-block; color: #ff6b73; font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; }
 .viewing-options .hint { font-size: .76rem; line-height: 1.5; margin-bottom: 16px; }
 .drawer h3 { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); margin: 26px 0 12px; }
 .drawer-close { position: absolute; top: 18px; right: 16px; border-radius: 50%; }
@@ -475,16 +475,82 @@ select:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 @media (max-width: 560px) {
   :root { --per: 3; --gutter: 16px; }
   .row.top10 { --per: 2; }
-  .nav { gap: 12px; }
+  .nav { height: 64px; gap: 8px; }
+  .nav-right { gap: 6px; }
+  .nav .icon-btn, .avatar { width: 44px; height: 44px; }
+  .avatar { margin: 0; }
   .logo { font-size: 1.6rem; }
-  .billboard { min-height: 500px; height: 78vh; }
-  .rows { margin-top: -6vh; }
+  .billboard { min-height: 0; height: auto; padding: 104px var(--gutter) 64px; }
+  .bb-content { position: relative; inset: auto; width: 100%; }
+  body:has(.search.open) .billboard { padding-top: 156px; }
+  .bb-title { font-size: clamp(2rem, 8.5vw, 2.6rem); line-height: 1.05; overflow-wrap: anywhere; }
+  .bb-kicker { font-size: .7rem; letter-spacing: .12em; }
+  .bb-content .meta { gap: 8px; font-size: .8rem; }
+  .bb-overview { font-size: .9rem; }
+  .bb-reason { align-items: flex-start; flex-wrap: wrap; gap: 4px; font-size: .8rem; }
+  .bb-reason::before { flex-shrink: 0; }
+  .bb-actions { gap: 8px; }
+  .bb-content .bb-actions .btn { flex: 1 1 calc(50% - 4px); justify-content: center; min-width: 0; padding: 10px 12px; font-size: .875rem; }
+  .bb-content .bb-actions .btn:first-child { flex-basis: 100%; }
+  .bb-content .bb-actions .btn[aria-label="Not for me"] { flex: 0 0 44px; padding: 10px; }
+  .bb-dots { bottom: 24px; }
+  .rows { margin-top: 0; }
+  .mood-strip { display: block; margin-bottom: 20px; }
+  .mood-label { display: block; margin-bottom: 10px; font-size: .875rem; }
+  .moods { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 4px; }
+  .moods::-webkit-scrollbar { display: none; }
+  .mood { flex-shrink: 0; min-height: 44px; }
+  .onboard { gap: 8px; padding: 14px; }
+  .steps { margin-left: 0; }
+  .row { margin-bottom: 28px; }
+  .row-head { flex-wrap: wrap; gap: 4px 10px; }
+  .row-sub { flex-basis: 100%; overflow-wrap: anywhere; }
+  .row-head .explore { opacity: 1; transform: none; }
   .arrow { display: none; }
-  .m-head { flex-direction: column; align-items: flex-start; padding: 50px 20px 20px; }
-  .m-poster { width: 130px; }
+  .btn, .btn-sm, .circle, .m-close { min-height: 44px; }
+  .circle, .m-close { width: 44px; height: 44px; flex-shrink: 0; }
+  .modal-backdrop { padding: 12px 8px max(12px, env(safe-area-inset-bottom)); }
+  .m-head, .m-head.has-backdrop { min-height: 0; flex-direction: column; align-items: flex-start; gap: 18px; padding: 64px 20px 24px; }
+  .m-head > div { min-width: 0; max-width: 100%; }
+  .m-head h2 { font-size: 1.75rem; overflow-wrap: anywhere; }
+  .m-head .bb-actions .btn { justify-content: center; flex: 1 1 calc(50% - 4px); padding: 10px; font-size: .8rem; }
+  .m-head .bb-actions kbd { display: none; }
+  .m-poster { width: 96px; }
   .m-body, .m-section, .how { padding-left: 20px; padding-right: 20px; }
-  .pipeline, .stats { grid-template-columns: 1fr 1fr; }
-  .search.open input { width: 120px; }
+  .m-body { gap: 20px; }
+  .m-side { overflow-wrap: anywhere; }
+  .like-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .lc-top { flex-wrap: wrap; gap: 6px; }
+  .like-card .lc-body { padding: 10px; }
+  .why .dna-row { grid-template-columns: minmax(0, 1fr) minmax(40px, 1fr) 32px; gap: 8px; }
+  .player-heading { padding-top: 64px; }
+  .player-controls { gap: 12px; padding-bottom: 16px; }
+  .player-actions .btn { flex: 1 1 0; justify-content: center; padding: 10px; font-size: .8rem; }
+  .player-status, .player-foot { overflow-wrap: anywhere; }
+  .source-option { min-height: 44px; }
+  .drawer { width: min(400px, 100vw); padding: 20px 20px max(24px, env(safe-area-inset-bottom)); overscroll-behavior-y: contain; }
+  .drawer-heading { position: sticky; top: -20px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -20px -20px 12px; padding: 12px 20px; background: #101010; border-bottom: 1px solid var(--border); }
+  .drawer-heading h2 { font-size: 1.75rem; }
+  .drawer-heading .drawer-close { position: static; flex-shrink: 0; width: 44px; height: 44px; }
+  .viewing-options { padding: 12px; }
+  .viewing-options label { min-height: 44px; align-items: flex-start; padding: 10px 0; }
+  .viewing-options label input { margin-top: 2px; }
+  .viewing-options label span { min-width: 0; }
+  .viewing-options label small { margin-left: 4px; }
+  .drawer-foot { flex-wrap: wrap; }
+  .drawer-foot .btn { flex: 1 1 120px; justify-content: center; }
+  .pick button { opacity: 1; width: 32px; height: 32px; display: grid; place-items: center; }
+  .how { padding-top: 64px; }
+  .how h2 { font-size: 2rem; line-height: 1.1; margin-bottom: 16px; overflow-wrap: anywhere; }
+  .pipeline { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .nav:has(.search.open) .search { top: 64px; }
+  .search.open input { font-size: 16px; }
+  body.searching .rows { padding-top: 140px; }
+  .catalogue-controls select { min-height: 44px; font-size: 16px; max-width: 100%; }
+  .catalogue-controls span { min-width: 0; flex-basis: 100%; }
+  .toast-wrap { width: calc(100% - 32px); bottom: max(16px, env(safe-area-inset-bottom)); }
+  .toast { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }

@@ -1,0 +1,354 @@
+{
+  "recorded": "2026-10-21",
+  "browser": "Headless Edge with isolated temporary profile",
+  "scope": "Local static app; blocked movie/trailer frames; emulated viewports, not physical devices",
+  "viewports": [
+    [
+      320,
+      640
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      560,
+      844
+    ],
+    [
+      768,
+      900
+    ],
+    [
+      770,
+      903
+    ],
+    [
+      1440,
+      900
+    ]
+  ],
+  "screens": 35,
+  "geometry_checks_passed": 95,
+  "observations": [
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "home",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "search",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "details",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "player",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "taste",
+      "page_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "taste-bottom",
+      "page_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "screen": "how",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "home",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "search",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "details",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "player",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "taste",
+      "page_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "taste-bottom",
+      "page_overflow": 0,
+      "inner_overflow": [],
+      "sticky_close_reachable": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "screen": "how",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "home",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "search",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "details",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "player",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "taste",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "taste-bottom",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        560,
+        844
+      ],
+      "screen": "how",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        770,
+        903
+      ],
+      "screen": "home",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        768,
+        900
+      ],
+      "screen": "search",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        768,
+        900
+      ],
+      "screen": "details",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        768,
+        900
+      ],
+      "screen": "player",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        770,
+        903
+      ],
+      "screen": "taste",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        770,
+        903
+      ],
+      "screen": "taste-bottom",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        770,
+        903
+      ],
+      "screen": "how",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "home",
+      "page_overflow": -15,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "search",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "details",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "player",
+      "page_overflow": 0,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "taste",
+      "page_overflow": -15,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "taste-bottom",
+      "page_overflow": -15,
+      "inner_overflow": []
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "screen": "how",
+      "page_overflow": 0,
+      "inner_overflow": []
+    }
+  ]
+}

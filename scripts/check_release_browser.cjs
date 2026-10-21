@@ -1,7 +1,7 @@
 /* S6 real-browser DOM checks. Node >=22, Python dependencies and Chromium required.
  * Starts isolated local servers/profile; blocks third-party movie frames deliberately.
  * Synthetic messages exercise lifecycle; these results never establish video playback.
- * Usage: node scripts/check_release_browser.cjs --recorded 2026-10-20
+ * Usage: node scripts/check_release_browser.cjs --recorded YYYY-MM-DD [--output-dir PATH]
  */
 "use strict";
 const fs = require("node:fs"), path = require("node:path"), os = require("node:os");
@@ -9,7 +9,9 @@ const http = require("node:http"), { spawn } = require("node:child_process");
 const net = require("node:net");
 const assert = require("node:assert/strict");
 const ROOT = path.resolve(__dirname, ".."), FRONTEND = path.join(ROOT, "frontend");
-const OUT = path.join(ROOT, "docs", "evaluation", "s6");
+const outputArg = process.argv.indexOf("--output-dir");
+if (outputArg >= 0 && (!process.argv[outputArg + 1] || process.argv[outputArg + 1].startsWith("--"))) throw Error("Supply a path after --output-dir");
+const OUT = outputArg < 0 ? path.join(ROOT, "docs", "evaluation", "s6") : path.resolve(ROOT, process.argv[outputArg + 1]);
 const recorded = process.argv[process.argv.indexOf("--recorded") + 1];
 if (!process.argv.includes("--recorded") || !/^\d{4}-\d{2}-\d{2}$/.test(recorded)) throw Error("Supply --recorded YYYY-MM-DD");
 const browser = process.env.CHROMIUM_PATH || [
@@ -86,8 +88,14 @@ async function message(data, origin = "https://cinesrc.st") {
 }
 async function flow(base, width, label) {
   await client.send("Emulation.setDeviceMetricsOverride", { width, height: width < 600 ? 844 : 900, deviceScaleFactor: 1, mobile: width < 600 });
+  // Clear in the new document before app boot; remove before the persistence reload.
+  // Clearing through Storage while about:blank inherits an old origin can race its cached storage.
+  const reset = await client.send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `if(location.origin===${JSON.stringify(new URL(base).origin)}) localStorage.clear();`,
+  });
   await client.send("Page.navigate", { url: base });
   await wait("document.querySelector('.bb-title') && document.querySelector('#row-picks .tile')", "boot picks");
+  await client.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: reset.identifier });
   await searchMovie();
   await click('#modalBody [data-act="love"][data-id="27205"]');
   await openPlayer();
@@ -180,7 +188,6 @@ async function flow(base, width, label) {
     await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
     for (const [base, width, name] of [["http://127.0.0.1:8126/", 1440, "backend-desktop"], ["http://127.0.0.1:8126/", 390, "backend-mobile"], ["http://127.0.0.1:8127/", 1440, "static-desktop"], ["http://127.0.0.1:8127/", 390, "static-mobile"]]) {
       // Independent flow; retain state inside its refresh exercise only.
-      await client.send("Storage.clearDataForOrigin", { origin: new URL(base).origin, storageTypes: "local_storage" });
       results.scenarios.push(await flow(base, width, name));
     }
     await backend("");

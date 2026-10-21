@@ -1,0 +1,139 @@
+{
+  "recorded": "2026-10-21",
+  "browser": "msedge.exe",
+  "scope": "Local release candidate; real DOM with blocked external frames and synthetic progress/errors",
+  "scenarios": [
+    {
+      "label": "backend-desktop",
+      "viewport": [
+        1440,
+        900
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked"
+    },
+    {
+      "label": "backend-mobile",
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked"
+    },
+    {
+      "label": "static-desktop",
+      "viewport": [
+        1440,
+        900
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked"
+    },
+    {
+      "label": "static-mobile",
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": [
+        "boot",
+        "debounced snapshot search",
+        "details",
+        "watch",
+        "registry permissions",
+        "manual keyboard source switch",
+        "no switch on error",
+        "wrong-origin and stale-frame rejection",
+        "resume URL transfer",
+        "autoplay request and pause guidance",
+        "menu Escape",
+        "modal focus trap",
+        "no horizontal overflow",
+        "close disposal",
+        "refresh retains resume/watchlist/likes/source",
+        "start over",
+        "trailer replaces movie",
+        "recent-playback empty state"
+      ],
+      "video_playback": "not tested; third-party frames blocked"
+    },
+    {
+      "label": "disabled-provider restart",
+      "passed": [
+        "no enabled providers",
+        "explicit unavailable state",
+        "recommendations remain",
+        "browser likes preserved"
+      ]
+    },
+    {
+      "label": "disabled saved source",
+      "passed": [
+        "fallback to first enabled source at next open",
+        "resume retained",
+        "one source option",
+        "remove history preserves watchlist",
+        "close disposal"
+      ]
+    }
+  ],
+  "capture_note": "Interaction-run captures retained in the ignored local output directory; reviewed layout screenshots are linked in README.md."
+}
